@@ -1,0 +1,8 @@
+{
+  "name": "Lando Ranch",
+  "short_name": "LandoRanch",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#16a34a"
+}
