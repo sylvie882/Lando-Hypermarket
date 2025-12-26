@@ -447,58 +447,60 @@ export default function OrderDetailPage() {
             </div>
 
             {/* Tracking History */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Order Status</h2>
-              
-              <div className="space-y-6">
-                {order.tracking_history && order.tracking_history.length > 0 ? (
-                  order.tracking_history.map((history, index) => (
-                    <div key={index} className="flex">
-                      <div className="flex flex-col items-center mr-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          history.status === 'delivered' ? 'bg-green-100 text-green-600' :
-                          history.status === 'cancelled' ? 'bg-red-100 text-red-600' :
-                          'bg-blue-100 text-blue-600'
-                        }`}>
-                          {history.icon === '📝' && <Package className="w-5 h-5" />}
-                          {history.icon === '✅' && <CheckCircle className="w-5 h-5" />}
-                          {history.icon === '⚙️' && <Package className="w-5 h-5" />}
-                          {history.icon === '🚚' && <Truck className="w-5 h-5" />}
-                          {history.icon === '🎉' && <CheckCircle className="w-5 h-5" />}
-                          {history.icon === '❌' && <AlertCircle className="w-5 h-5" />}
-                        </div>
-                        {index < order.tracking_history.length - 1 && (
-                          <div className="w-0.5 h-full bg-gray-200 mt-2"></div>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 pb-6 last:pb-0">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-bold text-gray-900">{history.title || 'Status Update'}</h3>
-                          <span className="text-sm text-gray-500">
-                            {formatDate(history.actual_date)}
-                          </span>
-                        </div>
-                        
-                        <p className="text-gray-600 mb-2">{history.description || 'Status updated'}</p>
-                        
-                        {history.location && (
-                          <div className="flex items-center text-sm text-gray-500">
-                            <MapPin className="w-4 h-4 mr-2" />
-                            {history.location}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No tracking history available yet</p>
-                  </div>
-                )}
-              </div>
+           {/* Tracking History */}
+<div className="bg-white rounded-xl shadow-lg p-6">
+  <h2 className="text-xl font-bold text-gray-900 mb-6">Order Status</h2>
+  
+  <div className="space-y-6">
+    {order.tracking_history && order.tracking_history.length > 0 ? (
+      order.tracking_history.map((history, index) => (
+        <div key={index} className="flex">
+          <div className="flex flex-col items-center mr-4">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              history.status === 'delivered' ? 'bg-green-100 text-green-600' :
+              history.status === 'cancelled' ? 'bg-red-100 text-red-600' :
+              'bg-blue-100 text-blue-600'
+            }`}>
+              {history.icon === '📝' && <Package className="w-5 h-5" />}
+              {history.icon === '✅' && <CheckCircle className="w-5 h-5" />}
+              {history.icon === '⚙️' && <Package className="w-5 h-5" />}
+              {history.icon === '🚚' && <Truck className="w-5 h-5" />}
+              {history.icon === '🎉' && <CheckCircle className="w-5 h-5" />}
+              {history.icon === '❌' && <AlertCircle className="w-5 h-5" />}
             </div>
+            {/* FIXED: Added optional chaining */}
+            {index < (order.tracking_history?.length || 0) - 1 && (
+              <div className="w-0.5 h-full bg-gray-200 mt-2"></div>
+            )}
+          </div>
+          
+          <div className="flex-1 pb-6 last:pb-0">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-bold text-gray-900">{history.title || 'Status Update'}</h3>
+              <span className="text-sm text-gray-500">
+                {formatDate(history.actual_date)}
+              </span>
+            </div>
+            
+            <p className="text-gray-600 mb-2">{history.description || 'Status updated'}</p>
+            
+            {history.location && (
+              <div className="flex items-center text-sm text-gray-500">
+                <MapPin className="w-4 h-4 mr-2" />
+                {history.location}
+              </div>
+            )}
+          </div>
+        </div>
+      ))
+    ) : (
+      <div className="text-center py-8">
+        <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+        <p className="text-gray-500">No tracking history available yet</p>
+      </div>
+    )}
+  </div>
+</div>
           </div>
 
           {/* Right Column - Sidebar */}
