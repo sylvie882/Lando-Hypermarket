@@ -25,43 +25,45 @@ const CategoryPage = () => {
   }, [slug]);
 
   const fetchCategoryAndProducts = async () => {
-    try {
-      setIsLoading(true);
-      
-      const categoriesRes = await api.categories.getAll();
-      const allCategories = categoriesRes.data || [];
-      
-      let foundCategory = allCategories.find(cat => cat.slug === slug);
-      
-      if (!foundCategory && !isNaN(Number(slug))) {
-        foundCategory = allCategories.find(cat => cat.id.toString() === slug);
-      }
-      
-      if (!foundCategory) {
-        notFound();
-        return;
-      }
-      
-      setCategory(foundCategory);
-      
-      try {
-        const productsRes = await api.products.getAll({
-          category_id: foundCategory.id,
-          per_page: 50
-        });
-        
-        const productsData = productsRes.data?.data || productsRes.data || [];
-        setProducts(productsData);
-      } catch {
-        setProducts([]);
-      }
-      
-    } catch {
-      notFound();
-    } finally {
-      setIsLoading(false);
+  try {
+    setIsLoading(true);
+    
+    const categoriesRes = await api.categories.getAll();
+    const allCategories = categoriesRes.data || [];
+    
+    // FIXED: Add type annotation
+    let foundCategory = allCategories.find((cat: Category) => cat.slug === slug);
+    
+    if (!foundCategory && !isNaN(Number(slug))) {
+      // FIXED: Add type annotation
+      foundCategory = allCategories.find((cat: Category) => cat.id.toString() === slug);
     }
-  };
+    
+    if (!foundCategory) {
+      notFound();
+      return;
+    }
+    
+    setCategory(foundCategory);
+    
+    try {
+      const productsRes = await api.products.getAll({
+        category_id: foundCategory.id,
+        per_page: 50
+      });
+      
+      const productsData = productsRes.data?.data || productsRes.data || [];
+      setProducts(productsData);
+    } catch {
+      setProducts([]);
+    }
+    
+  } catch {
+    notFound();
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   if (isLoading) {
     return (
