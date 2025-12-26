@@ -46,39 +46,63 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     }
   }, [isOpen, user, productId]);
 
-  const fetchUserOrders = async () => {
-    try {
-      setIsLoading(true);
-      const response = await api.orders.getUserOrders();
+ const fetchUserOrders = async () => {
+  try {
+    setIsLoading(true);
+    // Use api.orders.getAll() with parameters
+    const response = await api.orders.getAll({
+      per_page: 100, // Get all orders to ensure we find the product
+      status: 'delivered,completed', // Filter by completed statuses if backend supports it
+    });
+    
+    console.log('User orders response:', response.data);
+    
+    // Handle different response structures
+    let ordersData = [];
+    if (response.data.data && Array.isArray(response.data.data)) {
+      ordersData = response.data.data;
+    } else if (Array.isArray(response.data)) {
+      ordersData = response.data;
+    } else if (response.data.orders && Array.isArray(response.data.orders)) {
+      ordersData = response.data.orders;
+    } else {
+      ordersData = [];
+    }
+    
+    console.log('Processed orders data:', ordersData);
+    
+    // Check if any order contains this product (delivered or completed)
+    const eligibleOrders = ordersData.filter((order: any) => {
+      // Check if order is in a completed state
+      const orderStatus = order.status?.toLowerCase();
+      const isCompleted = ['delivered', 'completed', 'fulfilled', 'received'].includes(orderStatus);
       
-      // Check if any order contains this product (delivered or completed)
-      const eligibleOrders = response.data.filter((order: any) => {
-        // Check if order is in a completed state
-        const isCompleted = ['delivered', 'completed', 'fulfilled'].includes(order.status?.toLowerCase());
-        
-        // Check if any item in the order matches the product
-        const hasProduct = order.items?.some((item: any) => 
-          item.product_id === productId || 
-          item.product?.id === productId ||
-          item.product_id?.toString() === productId.toString()
-        );
-        
-        return isCompleted && hasProduct;
+      // Check if any item in the order matches the product
+      const hasProduct = order.items?.some((item: any) => {
+        const itemProductId = item.product_id || item.product?.id;
+        return itemProductId?.toString() === productId.toString();
       });
       
-      setUserOrders(eligibleOrders);
-      setHasPurchased(eligibleOrders.length > 0);
-      
-      if (eligibleOrders.length > 0 && !selectedOrderId) {
-        setSelectedOrderId(eligibleOrders[0].id);
-      }
-    } catch (error) {
-      console.error('Failed to fetch orders:', error);
-      toast.error('Failed to load your orders');
-    } finally {
-      setIsLoading(false);
+      const isEligible = isCompleted && hasProduct;
+      console.log(`Order #${order.id}: isCompleted=${isCompleted}, hasProduct=${hasProduct}, eligible=${isEligible}`);
+      return isEligible;
+    });
+    
+    console.log('Eligible orders:', eligibleOrders);
+    
+    setUserOrders(eligibleOrders);
+    setHasPurchased(eligibleOrders.length > 0);
+    
+    if (eligibleOrders.length > 0 && !selectedOrderId) {
+      setSelectedOrderId(eligibleOrders[0].id);
     }
-  };
+  } catch (error) {
+    console.error('Failed to fetch orders:', error);
+    toast.error('Failed to load your orders');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // If editing existing review, user has obviously purchased it
   useEffect(() => {
