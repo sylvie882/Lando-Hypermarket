@@ -18,27 +18,32 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetchAnalyticsData();
-  }, []); // Remove filters from dependency array since API doesn't accept them
+  }, []);
 
   const fetchAnalyticsData = async () => {
     try {
       setLoading(true);
       
       // Fetch all analytics data - using available methods
-      const [salesData, productsData, customersData] = await Promise.all([
+      const [salesData, productsData, usersData] = await Promise.all([
         api.admin.getAnalytics(), // No arguments needed
         api.admin.getProducts({ limit: 10, sortBy: 'sales' }),
-        api.admin.getCustomers({ limit: 10, sortBy: 'total_spent' }),
+        api.admin.getUsers({ limit: 10, sortBy: 'total_spent' }), // Changed from getCustomers to getUsers
       ]);
 
       setSalesReport(salesData.data);
       setProductPerformance(productsData.data?.products || productsData.data || []);
+      
+      // Process users data for customer insights
+      const users = usersData.data?.users || usersData.data || [];
+      const totalUsers = usersData.data?.total || users.length;
+      
       setCustomerInsights({
-        total_customers: customersData.data?.total || customersData.data?.length || 0,
-        active_customers: customersData.data?.active || customersData.data?.total || customersData.data?.length || 0,
+        total_customers: totalUsers,
+        active_customers: users.filter((user: any) => user.status === 'active' || user.is_active).length || totalUsers,
         avg_orders_per_customer: salesData.data?.summary?.avg_order_value || 
                                   salesData.data?.avg_order_value || 0,
-        top_customers: customersData.data?.customers || customersData.data || []
+        top_customers: users.slice(0, 5) // Get top 5 users
       });
     } catch (error) {
       console.error('Failed to fetch analytics data:', error);
@@ -48,7 +53,6 @@ export default function AnalyticsPage() {
   };
 
   const handleApplyFilters = () => {
-    // If you need to filter the data client-side
     fetchAnalyticsData();
   };
 
@@ -59,7 +63,7 @@ export default function AnalyticsPage() {
         <p className="text-gray-600">Business insights and performance metrics</p>
       </div>
 
-      {/* Filters - You might want to handle filtering client-side or remove this section */}
+      {/* Filters */}
       <div className="p-4 mb-6 bg-white rounded-lg shadow">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div>
@@ -250,10 +254,11 @@ export default function AnalyticsPage() {
                                   ${customer.total_spent?.toFixed(2) || 
                                      customer.orders_sum_total?.toFixed(2) || 
                                      customer.total_amount?.toFixed(2) ||
+                                     customer.total_purchases?.toFixed(2) ||
                                      '0.00'}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  {customer.order_count || customer.orders_count || customer.order_total || 0} orders
+                                  {customer.order_count || customer.orders_count || customer.order_total || customer.total_orders || 0} orders
                                 </div>
                               </div>
                             </div>
