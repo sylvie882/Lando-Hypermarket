@@ -52,7 +52,15 @@ export default function VerifyEmailPage() {
         toast.success('Email verified successfully!');
         router.push('/');
       } else {
-        toast.info('Email not verified yet. Please check your inbox.');
+        // FIXED: Use toast() instead of toast.info()
+        toast('Email not verified yet. Please check your inbox.', {
+          icon: 'ℹ️',
+          style: {
+            background: '#f0f9ff',
+            color: '#0369a1',
+            border: '1px solid #bae6fd'
+          },
+        });
       }
     } catch (error) {
       toast.error('Failed to check verification status');
