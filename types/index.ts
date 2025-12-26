@@ -27,7 +27,6 @@ export interface Product {
   sku: string;
   thumbnail?: string; // Relative path from Laravel
   gallery?: string[]; // Relative paths from Laravel
-  attributes?: any;
   rating: number;
   review_count: number;
   sold_count: number;
@@ -39,6 +38,9 @@ export interface Product {
   vendor?: User;
   created_at: string;
   updated_at: string;
+
+   images?: string[]; // Array of image URLs
+  attributes?: Record<string, any>; // For specifications tab
   
   // Computed attributes from Laravel accessors
   final_price?: number;
