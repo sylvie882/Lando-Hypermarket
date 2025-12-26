@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
+import axios from 'axios'; // Make sure axios is imported
 import ProductTable from '@/components/admin/ProductTable';
 import ProductForm from '@/components/admin/ProductForm';
 import BulkUpload from '@/components/admin/BulkUpload';
@@ -787,7 +788,31 @@ useEffect(() => {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await api.admin.bulkUploadProducts?.(formData);
+      // FIXED: Replace the problematic line with a direct API call
+      // Original: const response = await api.admin.bulkUploadProducts?.(formData);
+      
+      // Solution 1: Use a direct axios call
+      const response = await api.post('/admin/products/bulk-upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      // OR Solution 2: If you want to keep using api.admin, check if method exists first
+      /*
+      let response;
+      if (api.admin.bulkUploadProducts) {
+        response = await api.admin.bulkUploadProducts(formData);
+      } else {
+        // Fallback to direct call
+        response = await api.post('/admin/products/bulk-upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      }
+      */
+      
       alert('Products uploaded successfully');
       setShowBulkUpload(false);
       fetchProducts(pagination.currentPage, showAll);
@@ -815,7 +840,17 @@ useEffect(() => {
 
   const exportProducts = async () => {
     try {
-      const response = await api.admin.exportProducts?.();
+      // FIXED: Also check if exportProducts exists before calling
+      let response;
+      if (api.admin.exportProducts) {
+        response = await api.admin.exportProducts();
+      } else {
+        // Fallback to direct call
+        response = await api.get('/admin/products/export', {
+          responseType: 'blob'
+        });
+      }
+      
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
