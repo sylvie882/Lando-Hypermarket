@@ -162,7 +162,17 @@ export default function EditBannerPage() {
         });
         
         console.log(`Large file (${(file.size / 1024 / 1024).toFixed(2)}MB) - skipping compression to avoid memory issues`);
-        toast.warning('Large image detected. Using original file (backend will optimize).');
+        
+        // FIXED: Use toast with warning styling instead of toast.warning()
+        toast('Large image detected. Using original file (backend will optimize).', {
+          icon: '⚠️',
+          style: {
+            background: '#fef3c7',
+            color: '#92400e',
+            border: '1px solid #f59e0b'
+          },
+          duration: 5000
+        });
         
         resolve(newFile);
       });
@@ -359,7 +369,12 @@ export default function EditBannerPage() {
     
     // For very large files, warn the user
     if (file.size > 50 * 1024 * 1024) {
-      toast.loading(`Processing large ${type} image (${(file.size / 1024 / 1024).toFixed(0)}MB)...`, {
+      toast('Processing large image...', {
+        icon: '⏳',
+        style: {
+          background: '#fef3c7',
+          color: '#92400e',
+        },
         duration: 3000
       });
     }
