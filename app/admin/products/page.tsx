@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import axios from 'axios'; // Make sure axios is imported
-import ProductTable from '@/components/admin/ProductTable';
+import axios from 'axios';
+// Import both the component and the Product type from ProductTable
+import ProductTable, { Product } from '@/components/admin/ProductTable';
 import ProductForm from '@/components/admin/ProductForm';
 import BulkUpload from '@/components/admin/BulkUpload';
 import { 
@@ -19,43 +20,11 @@ import {
 } from 'lucide-react';
 import debounce from 'lodash/debounce';
 
-interface Product {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  discounted_price?: number;
-  stock_quantity: number;
-  category_id?: number;
-  vendor_id?: number;
-  sku: string;
-  thumbnail: string;
-  gallery: string[];
-  attributes?: any;
-  weight?: number;
-  unit?: string;
-  is_featured: boolean;
-  is_active: boolean;
-  rating?: number;
-  sold_count?: number;
-  views?: number;
-  created_at: string;
-  updated_at: string;
-  category?: {
-    id: number;
-    name: string;
-  };
-  vendor?: {
-    id: number;
-    name: string;
-    email: string;
-  };
-}
+// REMOVED the local Product interface - using imported one instead
 
 // Image compression utility
 const compressImage = async (file: File, maxWidth: number = 1200, maxSizeKB: number = 500): Promise<File> => {
   return new Promise((resolve, reject) => {
-    // If file is already small, return as-is
     if (file.size <= maxSizeKB * 1024) {
       resolve(file);
       return;
@@ -67,7 +36,6 @@ const compressImage = async (file: File, maxWidth: number = 1200, maxSizeKB: num
       img.onload = () => {
         const canvas = document.createElement('canvas');
         
-        // Calculate new dimensions while maintaining aspect ratio
         let width = img.width;
         let height = img.height;
         
@@ -85,11 +53,9 @@ const compressImage = async (file: File, maxWidth: number = 1200, maxSizeKB: num
           return;
         }
         
-        // Draw image with higher quality for downscaling
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Determine quality based on target size
         let quality = 0.8;
         let attempts = 0;
         const maxAttempts = 5;
@@ -113,7 +79,6 @@ const compressImage = async (file: File, maxWidth: number = 1200, maxSizeKB: num
                 console.log(`Compressed ${file.name}: ${(file.size / 1024).toFixed(2)}KB -> ${blobSizeKB.toFixed(2)}KB`);
                 resolve(compressedFile);
               } else {
-                // Reduce quality and try again
                 quality *= 0.85;
                 attempts++;
                 setTimeout(compressIteration, 0);
@@ -177,7 +142,7 @@ export default function ProductsPage() {
     minPrice: '',
     maxPrice: '',
     vendor: '',
-    stockStatus: '', // FIXED: Changed from min_stock/max_stock to stock_status
+    stockStatus: '',
     sort: 'created_at',
     order: 'desc' as 'asc' | 'desc',
   });
@@ -185,185 +150,160 @@ export default function ProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   
-  // NEW: Pagination state
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    perPage: 100, // Increased from 20 to 100
+    perPage: 100,
     total: 0,
     lastPage: 1,
     from: 0,
     to: 0
   });
   
-  // NEW: Show all products state
   const [showAll, setShowAll] = useState(true);
 
-  // Fetch products with proper error handling - UPDATED
-// Fetch products with proper error handling - UPDATED for admin endpoint
-const fetchProducts = useCallback(async (page = 1, showAllProducts = showAll) => {
-  try {
-    setLoading(true);
-    setError(null);
-    
-    // Build query params
-    const params: any = {};
-    
-    if (searchQuery.trim()) params.search = searchQuery.trim();
-    if (filters.category) params.category_id = filters.category;
-    if (filters.vendor) params.vendor_id = filters.vendor;
-    
-    // Status filter
-    if (filters.status === 'active') {
-      params.is_active = '1';
-    } else if (filters.status === 'inactive') {
-      params.is_active = '0';
-    }
-    
-    // FIXED: Stock status filter - use stock_status parameter
-    if (filters.stockStatus === 'in_stock') {
-      params.stock_status = 'in_stock';
-    } else if (filters.stockStatus === 'out_of_stock') {
-      params.stock_status = 'out_of_stock';
-    }
-    
-    if (filters.minPrice) params.min_price = parseFloat(filters.minPrice);
-    if (filters.maxPrice) params.max_price = parseFloat(filters.maxPrice);
-    
-    // Sort parameters
-    params.sort = filters.sort;
-    params.order = filters.order;
-    
-    // Set pagination - fetch ALL products or paginated
-    if (showAllProducts) {
-      params.per_page = 1000; // Fetch all products
-    } else {
-      params.page = page;
-      params.per_page = pagination.perPage;
-    }
-
-    console.log('Fetching products with params:', params);
-    
-    const response = await api.admin.getProducts(params);
-    
-    // Handle admin endpoint response structure
-    const data = response.data;
-    console.log('Admin products response:', data);
-    
-    let productsArray: Product[] = [];
-    let totalProducts = 0;
-    
-    if (data && data.products && data.products.data) {
-      // Admin endpoint returns { products: { data: [], ...pagination } }
-      productsArray = data.products.data;
-      const paginationData = data.products;
+  const fetchProducts = useCallback(async (page = 1, showAllProducts = showAll) => {
+    try {
+      setLoading(true);
+      setError(null);
       
-      // Update pagination info
-      totalProducts = paginationData.total;
-      setPagination(prev => ({
-        ...prev,
-        currentPage: paginationData.current_page,
-        perPage: paginationData.per_page,
-        total: paginationData.total,
-        lastPage: paginationData.last_page,
-        from: paginationData.from || 0,
-        to: paginationData.to || 0
+      const params: any = {};
+      
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (filters.category) params.category_id = filters.category;
+      if (filters.vendor) params.vendor_id = filters.vendor;
+      
+      if (filters.status === 'active') {
+        params.is_active = '1';
+      } else if (filters.status === 'inactive') {
+        params.is_active = '0';
+      }
+      
+      if (filters.stockStatus === 'in_stock') {
+        params.stock_status = 'in_stock';
+      } else if (filters.stockStatus === 'out_of_stock') {
+        params.stock_status = 'out_of_stock';
+      }
+      
+      if (filters.minPrice) params.min_price = parseFloat(filters.minPrice);
+      if (filters.maxPrice) params.max_price = parseFloat(filters.maxPrice);
+      
+      params.sort = filters.sort;
+      params.order = filters.order;
+      
+      if (showAllProducts) {
+        params.per_page = 1000;
+      } else {
+        params.page = page;
+        params.per_page = pagination.perPage;
+      }
+
+      console.log('Fetching products with params:', params);
+      
+      const response = await api.admin.getProducts(params);
+      
+      const data = response.data;
+      console.log('Admin products response:', data);
+      
+      let productsArray: Product[] = [];
+      let totalProducts = 0;
+      
+      if (data && data.products && data.products.data) {
+        productsArray = data.products.data;
+        const paginationData = data.products;
+        
+        totalProducts = paginationData.total;
+        setPagination(prev => ({
+          ...prev,
+          currentPage: paginationData.current_page,
+          perPage: paginationData.per_page,
+          total: paginationData.total,
+          lastPage: paginationData.last_page,
+          from: paginationData.from || 0,
+          to: paginationData.to || 0
+        }));
+        
+        console.log(`Fetched ${productsArray.length} products, Total: ${totalProducts}, Page: ${paginationData.current_page}/${paginationData.last_page}`);
+      } else if (data && data.data) {
+        productsArray = data.data;
+        
+        if (data.meta) {
+          totalProducts = data.meta.total;
+          setPagination(prev => ({
+            ...prev,
+            currentPage: data.meta.current_page,
+            perPage: data.meta.per_page,
+            total: data.meta.total,
+            lastPage: data.meta.last_page,
+            from: data.meta.from || 0,
+            to: data.meta.to || 0
+          }));
+        } else if (data.total !== undefined) {
+          totalProducts = data.total;
+          setPagination(prev => ({
+            ...prev,
+            currentPage: page,
+            total: data.total,
+            lastPage: Math.ceil(data.total / params.per_page),
+            from: (page - 1) * params.per_page + 1,
+            to: Math.min(page * params.per_page, data.total)
+          }));
+        }
+      } else if (Array.isArray(data)) {
+        productsArray = data;
+        totalProducts = data.length;
+        console.log(`Fetched ${data.length} products (non-paginated)`);
+      } else {
+        console.warn('Unexpected API response structure:', data);
+        productsArray = [];
+      }
+      
+      const normalizedProducts = productsArray.map(product => ({
+        ...product,
+        gallery: Array.isArray(product.gallery) ? product.gallery : [],
+        thumbnail: product.thumbnail || '/images/default-product.png'
       }));
       
-      console.log(`Fetched ${productsArray.length} products, Total: ${totalProducts}, Page: ${paginationData.current_page}/${paginationData.last_page}`);
-    } else if (data && data.data) {
-      // Fallback for regular products endpoint structure
-      productsArray = data.data;
+      setProducts(normalizedProducts);
       
-      if (data.meta) {
-        totalProducts = data.meta.total;
+      if (showAllProducts) {
         setPagination(prev => ({
           ...prev,
-          currentPage: data.meta.current_page,
-          perPage: data.meta.per_page,
-          total: data.meta.total,
-          lastPage: data.meta.last_page,
-          from: data.meta.from || 0,
-          to: data.meta.to || 0
-        }));
-      } else if (data.total !== undefined) {
-        totalProducts = data.total;
-        setPagination(prev => ({
-          ...prev,
-          currentPage: page,
-          total: data.total,
-          lastPage: Math.ceil(data.total / params.per_page),
-          from: (page - 1) * params.per_page + 1,
-          to: Math.min(page * params.per_page, data.total)
+          total: normalizedProducts.length,
+          perPage: normalizedProducts.length,
+          currentPage: 1,
+          lastPage: 1,
+          from: 1,
+          to: normalizedProducts.length
         }));
       }
-    } else if (Array.isArray(data)) {
-      // Non-paginated response
-      productsArray = data;
-      totalProducts = data.length;
-      console.log(`Fetched ${data.length} products (non-paginated)`);
-    } else {
-      console.warn('Unexpected API response structure:', data);
-      productsArray = [];
+      
+    } catch (error: any) {
+      console.error('Failed to fetch products:', error);
+      console.error('Error response:', error.response);
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Failed to fetch products';
+      setError(errorMessage);
+      setProducts([]);
+    } finally {
+      setLoading(false);
     }
+  }, [searchQuery, filters, pagination.perPage, showAll]);
+
+  useEffect(() => {
+    fetchProducts(1, true);
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchProducts(pagination.currentPage, showAll);
+    }, 300);
     
-    // Ensure all products have proper gallery arrays
-    const normalizedProducts = productsArray.map(product => ({
-      ...product,
-      gallery: Array.isArray(product.gallery) ? product.gallery : [],
-      thumbnail: product.thumbnail || '/images/default-product.png'
-    }));
-    
-    setProducts(normalizedProducts);
-    
-    // If showing all products, update pagination totals
-    if (showAllProducts) {
-      setPagination(prev => ({
-        ...prev,
-        total: normalizedProducts.length,
-        perPage: normalizedProducts.length,
-        currentPage: 1,
-        lastPage: 1,
-        from: 1,
-        to: normalizedProducts.length
-      }));
-    }
-    
-  } catch (error: any) {
-    console.error('Failed to fetch products:', error);
-    console.error('Error response:', error.response);
-    
-    const errorMessage = error.response?.data?.message || 
-                        error.response?.data?.error || 
-                        error.message || 
-                        'Failed to fetch products';
-    setError(errorMessage);
-    setProducts([]);
-  } finally {
-    setLoading(false);
-  }
-}, [searchQuery, filters, pagination.perPage, showAll]);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, filters, showAll, pagination.currentPage, fetchProducts]);
 
-
-// Initial fetch - show ALL products by default
-useEffect(() => {
-  fetchProducts(1, true);
-}, [fetchProducts]); // Add fetchProducts to dependency array
-
-
-
- // Re-fetch when filters change
-useEffect(() => {
-  const timeoutId = setTimeout(() => {
-    fetchProducts(pagination.currentPage, showAll);
-  }, 300);
-  
-  return () => clearTimeout(timeoutId);
-}, [searchQuery, filters, showAll, pagination.currentPage, fetchProducts]);
-
-
-
-
-  // Pagination handlers
   const goToPage = (page: number) => {
     if (page < 1 || page > pagination.lastPage) return;
     fetchProducts(page, false);
@@ -379,7 +319,6 @@ useEffect(() => {
     fetchProducts(1, false);
   };
 
-  // Debounced search
   const debouncedSearch = useCallback(
     debounce((value: string) => {
       fetchProducts(1, showAll);
@@ -387,7 +326,6 @@ useEffect(() => {
     [fetchProducts, showAll]
   );
 
-  // Apply search when query changes
   useEffect(() => {
     if (searchQuery !== '') {
       debouncedSearch(searchQuery);
@@ -404,7 +342,6 @@ useEffect(() => {
 
     try {
       await api.admin.deleteProduct(id);
-      // Update local state
       setProducts(products.map(p => 
         p.id === id ? { ...p, is_active: false } : p
       ));
@@ -424,7 +361,6 @@ useEffect(() => {
     try {
       console.log('Form data received:', formData);
       
-      // Validate discounted price
       const price = parseFloat(formData.price) || 0;
       const discountedPrice = parseFloat(formData.discounted_price);
       
@@ -434,10 +370,8 @@ useEffect(() => {
         return;
       }
       
-      // Create FormData
       const data = new FormData();
       
-      // Helper function to append fields with proper type checking
       const appendField = (key: string, value: any) => {
         if (value !== undefined && value !== null && value !== '') {
           if (typeof value === 'boolean') {
@@ -445,7 +379,6 @@ useEffect(() => {
           } else if (typeof value === 'number') {
             data.append(key, value.toString());
           } else if (typeof value === 'object' && !(value instanceof File)) {
-            // Handle attributes properly
             if (key === 'attributes') {
               try {
                 if (typeof value === 'string') {
@@ -470,7 +403,6 @@ useEffect(() => {
         }
       };
       
-      // Helper function to check if a value is not empty
       const hasValue = (value: any): boolean => {
         if (value === undefined || value === null) return false;
         if (typeof value === 'string') return value.trim() !== '';
@@ -478,23 +410,19 @@ useEffect(() => {
         return true;
       };
       
-      // Required fields (based on Laravel validation)
       appendField('name', formData.name);
       appendField('description', formData.description);
       appendField('price', price);
       appendField('stock_quantity', parseInt(formData.stock_quantity) || 0);
       appendField('category_id', parseInt(formData.category_id));
       
-      // Handle SKU - make sure it's unique
       if (hasValue(formData.sku)) {
         appendField('sku', formData.sku);
       } else {
-        // Generate a unique SKU
         const uniqueSku = `PROD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         appendField('sku', uniqueSku);
       }
       
-      // Optional fields with proper handling
       if (hasValue(formData.discounted_price)) {
         const discounted = parseFloat(formData.discounted_price);
         if (!isNaN(discounted) && discounted > 0 && discounted < price) {
@@ -505,7 +433,6 @@ useEffect(() => {
       appendField('is_featured', formData.is_featured !== undefined ? formData.is_featured : false);
       appendField('is_active', formData.is_active !== undefined ? formData.is_active : true);
       
-      // Additional optional fields
       if (hasValue(formData.min_stock_threshold)) {
         appendField('min_stock_threshold', parseInt(formData.min_stock_threshold));
       }
@@ -522,7 +449,6 @@ useEffect(() => {
         appendField('unit', formData.unit);
       }
       
-      // Handle attributes field - Laravel expects array or null
       if (formData.attributes && formData.attributes !== '{}') {
         try {
           const attributes = typeof formData.attributes === 'string' 
@@ -541,7 +467,6 @@ useEffect(() => {
         appendField('vendor_id', parseInt(formData.vendor_id));
       }
       
-      // Handle thumbnail (main image)
       let hasThumbnail = false;
       if (formData.thumbnail) {
         console.log('Processing thumbnail:', formData.thumbnail);
@@ -565,7 +490,6 @@ useEffect(() => {
         }
         
         if (thumbnailFile) {
-          // Validate thumbnail
           const validation = validateImage(thumbnailFile);
           if (!validation.valid) {
             alert(validation.message);
@@ -574,40 +498,35 @@ useEffect(() => {
           }
           
           try {
-            // Compress thumbnail to meet Laravel's 2MB limit
             console.log('Compressing thumbnail...');
-            const compressedThumbnail = await compressImage(thumbnailFile, 800, 2000); // Max 800px width, 2MB
+            const compressedThumbnail = await compressImage(thumbnailFile, 800, 2000);
             data.append('thumbnail', compressedThumbnail);
             hasThumbnail = true;
             setUploadProgress(20);
             console.log('Thumbnail appended:', compressedThumbnail.name);
           } catch (error) {
             console.error('Failed to compress thumbnail:', error);
-            // Fall back to original if compression fails
             data.append('thumbnail', thumbnailFile);
             hasThumbnail = true;
             setUploadProgress(20);
             console.log('Original thumbnail appended:', thumbnailFile.name);
           }
         } else if (typeof formData.thumbnail === 'string' && !selectedProduct) {
-          // For existing thumbnails when editing, skip if it's already a URL
           console.log('Using existing thumbnail URL');
           hasThumbnail = true;
         }
       }
       
-      // Handle gallery images - limit to 5 as per Laravel validation
       if (formData.gallery && formData.gallery.length > 0) {
         console.log('Processing gallery images:', formData.gallery.length);
         
         let galleryIndex = 0;
         let processedCount = 0;
-        const totalGalleryImages = Math.min(formData.gallery.length, 5); // Limit to 5
+        const totalGalleryImages = Math.min(formData.gallery.length, 5);
         
         for (let i = 0; i < totalGalleryImages; i++) {
           const galleryImage = formData.gallery[i];
           
-          // Skip existing images in update mode (URLs)
           if (selectedProduct && typeof galleryImage === 'string' && !galleryImage.startsWith('blob:')) {
             continue;
           }
@@ -624,12 +543,11 @@ useEffect(() => {
               galleryFile = new File([blob], fileName, { type: 'image/jpeg' });
             } catch (error) {
               console.error(`Failed to process gallery image ${i}:`, error);
-              continue; // Skip this image but continue with others
+              continue;
             }
           }
           
           if (galleryFile) {
-            // Validate gallery image
             const validation = validateImage(galleryFile);
             if (!validation.valid) {
               console.warn(`Gallery image ${i} validation failed:`, validation.message);
@@ -637,15 +555,13 @@ useEffect(() => {
             }
             
             try {
-              // Compress gallery image to meet Laravel's 2MB limit
               console.log(`Compressing gallery image ${i}...`);
-              const compressedGallery = await compressImage(galleryFile, 1200, 2000); // Max 1200px width, 2MB
+              const compressedGallery = await compressImage(galleryFile, 1200, 2000);
               data.append(`gallery[${galleryIndex}]`, compressedGallery);
               galleryIndex++;
               console.log(`Gallery image ${i} appended:`, compressedGallery.name);
             } catch (error) {
               console.error(`Failed to compress gallery image ${i}:`, error);
-              // Fall back to original
               data.append(`gallery[${galleryIndex}]`, galleryFile);
               galleryIndex++;
               console.log(`Original gallery image ${i} appended:`, galleryFile.name);
@@ -653,23 +569,19 @@ useEffect(() => {
           }
           
           processedCount++;
-          // Update progress based on gallery processing
           setUploadProgress(20 + (processedCount / totalGalleryImages) * 50);
         }
         console.log(`Total gallery images appended: ${galleryIndex}`);
       } else if (selectedProduct) {
-        // For update mode, explicitly send empty array if no gallery
         data.append('gallery', '[]');
       }
       
-      // Validate we have required thumbnail for new products
       if (!selectedProduct && !hasThumbnail) {
         alert('Please upload a main product image (thumbnail).');
         setIsSubmitting(false);
         return;
       }
       
-      // Debug FormData - but only show summary to avoid large logs
       console.log('FormData entries summary:');
       let totalSize = 0;
       for (let [key, value] of (data as any).entries()) {
@@ -684,7 +596,6 @@ useEffect(() => {
       }
       console.log(`Total FormData size: ${(totalSize / 1024 / 1024).toFixed(2)}MB`);
       
-      // Set final progress before upload
       setUploadProgress(80);
       
       let response;
@@ -694,7 +605,6 @@ useEffect(() => {
       };
       
       if (selectedProduct) {
-        // Update product - use POST with _method=PUT for Laravel
         const updateData = new FormData();
         updateData.append('_method', 'PUT');
         
@@ -706,7 +616,7 @@ useEffect(() => {
           headers,
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-            setUploadProgress(80 + (percentCompleted * 0.2)); // Last 20% for upload
+            setUploadProgress(80 + (percentCompleted * 0.2));
           }
         }).catch(error => {
           console.log('Full update error:', error);
@@ -717,12 +627,11 @@ useEffect(() => {
         console.log('Update response:', response.data);
         alert('Product updated successfully');
       } else {
-        // Create product
         response = await api.post('/admin/products', data, {
           headers,
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-            setUploadProgress(80 + (percentCompleted * 0.2)); // Last 20% for upload
+            setUploadProgress(80 + (percentCompleted * 0.2));
           }
         }).catch(error => {
           console.log('Full create error:', error);
@@ -788,30 +697,11 @@ useEffect(() => {
       const formData = new FormData();
       formData.append('file', file);
       
-      // FIXED: Replace the problematic line with a direct API call
-      // Original: const response = await api.admin.bulkUploadProducts?.(formData);
-      
-      // Solution 1: Use a direct axios call
       const response = await api.post('/admin/products/bulk-upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-      
-      // OR Solution 2: If you want to keep using api.admin, check if method exists first
-      /*
-      let response;
-      if (api.admin.bulkUploadProducts) {
-        response = await api.admin.bulkUploadProducts(formData);
-      } else {
-        // Fallback to direct call
-        response = await api.post('/admin/products/bulk-upload', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-      }
-      */
       
       alert('Products uploaded successfully');
       setShowBulkUpload(false);
@@ -840,12 +730,10 @@ useEffect(() => {
 
   const exportProducts = async () => {
     try {
-      // FIXED: Also check if exportProducts exists before calling
       let response;
       if (api.admin.exportProducts) {
         response = await api.admin.exportProducts();
       } else {
-        // Fallback to direct call
         response = await api.get('/admin/products/export', {
           responseType: 'blob'
         });
@@ -871,7 +759,7 @@ useEffect(() => {
       minPrice: '',
       maxPrice: '',
       vendor: '',
-      stockStatus: '', // Fixed: use stockStatus instead of min_stock/max_stock
+      stockStatus: '',
       sort: 'created_at',
       order: 'desc',
     });
@@ -1072,7 +960,7 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* NEW: View Controls */}
+        {/* View Controls */}
         <div className="flex flex-wrap justify-between items-center mt-4 gap-3">
           <div className="flex gap-3">
             <button
@@ -1113,7 +1001,7 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Pagination Controls (Only show when not showing all) */}
+      {/* Pagination Controls */}
       {!showAll && pagination.lastPage > 1 && (
         <div className="flex items-center justify-between bg-white px-4 py-3 rounded-lg shadow">
           <div className="text-sm text-gray-700">
@@ -1215,7 +1103,6 @@ useEffect(() => {
           />
         )}
         
-        {/* Show total count at bottom */}
         {products.length > 0 && (
           <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
             <div className="flex justify-between items-center">
