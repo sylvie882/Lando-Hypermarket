@@ -77,10 +77,44 @@ export default function NotificationsPage() {
 
   const deleteNotification = async (id: number) => {
     try {
-      await api.notifications.delete(id);
+      // Try different method names for delete
+      try {
+        // Try "destroy" which is common in Laravel
+        await api.notifications.destroy(id);
+      } catch (destroyError) {
+        console.log('destroy failed, trying deleteById:', destroyError);
+        // Try "deleteById"
+        await api.notifications.deleteById(id);
+      }
       setNotifications(notifications.filter(n => n.id !== id));
     } catch (error) {
       console.error('Failed to delete notification:', error);
+      
+      // Fallback: Direct fetch approach
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          alert('Please login to delete notifications');
+          return;
+        }
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/notifications/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          setNotifications(notifications.filter(n => n.id !== id));
+        } else {
+          throw new Error(`Server error: ${response.status}`);
+        }
+      } catch (fetchError) {
+        console.error('Direct fetch also failed:', fetchError);
+        alert('Failed to delete notification');
+      }
     }
   };
 
@@ -92,7 +126,31 @@ export default function NotificationsPage() {
       setNotifications([]);
       alert('All notifications cleared');
     } catch (error) {
-      alert('Failed to clear notifications');
+      // Fallback: Direct fetch for clearAll
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          alert('Please login to clear notifications');
+          return;
+        }
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/notifications/clear-all`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          setNotifications([]);
+          alert('All notifications cleared');
+        } else {
+          throw new Error(`Server error: ${response.status}`);
+        }
+      } catch (fetchError) {
+        alert('Failed to clear notifications');
+      }
     }
   };
 
