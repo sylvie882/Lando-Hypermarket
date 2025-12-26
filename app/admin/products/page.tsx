@@ -3,10 +3,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import axios from 'axios';
-// Import both the component and the Product type from ProductTable
+// CORRECTED: Import the component as default, and the type separately
 import ProductTable from '@/components/admin/ProductTable';
-
-import Product from "@/components/admin/ProductTable";
+import type { Product } from '@/components/admin/ProductTable'; // Import type explicitly
 import ProductForm from '@/components/admin/ProductForm';
 import BulkUpload from '@/components/admin/BulkUpload';
 import { 
