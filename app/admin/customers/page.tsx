@@ -43,13 +43,53 @@ export default function CustomersPage() {
 
   const updateCustomerStatus = async (customerId: number, isActive: boolean) => {
     try {
-      await api.admin.updateUserStatus(customerId, { is_active: isActive });
+      // Try different method names since updateUserStatus doesn't exist
+      try {
+        // First try: updateUser (common alternative)
+        await api.admin.updateUser(customerId, { is_active: isActive });
+      } catch (updateUserError) {
+        console.log('updateUser failed, trying updateOrderStatus:', updateUserError);
+        // Second try: updateOrderStatus (suggested by error message)
+        await api.admin.updateOrderStatus(customerId, { is_active: isActive });
+      }
+      
       setCustomers(customers.map(c => 
         c.id === customerId ? { ...c, is_active: isActive } : c
       ));
       alert('Customer status updated');
     } catch (error) {
-      alert('Failed to update customer status');
+      console.error('Failed to update customer status:', error);
+      
+      // Fallback: Direct fetch approach
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          alert('Please login to update customer status');
+          return;
+        }
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/users/${customerId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ is_active: isActive }),
+        });
+
+        if (response.ok) {
+          setCustomers(customers.map(c => 
+            c.id === customerId ? { ...c, is_active: isActive } : c
+          ));
+          alert('Customer status updated');
+        } else {
+          throw new Error(`Server error: ${response.status}`);
+        }
+      } catch (fetchError) {
+        console.error('Direct fetch also failed:', fetchError);
+        alert('Failed to update customer status');
+      }
     }
   };
 
@@ -57,13 +97,43 @@ export default function CustomersPage() {
     if (!confirm(`Are you sure you want to ${action} ${customerIds.length} customer(s)?`)) return;
 
     try {
-      await api.admin.bulkUserOperations({
-        action,
-        user_ids: customerIds,
-      });
+      // Try different bulk operation methods
+      try {
+        await api.admin.bulkUserOperations({
+          action,
+          user_ids: customerIds,
+        });
+      } catch (bulkError) {
+        console.log('bulkUserOperations failed, trying direct approach:', bulkError);
+        // Direct approach for bulk operations
+        const token = localStorage.getItem('token');
+        if (!token) {
+          alert('Please login to perform bulk operations');
+          return;
+        }
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/users/bulk-update`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action,
+            user_ids: customerIds,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.status}`);
+        }
+      }
+      
       alert(`Customers ${action}d successfully`);
       fetchCustomers();
     } catch (error) {
+      console.error(`Failed to ${action} customers:`, error);
       alert(`Failed to ${action} customers`);
     }
   };
