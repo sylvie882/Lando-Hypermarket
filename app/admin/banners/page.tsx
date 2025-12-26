@@ -125,7 +125,7 @@ export default function BannersPage() {
       ];
 
       let deleteSuccessful = false;
-      let lastError = null;
+      let lastError: Error | null = null;
 
       for (const endpoint of endpoints) {
         try {
@@ -151,7 +151,7 @@ export default function BannersPage() {
           }
         } catch (endpointError) {
           console.log(`Error with endpoint ${endpoint}:`, endpointError);
-          lastError = endpointError;
+          lastError = endpointError instanceof Error ? endpointError : new Error(String(endpointError));
           continue;
         }
       }
