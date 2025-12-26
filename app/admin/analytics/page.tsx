@@ -24,16 +24,21 @@ export default function AnalyticsPage() {
     try {
       setLoading(true);
       
-      // Fetch all analytics data
+      // Fetch all analytics data - using available methods
       const [salesData, productsData, customersData] = await Promise.all([
-        api.admin.getSalesReport(filters),
-        api.admin.getProductPerformance(),
-        api.admin.getCustomerInsights(),
+        api.admin.getAnalytics(filters), // Changed from getSalesReport
+        api.admin.getProducts({ limit: 10, sortBy: 'sales' }), // Using getProducts with sorting
+        api.admin.getCustomers({ limit: 10, sortBy: 'total_spent' }), // Using getCustomers with sorting
       ]);
 
       setSalesReport(salesData.data);
-      setProductPerformance(productsData.data);
-      setCustomerInsights(customersData.data);
+      setProductPerformance(productsData.data?.products || []);
+      setCustomerInsights({
+        total_customers: customersData.data?.total || 0,
+        active_customers: customersData.data?.active || customersData.data?.total || 0,
+        avg_orders_per_customer: salesData.data?.summary?.avg_order_value || 0,
+        top_customers: customersData.data?.customers || []
+      });
     } catch (error) {
       console.error('Failed to fetch analytics data:', error);
     } finally {
@@ -112,7 +117,9 @@ export default function AnalyticsPage() {
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Total Revenue</p>
                     <p className="text-2xl font-semibold text-gray-900">
-                      ${salesReport.summary?.total_revenue?.toLocaleString() || '0'}
+                      ${salesReport.summary?.total_revenue?.toLocaleString() || 
+                        salesReport.total_revenue?.toLocaleString() || 
+                        '0'}
                     </p>
                   </div>
                 </div>
@@ -124,7 +131,9 @@ export default function AnalyticsPage() {
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Total Orders</p>
                     <p className="text-2xl font-semibold text-gray-900">
-                      {salesReport.summary?.total_orders?.toLocaleString() || '0'}
+                      {salesReport.summary?.total_orders?.toLocaleString() || 
+                        salesReport.total_orders?.toLocaleString() || 
+                        '0'}
                     </p>
                   </div>
                 </div>
@@ -136,7 +145,9 @@ export default function AnalyticsPage() {
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Avg Order Value</p>
                     <p className="text-2xl font-semibold text-gray-900">
-                      ${salesReport.summary?.avg_order_value?.toFixed(2) || '0.00'}
+                      ${salesReport.summary?.avg_order_value?.toFixed(2) || 
+                        salesReport.avg_order_value?.toFixed(2) || 
+                        '0.00'}
                     </p>
                   </div>
                 </div>
@@ -148,31 +159,37 @@ export default function AnalyticsPage() {
             {/* Top Products */}
             <div className="bg-white rounded-lg shadow">
               <div className="px-6 py-4 border-b">
-                <h3 className="text-lg font-semibold text-gray-900">Top Performing Products</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Top Products</h3>
               </div>
               <div className="p-6">
                 <div className="space-y-4">
-                  {productPerformance.slice(0, 5).map((product, index) => (
-                    <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center">
-                        <span className="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full text-sm font-medium mr-3">
-                          {index + 1}
-                        </span>
-                        <div>
-                          <div className="font-medium text-gray-900">{product.name}</div>
-                          <div className="text-sm text-gray-500">{product.category?.name}</div>
+                  {productPerformance.length > 0 ? (
+                    productPerformance.slice(0, 5).map((product, index) => (
+                      <div key={product.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center">
+                          <span className="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full text-sm font-medium mr-3">
+                            {index + 1}
+                          </span>
+                          <div>
+                            <div className="font-medium text-gray-900">{product.name || product.title}</div>
+                            <div className="text-sm text-gray-500">{product.category?.name || product.category}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-medium text-gray-900">
+                            {product.quantity_sold || product.sales_count || 0} sold
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            ${product.revenue || product.total_sales || 0} revenue
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-medium text-gray-900">
-                          {product.order_items_sum_quantity || 0} sold
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          ${product.order_items_count || 0} revenue
-                        </div>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No product data available
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
@@ -210,22 +227,30 @@ export default function AnalyticsPage() {
                     <div>
                       <div className="text-sm font-medium text-gray-700 mb-3">Top Customers</div>
                       <div className="space-y-3">
-                        {customerInsights.top_customers?.slice(0, 3).map((customer: any) => (
-                          <div key={customer.id} className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <Users size={16} className="text-gray-400 mr-2" />
-                              <span className="font-medium text-gray-900">{customer.name}</span>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-medium text-gray-900">
-                                ${customer.orders_sum_total?.toFixed(2) || '0.00'}
+                        {customerInsights.top_customers && customerInsights.top_customers.length > 0 ? (
+                          customerInsights.top_customers.slice(0, 3).map((customer: any) => (
+                            <div key={customer.id} className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <Users size={16} className="text-gray-400 mr-2" />
+                                <span className="font-medium text-gray-900">
+                                  {customer.name || customer.full_name || customer.email}
+                                </span>
                               </div>
-                              <div className="text-sm text-gray-500">
-                                {customer.orders_count || 0} orders
+                              <div className="text-right">
+                                <div className="font-medium text-gray-900">
+                                  ${customer.total_spent?.toFixed(2) || customer.orders_sum_total?.toFixed(2) || '0.00'}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {customer.order_count || customer.orders_count || 0} orders
+                                </div>
                               </div>
                             </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-4 text-gray-500">
+                            No customer data available
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
                   </div>
@@ -252,14 +277,14 @@ export default function AnalyticsPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {salesReport.data.slice(0, 10).map((item: any) => (
-                        <tr key={item.date}>
+                      {salesReport.data.slice(0, 10).map((item: any, index: number) => (
+                        <tr key={item.date || index}>
                           <td className="px-4 py-3 text-sm text-gray-900">
-                            {new Date(item.date).toLocaleDateString()}
+                            {item.date ? new Date(item.date).toLocaleDateString() : 'N/A'}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">{item.order_count}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{item.order_count || item.count || 0}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">
-                            ${item.revenue?.toFixed(2) || '0.00'}
+                            ${item.revenue?.toFixed(2) || item.total?.toFixed(2) || '0.00'}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900">
                             ${item.avg_order_value?.toFixed(2) || '0.00'}
