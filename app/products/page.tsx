@@ -73,16 +73,17 @@ const ProductsPage: React.FC = () => {
         per_page: 12,
       };
       
-      // Remove empty params
-      Object.keys(params).forEach(key => {
-        if (params[key] === '' || params[key] === false || params[key] === 0) {
-          delete params[key];
+      // Remove empty params using reduce (functional approach)
+      const filteredParams = Object.entries(params).reduce((acc, [key, value]) => {
+        if (value !== '' && value !== false && value !== 0) {
+          acc[key] = value;
         }
-      });
+        return acc;
+      }, {} as Record<string, any>);
       
-      console.log('Fetching products with params:', params);
+      console.log('Fetching products with params:', filteredParams);
       
-      const response = await api.products.getAll(params);
+      const response = await api.products.getAll(filteredParams);
       console.log('Products API Response:', response);
       
       // Handle different API response structures
@@ -144,7 +145,7 @@ const ProductsPage: React.FC = () => {
       
       // Update URL with current filters
       const newParams = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
+      Object.entries(filteredParams).forEach(([key, value]) => {
         if (value && value !== '') {
           newParams.set(key, String(value));
         }
@@ -438,7 +439,7 @@ const ProductsPage: React.FC = () => {
                       <div key={product.id} className="bg-white rounded-lg shadow-sm p-4 flex">
                         <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                           <img
-                            src={product.thumbnail || product.images?.[0] || '/placeholder-product.jpg'}
+                            src={product.thumbnail || (product as any).images?.[0] || '/placeholder-product.jpg'}
                             alt={product.name}
                             className="w-full h-full object-cover"
                           />
