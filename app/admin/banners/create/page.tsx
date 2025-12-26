@@ -12,7 +12,6 @@ import {
   EyeOff, 
   Calendar, 
   AlertCircle, 
-  Compress, 
   FileWarning,
   CheckCircle,
   XCircle,
