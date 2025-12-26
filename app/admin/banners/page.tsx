@@ -110,24 +110,103 @@ export default function BannersPage() {
     if (!confirm('Are you sure you want to delete this banner?')) return;
     
     try {
-      await api.banners.delete(id);
-      setBanners(banners.filter(banner => banner.id !== id));
-      toast.success('Banner deleted successfully');
+      // Get authentication token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Please login to delete banners');
+        return;
+      }
+
+      // Try multiple API endpoints
+      const endpoints = [
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/banners/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/banners/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/banners/${id}/delete`
+      ];
+
+      let deleteSuccessful = false;
+      let lastError = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json',
+            },
+            credentials: 'include',
+          });
+
+          if (response.ok) {
+            deleteSuccessful = true;
+            break;
+          } else if (response.status === 404) {
+            console.log(`Endpoint not found: ${endpoint}`);
+            continue;
+          } else {
+            const errorText = await response.text();
+            console.log(`Delete failed at ${endpoint}:`, response.status, errorText);
+            continue;
+          }
+        } catch (endpointError) {
+          console.log(`Error with endpoint ${endpoint}:`, endpointError);
+          lastError = endpointError;
+          continue;
+        }
+      }
+
+      if (deleteSuccessful) {
+        setBanners(banners.filter(banner => banner.id !== id));
+        toast.success('Banner deleted successfully');
+      } else {
+        throw new Error(lastError?.message || 'All delete endpoints failed');
+      }
+
     } catch (err: any) {
-      setError('Failed to delete banner');
-      toast.error('Failed to delete banner');
+      console.error('Delete error:', err);
+      
+      // Fallback: Remove from local state if server delete fails
+      if (confirm('Server delete failed. Remove from local list anyway?')) {
+        setBanners(banners.filter(banner => banner.id !== id));
+        toast.success('Banner removed from list (server may still have it)');
+      } else {
+        setError('Failed to delete banner: ' + err.message);
+        toast.error('Failed to delete banner');
+      }
     }
   };
 
   const handleToggleStatus = async (id: number, currentStatus: boolean) => {
     try {
-      await api.banners.update(id, { is_active: !currentStatus });
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Please login to update banners');
+        return;
+      }
+
+      // Direct fetch approach
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/banners/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_active: !currentStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
       // Update local state
       setBanners(banners.map(banner => 
         banner.id === id ? { ...banner, is_active: !currentStatus } : banner
       ));
       toast.success('Banner status updated');
     } catch (err: any) {
+      console.error('Toggle status error:', err);
       setError('Failed to update banner status');
       toast.error('Failed to update banner status');
     }
