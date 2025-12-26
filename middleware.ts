@@ -16,7 +16,8 @@ export function middleware(request: NextRequest) {
     path.startsWith('/api/') ||
     path.startsWith('/_next/') ||
     path.startsWith('/static/') ||
-    path.includes('.');
+    // Handle file extensions (images, CSS, JS, etc.)
+    /\.[a-zA-Z0-9]+$/.test(path);
   
   // Skip middleware for public paths, API routes, and static files
   if (isPublicPath) {
@@ -78,8 +79,7 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public folder
      */
-    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
