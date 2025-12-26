@@ -55,8 +55,14 @@ export default function BannersPage() {
 
   useEffect(() => {
     fetchBanners();
-    fetchStats();
   }, []);
+
+  useEffect(() => {
+    // Calculate stats from banners data when banners change
+    if (banners.length > 0) {
+      calculateStatsFromBanners();
+    }
+  }, [banners]);
 
   const fetchBanners = async () => {
     try {
@@ -82,14 +88,21 @@ export default function BannersPage() {
     }
   };
 
-  const fetchStats = async () => {
+  const calculateStatsFromBanners = () => {
     try {
-      const response = await api.banners.getStats();
-      if (response.data && response.data.success) {
-        setStats(response.data.data);
-      }
+      const total = banners.length;
+      const active = banners.filter(b => b.is_active).length;
+      const total_clicks = banners.reduce((sum, b) => sum + (b.clicks || 0), 0);
+      const total_impressions = banners.reduce((sum, b) => sum + (b.impressions || 0), 0);
+      
+      setStats({
+        total,
+        active,
+        total_clicks,
+        total_impressions
+      });
     } catch (err) {
-      console.error('Error fetching banner stats:', err);
+      console.error('Error calculating stats:', err);
     }
   };
 
