@@ -1037,23 +1037,23 @@ export default function EditBannerPage() {
 
                   <div className="flex space-x-4">
                     <button
-                      type="submit"
-                      disabled={saving || compressing}
-                      className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {saving ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          {newImage?.size > 50 * 1024 * 1024 || newMobileImage?.size > 50 * 1024 * 1024 ? 
-                            'Uploading large files...' : 'Saving...'}
-                        </>
-                      ) : (
-                        <>
-                          <Save size={18} />
-                          Save Changes
-                        </>
-                      )}
-                    </button>
+  type="submit"
+  disabled={saving || compressing}
+  className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+>
+  {saving ? (
+    <>
+      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+      {(newImage && newImage.size > 50 * 1024 * 1024) || (newMobileImage && newMobileImage.size > 50 * 1024 * 1024) ? 
+        'Uploading large files...' : 'Saving...'}
+    </>
+  ) : (
+    <>
+      <Save size={18} />
+      Save Changes
+    </>
+  )}
+</button>
 
                     <button
                       type="button"
