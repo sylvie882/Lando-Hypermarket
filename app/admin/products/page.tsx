@@ -1170,27 +1170,33 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {showBulkUpload && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Bulk Upload Products</h2>
-                <button
-                  onClick={() => setShowBulkUpload(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <span className="text-2xl">×</span>
-                </button>
-              </div>
-              <BulkUpload
-                onClose={() => setShowBulkUpload(false)}
-                onUpload={handleBulkUpload}
-              />
-            </div>
-          </div>
+      // In your ProductsPage component, update the BulkUpload usage:
+{showBulkUpload && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Bulk Upload Products</h2>
+          <button
+            onClick={() => setShowBulkUpload(false)}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+          >
+            <span className="text-2xl">×</span>
+          </button>
         </div>
-      )}
+        <BulkUpload
+          onSuccess={() => {
+            setShowBulkUpload(false);
+            fetchProducts(pagination.currentPage, showAll);
+          }}
+          onError={(error) => {
+            alert(`Upload failed: ${error}`);
+          }}
+        />
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
