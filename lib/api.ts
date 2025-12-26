@@ -1,4 +1,3 @@
-// lib/api.ts
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -139,7 +138,7 @@ class ApiService {
 
     getAdminStatus: async (): Promise<boolean> => {
       try {
-        const response = await this.getUser();
+        const response = await this.api.get('/user');
         return response.data?.role === 'admin' || response.data?.isAdmin || false;
       } catch (error) {
         return false;
@@ -148,7 +147,7 @@ class ApiService {
 
     checkAdminAccess: async (): Promise<boolean> => {
       try {
-        const response = await this.getUser();
+        const response = await this.api.get('/user');
         return response.data?.role === 'admin' || response.data?.isAdmin || false;
       } catch (error: any) {
         if (error.response?.status === 403 || error.response?.status === 401) {
@@ -175,7 +174,7 @@ class ApiService {
 
     isCurrentUserAdmin: (): boolean => {
       if (typeof window === 'undefined') return false;
-      const user = this.getCurrentUser();
+      const user = this.auth.getCurrentUser();
       return user?.role === 'admin' || user?.isAdmin || false;
     },
   };
