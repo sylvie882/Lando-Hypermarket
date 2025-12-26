@@ -10,6 +10,7 @@ export interface User {
   gender?: 'male' | 'female' | 'other';
   preferences?: any;
   loyalty_points: number;
+  email_verified_at?: string | null; // Add this
   is_active: boolean;
   created_at: string;
   updated_at: string;

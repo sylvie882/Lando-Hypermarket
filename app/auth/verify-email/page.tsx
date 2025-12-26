@@ -44,7 +44,11 @@ export default function VerifyEmailPage() {
   const handleCheckVerification = async () => {
     try {
       await refreshUser();
-      if (user?.email_verified_at) {
+      
+      // FIXED: Check if email_verified_at exists and has a value
+      const isVerified = user && 'email_verified_at' in user && user.email_verified_at;
+      
+      if (isVerified) {
         toast.success('Email verified successfully!');
         router.push('/');
       } else {
