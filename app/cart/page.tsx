@@ -39,6 +39,15 @@ const CartPage: React.FC = () => {
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
 
+  // Helper function to create empty cart
+  const getEmptyCart = (): Cart => ({
+    items: [],
+    id: 0,
+    user_id: 0,
+    total: 0,
+    item_count: 0
+  });
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchCart();
@@ -51,11 +60,11 @@ const CartPage: React.FC = () => {
     try {
       setIsLoading(true);
       const response = await api.cart.get();
-      setCart(response.data.cart || { items: [], id: 0, user_id: 0 });
+      setCart(response.data.cart || getEmptyCart());
     } catch (error) {
       console.error('Failed to fetch cart:', error);
       toast.error('Failed to load cart');
-      setCart({ items: [], id: 0, user_id: 0 });
+      setCart(getEmptyCart());
     } finally {
       setIsLoading(false);
     }
@@ -169,7 +178,7 @@ const CartPage: React.FC = () => {
     
     try {
       await api.cart.clear();
-      setCart({ items: [], id: 0, user_id: 0 });
+      setCart(getEmptyCart());
       removePromoCode();
       toast.success('Cart cleared');
     } catch (error: any) {
