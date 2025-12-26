@@ -15,7 +15,7 @@ import {
   RefreshCw,
   Navigation,
   Battery,
-  Speedometer
+  Gauge // Changed from Speedometer to Gauge
 } from 'lucide-react';
 
 interface Delivery {
