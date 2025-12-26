@@ -16,7 +16,7 @@ import {
   RefreshCw,
   Navigation,
   Battery,
-  Speedometer
+  Gauge
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -382,7 +382,7 @@ export default function OrderDetailPage() {
                               <span>{liveTracking.driver_info.vehicle.type} • {liveTracking.driver_info.vehicle.number}</span>
                             </div>
                             <div className="flex items-center text-sm">
-                              <Speedometer className="w-4 h-4 mr-1 text-gray-400" />
+                              <Gauge className="w-4 h-4 mr-1 text-gray-400" />
                               <span>{liveTracking.driver_info.rating}/5</span>
                             </div>
                           </div>
