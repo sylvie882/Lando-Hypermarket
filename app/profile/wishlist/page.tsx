@@ -19,7 +19,7 @@ import {
   AlertCircle,
   ExternalLink
 } from 'lucide-react';
-import ProductCard from '@/components/product/ProductCard';
+import ProductCard from '@/components/ui/ProductCard';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
