@@ -324,28 +324,51 @@ export default function BannersPage() {
         </div>
       )}
 
-      {/* Stats Overview */}
+      {/* Stats Overview - Using simple cards instead of DashboardCard */}
       <div className="grid grid-cols-1 gap-6 mb-6 md:grid-cols-4">
-        <DashboardCard 
-          title="Total Banners" 
-          value={stats.total.toString()} 
-          icon={<ImageIcon className="text-blue-600" size={24} />}
-        />
-        <DashboardCard 
-          title="Active Banners" 
-          value={stats.active.toString()} 
-          icon={<Eye className="text-green-600" size={24} />}
-        />
-        <DashboardCard 
-          title="Total Clicks" 
-          value={stats.total_clicks.toLocaleString()} 
-          icon={<div className="text-purple-600 text-lg">👆</div>}
-        />
-        <DashboardCard 
-          title="Total Impressions" 
-          value={stats.total_impressions.toLocaleString()} 
-          icon={<div className="text-yellow-600 text-lg">👁️</div>}
-        />
+        {[
+          { 
+            title: "Total Banners", 
+            value: stats.total.toString(), 
+            icon: <ImageIcon className="text-blue-600" size={24} />,
+            bgColor: "bg-blue-50",
+            borderColor: "border-blue-200"
+          },
+          { 
+            title: "Active Banners", 
+            value: stats.active.toString(), 
+            icon: <Eye className="text-green-600" size={24} />,
+            bgColor: "bg-green-50",
+            borderColor: "border-green-200"
+          },
+          { 
+            title: "Total Clicks", 
+            value: stats.total_clicks.toLocaleString(), 
+            icon: <div className="text-purple-600 text-lg">👆</div>,
+            bgColor: "bg-purple-50",
+            borderColor: "border-purple-200"
+          },
+          { 
+            title: "Total Impressions", 
+            value: stats.total_impressions.toLocaleString(), 
+            icon: <div className="text-yellow-600 text-lg">👁️</div>,
+            bgColor: "bg-yellow-50",
+            borderColor: "border-yellow-200"
+          }
+        ].map((stat, index) => (
+          <div 
+            key={index} 
+            className={`bg-white rounded-lg border ${stat.borderColor} p-6`}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm font-medium text-gray-600">{stat.title}</div>
+              <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                {stat.icon}
+              </div>
+            </div>
+            <div className="text-3xl font-bold text-gray-900">{stat.value}</div>
+          </div>
+        ))}
       </div>
 
       {/* Filters and Search */}
