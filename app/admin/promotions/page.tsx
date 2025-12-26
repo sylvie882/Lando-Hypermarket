@@ -4,25 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import PromotionForm from '@/components/admin/PromotionForm';
 import { Plus, Edit, Trash2, Calendar, Percent, Tag, Filter, Search } from 'lucide-react';
+import type { Promotion } from '@/types'; // Import the shared type
 
-interface Promotion {
-  id: number;
-  code: string;
-  name: string;
-  description: string;
-  type: string;
-  discount_value: number;
-  minimum_order_amount: number | null;
-  min_order_amount: number | null;
-  max_discount_amount: number | null;
-  usage_limit: number | null;
-  valid_from: string;
-  valid_until: string;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
-  used_count: number;
-}
+// REMOVE the local Promotion interface - use the imported one instead
 
 export default function PromotionsPage() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -135,7 +119,7 @@ export default function PromotionsPage() {
 
   const formatDiscount = (promotion: Promotion) => {
     const type = promotion.type;
-    const value = promotion.discount_value;
+    const value = promotion.discount_value || 0;
     
     if (type === 'percentage') {
       return `${value}%`;
@@ -168,8 +152,8 @@ export default function PromotionsPage() {
   };
 
   const getStatus = (promotion: Promotion) => {
-    if (isExpired(promotion.valid_until || promotion.end_date)) return 'Expired';
-    if (isUpcoming(promotion.valid_from || promotion.start_date)) return 'Upcoming';
+    if (isExpired(promotion.valid_until)) return 'Expired';
+    if (isUpcoming(promotion.valid_from)) return 'Upcoming';
     if (!promotion.is_active) return 'Inactive';
     return 'Active';
   };
@@ -182,12 +166,9 @@ export default function PromotionsPage() {
 
   // Safely get date for display
   const getDateDisplay = (promotion: Promotion) => {
-    const startDate = promotion.valid_from || promotion.start_date;
-    const endDate = promotion.valid_until || promotion.end_date;
-    
     return {
-      start: startDate ? new Date(startDate).toLocaleDateString() : 'N/A',
-      end: endDate ? new Date(endDate).toLocaleDateString() : 'N/A'
+      start: promotion.valid_from ? new Date(promotion.valid_from).toLocaleDateString() : 'N/A',
+      end: promotion.valid_until ? new Date(promotion.valid_until).toLocaleDateString() : 'N/A'
     };
   };
 
@@ -375,15 +356,6 @@ export default function PromotionsPage() {
                           </div>
                         </div>
                       )}
-
-                      {promotion.max_discount_amount && promotion.type === 'percentage' && (
-                        <div>
-                          <div className="text-sm text-gray-600">Max Discount</div>
-                          <div className="font-medium text-gray-900">
-                            ${promotion.max_discount_amount.toFixed(2)}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -392,12 +364,12 @@ export default function PromotionsPage() {
                       <button
                         onClick={() => togglePromotionStatus(promotion)}
                         className={`px-3 py-1 text-sm rounded ${
-                          promotion.is_active && !isExpired(promotion.valid_until || promotion.end_date) && !isUpcoming(promotion.valid_from || promotion.start_date)
+                          promotion.is_active && !isExpired(promotion.valid_until) && !isUpcoming(promotion.valid_from)
                             ? 'text-yellow-700 bg-yellow-100 hover:bg-yellow-200'
                             : 'text-green-700 bg-green-100 hover:bg-green-200'
                         }`}
                       >
-                        {promotion.is_active && !isExpired(promotion.valid_until || promotion.end_date) && !isUpcoming(promotion.valid_from || promotion.start_date) 
+                        {promotion.is_active && !isExpired(promotion.valid_until) && !isUpcoming(promotion.valid_from) 
                           ? 'Deactivate' 
                           : 'Activate'}
                       </button>
