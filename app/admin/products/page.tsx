@@ -4,7 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import axios from 'axios';
 // Import both the component and the Product type from ProductTable
-import ProductTable, { Product } from '@/components/admin/ProductTable';
+import ProductTable from '@/components/admin/ProductTable';
+
+import Product from "@/components/admin/ProductTable";
 import ProductForm from '@/components/admin/ProductForm';
 import BulkUpload from '@/components/admin/BulkUpload';
 import { 
