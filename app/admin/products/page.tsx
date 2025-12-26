@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import axios from 'axios';
-// CORRECTED: Import the component as default, and the type separately
+// Import the shared Product type from your types
+import type { Product } from '@/types';
 import ProductTable from '@/components/admin/ProductTable';
-import type { Product } from '@/components/admin/ProductTable'; // Import type explicitly
 import ProductForm from '@/components/admin/ProductForm';
 import BulkUpload from '@/components/admin/BulkUpload';
 import { 
@@ -20,8 +20,6 @@ import {
   ChevronRight
 } from 'lucide-react';
 import debounce from 'lodash/debounce';
-
-// REMOVED the local Product interface - using imported one instead
 
 // Image compression utility
 const compressImage = async (file: File, maxWidth: number = 1200, maxSizeKB: number = 500): Promise<File> => {
@@ -258,10 +256,14 @@ export default function ProductsPage() {
         productsArray = [];
       }
       
+      // Ensure all products have proper gallery arrays and URLs
       const normalizedProducts = productsArray.map(product => ({
         ...product,
         gallery: Array.isArray(product.gallery) ? product.gallery : [],
-        thumbnail: product.thumbnail || '/images/default-product.png'
+        thumbnail: product.thumbnail || '/images/default-product.png',
+        // Ensure we have computed URLs
+        main_image: product.main_image || product.thumbnail || '/images/default-product.png',
+        gallery_urls: product.gallery_urls || product.gallery || []
       }));
       
       setProducts(normalizedProducts);
