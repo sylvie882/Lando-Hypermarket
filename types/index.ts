@@ -37,13 +37,15 @@ export interface Product {
   category?: Category;
   vendor?: User;
   created_at: string;
-  updated_at: string;
+  updated_at: string;  
+  final_price?: number | string; // Add this
 
    images?: string[]; // Array of image URLs
   attributes?: Record<string, any>; // For specifications tab
+  is_free_shipping?: boolean;
+
   
   // Computed attributes from Laravel accessors
-  final_price?: number;
   is_in_stock?: boolean;
   main_image?: string; // Full URL from getMainImageAttribute()
   gallery_urls?: string[]; // Full URLs from getGalleryUrlsAttribute()

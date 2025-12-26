@@ -25,14 +25,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
 
   // Use Laravel's computed attributes
   const finalPrice = product.final_price || product.discounted_price || product.price;
-  const price = parseFloat(product.price.toString());
-  const finalPriceNum = typeof finalPrice === 'number' ? finalPrice : parseFloat(finalPrice.toString());
+  const price = typeof product.price === 'number' ? product.price : parseFloat(String(product.price || 0));
+  const finalPriceNum = typeof finalPrice === 'number' ? finalPrice : parseFloat(String(finalPrice || 0));
   
-  const discountPercentage = product.discounted_price
+  const discountPercentage = product.discounted_price && price > 0
     ? Math.round(((price - finalPriceNum) / price) * 100)
     : 0;
 
-  const stockQuantity = parseInt(product.stock_quantity.toString());
+  const stockQuantity = typeof product.stock_quantity === 'number' 
+    ? product.stock_quantity 
+    : parseInt(String(product.stock_quantity || 0));
   const isInStock = product.is_in_stock !== undefined ? product.is_in_stock : stockQuantity > 0;
 
   // Safely handle rating - convert to number
@@ -66,8 +68,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
       }
 
       // Check if user has purchased this product
-      const ordersResponse = await api.orders.getUserOrders();
-      const deliveredOrders = ordersResponse.data.filter((order: any) => 
+      const ordersResponse = await api.orders.getAll({
+        per_page: 100,
+        status: 'delivered,completed',
+      });
+      
+      // Handle different response structures
+      let ordersData = [];
+      if (ordersResponse.data.data && Array.isArray(ordersResponse.data.data)) {
+        ordersData = ordersResponse.data.data;
+      } else if (Array.isArray(ordersResponse.data)) {
+        ordersData = ordersResponse.data;
+      } else if (ordersResponse.data.orders && Array.isArray(ordersResponse.data.orders)) {
+        ordersData = ordersResponse.data.orders;
+      }
+
+      const deliveredOrders = ordersData.filter((order: any) => 
         order.status === 'delivered' || order.status === 'completed'
       );
 
