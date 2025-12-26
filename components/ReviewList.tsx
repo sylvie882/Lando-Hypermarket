@@ -30,28 +30,30 @@ const ReviewList: React.FC<ReviewListProps> = ({ productId, productName, product
   }, [productId, filter, sort, page]);
 
   const fetchReviews = async () => {
-    try {
-      setLoading(true);
-      const response = await api.reviews.getProductReviews(productId, {
-        rating: filter !== 'all' ? filter : undefined,
-        sort,
-        page,
-        per_page: 10,
-      });
-      
-      if (page === 1) {
-        setReviews(response.data.data || response.data);
-      } else {
-        setReviews(prev => [...prev, ...(response.data.data || response.data)]);
-      }
-      
-      setHasMore(response.data.next_page_url ? true : false);
-    } catch (error) {
-      console.error('Failed to fetch reviews:', error);
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    // Use api.reviews.getAll with product_id parameter
+    const response = await api.reviews.getAll({
+      product_id: productId,
+      rating: filter !== 'all' ? filter : undefined,
+      sort,
+      page,
+      per_page: 10,
+    });
+    
+    if (page === 1) {
+      setReviews(response.data.data || response.data);
+    } else {
+      setReviews(prev => [...prev, ...(response.data.data || response.data)]);
     }
-  };
+    
+    setHasMore(response.data.next_page_url ? true : false);
+  } catch (error) {
+    console.error('Failed to fetch reviews:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchStats = async () => {
     try {
