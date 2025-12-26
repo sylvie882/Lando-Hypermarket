@@ -140,55 +140,59 @@ const CheckoutPage: React.FC = () => {
   };
 
   const handleApplyPromo = async () => {
-    if (!promoCode.trim()) {
-      toast.error('Please enter a promo code');
-      return;
-    }
+  if (!promoCode.trim()) {
+    toast.error('Please enter a promo code');
+    return;
+  }
+  
+  try {
+    console.log('Applying promo code:', promoCode);
     
-    try {
-      console.log('Applying promo code:', promoCode);
+    // Calculate subtotal
+    const subtotal = cart ? cart.items.reduce((sum, item) => {
+      const price = typeof item.price === 'string' ? parseFloat(item.price) : Number(item.price);
+      const quantity = Number(item.quantity);
+      return sum + (price * quantity);
+    }, 0) : 0;
+    
+    // CORRECTED: Pass as a single object with code and order_amount
+    const response = await api.promotions.validate({
+      code: promoCode,
+      order_amount: subtotal
+    });
+    
+    console.log('Promotion validation response:', response.data);
+    
+    if (response.data.valid) {
+      setAppliedPromo(response.data.promotion);
       
-      // Calculate subtotal
-      const subtotal = cart ? cart.items.reduce((sum, item) => {
-        const price = typeof item.price === 'string' ? parseFloat(item.price) : Number(item.price);
-        const quantity = Number(item.quantity);
-        return sum + (price * quantity);
-      }, 0) : 0;
-      
-      // Use the correct API endpoint
-      const response = await api.promotions.validate(promoCode, subtotal);
-      console.log('Promotion validation response:', response.data);
-      
-      if (response.data.valid) {
-        setAppliedPromo(response.data.promotion);
-        
-        // Calculate actual discount amount
-        let discount = 0;
-        const promo = response.data.promotion;
-        if (promo.type === 'percentage') {
-          discount = subtotal * (promo.discount_value / 100);
-          // Apply max discount if set
-          if (promo.max_discount_amount && discount > promo.max_discount_amount) {
-            discount = promo.max_discount_amount;
-          }
-        } else if (promo.type === 'fixed_amount') {
-          discount = promo.discount_value;
+      // Calculate actual discount amount
+      let discount = 0;
+      const promo = response.data.promotion;
+      if (promo.type === 'percentage') {
+        discount = subtotal * (promo.discount_value / 100);
+        // Apply max discount if set
+        if (promo.max_discount_amount && discount > promo.max_discount_amount) {
+          discount = promo.max_discount_amount;
         }
-        
-        setAppliedDiscount(discount);
-        toast.success(`Promo code applied! Discount: $${discount.toFixed(2)}`);
-      } else {
-        toast.error(response.data.message || 'Invalid promo code');
-        setAppliedPromo(null);
-        setAppliedDiscount(0);
+      } else if (promo.type === 'fixed_amount') {
+        discount = promo.discount_value;
       }
-    } catch (error: any) {
-      console.error('Promo code error:', error);
-      toast.error(error.response?.data?.message || 'Failed to apply promo code');
+      
+      setAppliedDiscount(discount);
+      toast.success(`Promo code applied! Discount: $${discount.toFixed(2)}`);
+    } else {
+      toast.error(response.data.message || 'Invalid promo code');
       setAppliedPromo(null);
       setAppliedDiscount(0);
     }
-  };
+  } catch (error: any) {
+    console.error('Promo code error:', error);
+    toast.error(error.response?.data?.message || 'Failed to apply promo code');
+    setAppliedPromo(null);
+    setAppliedDiscount(0);
+  }
+};
 
   const removePromoCode = () => {
     setAppliedPromo(null);
