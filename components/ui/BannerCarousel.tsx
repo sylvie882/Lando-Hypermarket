@@ -80,7 +80,7 @@ const BannerCarousel: React.FC = () => {
     }
   };
 
-  // Get the correct image URL
+  // FIXED: Simplified getImageUrl function
   const getImageUrl = (banner: Banner, isMobile = false): string => {
     // Try image_url from API first
     if (!isMobile && banner.image_url) {
@@ -93,7 +93,7 @@ const BannerCarousel: React.FC = () => {
       return banner.mobile_image_url;
     }
     
-    // Fallback: Construct URL from image path
+    // Fallback: Use the API service's getImageUrl method
     const imagePath = isMobile ? banner.mobile_image || banner.image : banner.image;
     
     if (!imagePath) {
@@ -101,27 +101,8 @@ const BannerCarousel: React.FC = () => {
       return 'https://via.placeholder.com/1200x600/4F46E5/FFFFFF?text=No+Image';
     }
     
-    // Check if already a full URL
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      console.log('Image is already full URL:', imagePath);
-      return imagePath;
-    }
-    
-    // Construct full URL - FIXED VERSION
-    const baseUrl = 'https://api.hypermarket.co.ke';
-    const cleanPath = imagePath.replace(/^\//, ''); // Remove leading slash
-    
-    // Check if path already includes 'storage'
-    if (cleanPath.startsWith('storage/')) {
-      const url = `${baseUrl}/${cleanPath}`;
-      console.log('Constructed URL (with storage):', url);
-      return url;
-    }
-    
-    // Otherwise add storage prefix
-    const url = `${baseUrl}/storage/${cleanPath}`;
-    console.log('Constructed URL (added storage):', url);
-    return url;
+    // Use the API service's method - this should work correctly
+    return api.getImageUrl(imagePath, 'https://via.placeholder.com/1200x600/4F46E5/FFFFFF?text=Banner+Image');
   };
 
   const nextSlide = () => {
