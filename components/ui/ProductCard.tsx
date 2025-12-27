@@ -324,75 +324,75 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
                 Reviewed
               </div>
             )}
+          </div>
+        </Link>
 
-            {/* Quick Actions Overlay */}
-            {showActions && (
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                <div className="flex items-center space-x-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+        {/* ALWAYS VISIBLE Floating Action Button at bottom of image */}
+        {showActions && (
+          <div className="absolute bottom-0 left-0 right-0">
+            <div className="relative">
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent h-24"></div>
+              
+              {/* Floating button container */}
+              <div className="relative px-4 pb-4 pt-10">
+                <div className="flex justify-center space-x-2">
                   <button
                     onClick={handleAddToCart}
                     disabled={isAddingToCart || !isInStock}
-                    className="bg-white p-3 rounded-full shadow-xl hover:bg-primary-50 hover:scale-110 transition-all duration-200 disabled:opacity-50"
-                    title="Add to cart"
+                    className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      isInStock 
+                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white' 
+                        : 'bg-gray-600 text-white'
+                    }`}
                   >
-                    <ShoppingCart size={20} className="text-primary-600" />
+                    {isAddingToCart ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart size={16} />
+                        {!isInStock ? 'Out of Stock' : 'Add to Cart'}
+                      </>
+                    )}
                   </button>
-                  <button
-                    onClick={handleAddToWishlist}
-                    disabled={isAddingToWishlist}
-                    className="bg-white p-3 rounded-full shadow-xl hover:bg-primary-50 hover:scale-110 transition-all duration-200"
-                    title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-                  >
-                    <Heart
-                      size={20}
-                      className={inWishlist ? 'text-red-500 fill-red-500' : 'text-gray-600'}
-                    />
-                  </button>
-                  <Link
-                    href={`/products/${product.id}`}
-                    className="bg-white p-3 rounded-full shadow-xl hover:bg-primary-50 hover:scale-110 transition-all duration-200"
-                    title="View details"
-                  >
-                    <Eye size={20} className="text-gray-600" />
-                  </Link>
-
-                  {/* Review Button */}
-                  {showActions && isAuthenticated && (
+                  
+                  {/* Quick action buttons */}
+                  <div className="flex space-x-2">
                     <button
-                      onClick={handleReviewClick}
-                      disabled={!canReview}
-                      className={`bg-white p-3 rounded-full shadow-xl hover:scale-110 transition-all duration-200 ${
-                        userReview 
-                          ? 'bg-yellow-50 hover:bg-yellow-100' 
-                          : canReview 
-                            ? 'hover:bg-yellow-50' 
-                            : 'opacity-50 cursor-not-allowed'
+                      onClick={handleAddToWishlist}
+                      disabled={isAddingToWishlist}
+                      className={`p-2.5 rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 ${
+                        inWishlist 
+                          ? 'bg-red-50 text-red-500 hover:bg-red-100' 
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
                       }`}
-                      title={
-                        userReview 
-                          ? 'You already reviewed this product' 
-                          : canReview 
-                            ? 'Write a review' 
-                            : 'Purchase product to review'
-                      }
+                      title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
                     >
-                      <Star
-                        size={20}
-                        className={
-                          userReview 
-                            ? 'text-yellow-500 fill-yellow-500' 
-                            : canReview 
-                              ? 'text-yellow-400' 
-                              : 'text-gray-400'
-                        }
+                      <Heart
+                        size={16}
+                        className={inWishlist ? 'fill-red-500' : ''}
                       />
                     </button>
-                  )}
+                    
+                    <Link
+                      href={`/products/${product.id}`}
+                      className="p-2.5 bg-white text-gray-700 hover:bg-gray-50 rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
+                      title="View details"
+                    >
+                      <Eye size={16} />
+                    </Link>
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
-        </Link>
+        )}
       </div>
 
       {/* Product Info Section */}
@@ -510,33 +510,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
               </div>
             )}
           </div>
-
-          {/* Review Modal */}
-          <ReviewModal
-            isOpen={showReviewModal}
-            onClose={() => {
-              setShowReviewModal(false);
-              // Refresh review status after modal closes
-              if (isAuthenticated) {
-                checkUserReviewStatus();
-              }
-            }}
-            productId={product.id}
-            productName={product.name}
-            productImage={imageUrl}
-            existingReview={userReview}
-            onSuccess={() => {
-              toast.success(userReview ? 'Review updated!' : 'Review submitted!');
-              checkUserReviewStatus();
-            }}
-          />
-
-          {/* Add to Cart Button */}
+          
+          {/* Bottom "Add to Cart" Button (still visible for mobile/touch) */}
           {showActions && (
             <button
               onClick={handleAddToCart}
               disabled={isAddingToCart || !isInStock}
-              className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-2.5 px-4 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02] flex items-center justify-center"
+              className="md:hidden w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-2.5 px-4 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02] flex items-center justify-center"
             >
               {isAddingToCart ? (
                 <span className="flex items-center justify-center">
@@ -554,9 +534,28 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
               )}
             </button>
           )}
-          
         </div>
       </div>
+
+      {/* Review Modal */}
+      <ReviewModal
+        isOpen={showReviewModal}
+        onClose={() => {
+          setShowReviewModal(false);
+          // Refresh review status after modal closes
+          if (isAuthenticated) {
+            checkUserReviewStatus();
+          }
+        }}
+        productId={product.id}
+        productName={product.name}
+        productImage={imageUrl}
+        existingReview={userReview}
+        onSuccess={() => {
+          toast.success(userReview ? 'Review updated!' : 'Review submitted!');
+          checkUserReviewStatus();
+        }}
+      />
     </div>
   );
 };

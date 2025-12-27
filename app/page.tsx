@@ -302,262 +302,406 @@ const HomePage: React.FC = () => {
       </button>
 
       {/* SIMPLIFIED BANNER SECTION */}
-      <section className="relative">
-        {banners.length > 0 ? (
-          <>
-            {/* Desktop Banner */}
-            <div className="hidden md:block relative h-[600px] overflow-hidden">
-              {banners.map((banner, index) => {
-                const imageUrl = getBannerImageUrl(banner, false);
-                const hasError = imageErrors.has(banner.id);
-                
-                return (
-                  <div
-                    key={banner.id}
-                    className={`absolute inset-0 transition-opacity duration-700 ${
-                      index === activeBannerIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                    }`}
-                  >
-                    {hasError ? (
-                      <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-orange-600 flex items-center justify-center">
-                        <div className="text-center text-white p-8">
-                          <h2 className="text-3xl font-bold mb-4">{banner.title}</h2>
-                          <p className="text-xl">Image failed to load</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        {/* Use img tag instead of background-image */}
-                        <img
-                          src={imageUrl}
-                          alt={banner.title}
-                          className="absolute inset-0 w-full h-full object-cover"
-                          onError={() => handleImageError(banner.id)}
-                          onLoad={() => console.log(`✅ Banner ${banner.id} loaded`)}
-                        />
-                        
-                        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30" />
-                        
-                        <div className="relative h-full flex items-center">
-                          <div className="container mx-auto px-8">
-                            <div className="max-w-2xl">
-                              <h1 className="text-5xl font-bold mb-6 text-white">
-                                {banner.title}
-                              </h1>
-                              {banner.subtitle && (
-                                <p className="text-2xl mb-10 text-white">
-                                  {banner.subtitle}
-                                </p>
-                              )}
-                              {banner.button_text && (
-                                <a
-                                  href={banner.button_link || '#'}
-                                  className="inline-flex items-center bg-white text-orange-600 px-8 py-4 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 text-lg"
-                                  onClick={() => handleBannerClick(banner.id)}
-                                >
-                                  {banner.button_text}
-                                  <ArrowRight className="ml-3" size={22} />
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </>
-                    )}
+<section className="relative">
+  {banners.length > 0 ? (
+    <>
+      {/* Desktop Banner - Reduced height */}
+      <div className="hidden md:block relative h-[400px] overflow-hidden">
+        {banners.map((banner, index) => {
+          const imageUrl = getBannerImageUrl(banner, false);
+          const hasError = imageErrors.has(banner.id);
+          
+          return (
+            <div
+              key={banner.id}
+              className={`absolute inset-0 transition-opacity duration-700 ${
+                index === activeBannerIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              }`}
+            >
+              {hasError ? (
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-orange-600 flex items-center justify-center">
+                  <div className="text-center text-white p-8">
+                    <h2 className="text-3xl font-bold mb-4">{banner.title}</h2>
+                    <p className="text-xl">Image failed to load</p>
                   </div>
-                );
-              })}
-              
-              {/* Navigation */}
-              {banners.length > 1 && (
+                </div>
+              ) : (
                 <>
-                  <button
-                    onClick={prevBanner}
-                    className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-white text-orange-600 p-3 rounded-full shadow-lg z-20"
-                    aria-label="Previous banner"
-                  >
-                    <ChevronLeft size={24} />
-                  </button>
-                  <button
-                    onClick={nextBanner}
-                    className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-white text-orange-600 p-3 rounded-full shadow-lg z-20"
-                    aria-label="Next banner"
-                  >
-                    <ChevronRight size={24} />
-                  </button>
+                  {/* Use img tag instead of background-image */}
+                  <img
+                    src={imageUrl}
+                    alt={banner.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={() => handleImageError(banner.id)}
+                    onLoad={() => console.log(`✅ Banner ${banner.id} loaded`)}
+                  />
                   
-                  <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-3 z-20">
-                    {banners.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setActiveBannerIndex(index)}
-                        className={`w-3 h-3 rounded-full ${
-                          index === activeBannerIndex ? 'bg-white' : 'bg-white/50'
-                        }`}
-                        aria-label={`Go to banner ${index + 1}`}
-                      />
-                    ))}
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30" />
+                  
+                  <div className="relative h-full flex items-center">
+                    <div className="container mx-auto px-8">
+                      <div className="max-w-2xl">
+                        <h1 className="text-4xl font-bold mb-4 text-white">
+                          {banner.title}
+                        </h1>
+                        {banner.subtitle && (
+                          <p className="text-xl mb-8 text-white">
+                            {banner.subtitle}
+                          </p>
+                        )}
+                        {banner.button_text && (
+                          <a
+                            href={banner.button_link || '#'}
+                            className="inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 text-base"
+                            onClick={() => handleBannerClick(banner.id)}
+                          >
+                            {banner.button_text}
+                            <ArrowRight className="ml-3" size={20} />
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </>
               )}
             </div>
+          );
+        })}
+        
+        {/* Navigation */}
+        {banners.length > 1 && (
+          <>
+            <button
+              onClick={prevBanner}
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white text-orange-600 p-2 rounded-full shadow-lg z-20"
+              aria-label="Previous banner"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              onClick={nextBanner}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white text-orange-600 p-2 rounded-full shadow-lg z-20"
+              aria-label="Next banner"
+            >
+              <ChevronRight size={20} />
+            </button>
             
-            {/* Mobile Banner */}
-            <div className="md:hidden relative h-[500px] overflow-hidden">
-              {banners.map((banner, index) => {
-                const imageUrl = getBannerImageUrl(banner, true);
-                const hasError = imageErrors.has(banner.id);
-                
-                return (
-                  <div
-                    key={banner.id}
-                    className={`absolute inset-0 transition-opacity duration-700 ${
-                      index === activeBannerIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                    }`}
-                  >
-                    {hasError ? (
-                      <div className="absolute inset-0 bg-gradient-to-b from-orange-500 to-orange-600 flex items-end pb-8">
-                        <div className="text-white p-6">
-                          <h2 className="text-2xl font-bold mb-2">{banner.title}</h2>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <img
-                          src={imageUrl}
-                          alt={banner.title}
-                          className="absolute inset-0 w-full h-full object-cover"
-                          onError={() => handleImageError(banner.id)}
-                        />
-                        
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
-                        
-                        <div className="relative h-full flex items-end pb-8 px-6">
-                          <div>
-                            <h1 className="text-3xl font-bold mb-4 text-white">
-                              {banner.title}
-                            </h1>
-                            {banner.subtitle && (
-                              <p className="text-base mb-8 text-white">
-                                {banner.subtitle}
-                              </p>
-                            )}
-                            {banner.button_text && (
-                              <a
-                                href={banner.button_link || '#'}
-                                className="inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-lg font-bold hover:bg-gray-50 transition-all duration-300"
-                                onClick={() => handleBannerClick(banner.id)}
-                              >
-                                {banner.button_text}
-                                <ArrowRight className="ml-2" size={18} />
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-              
-              {/* Mobile Dots */}
-              {banners.length > 1 && (
-                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
-                  {banners.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setActiveBannerIndex(index)}
-                      className={`w-2.5 h-2.5 rounded-full ${
-                        index === activeBannerIndex ? 'bg-white' : 'bg-white/50'
-                      }`}
-                      aria-label={`Go to banner ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
+              {banners.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setActiveBannerIndex(index)}
+                  className={`w-2.5 h-2.5 rounded-full ${
+                    index === activeBannerIndex ? 'bg-white' : 'bg-white/50'
+                  }`}
+                  aria-label={`Go to banner ${index + 1}`}
+                />
+              ))}
             </div>
           </>
-        ) : (
-          // Fallback if no banners
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-            <div className="container mx-auto px-4 py-16 md:py-24">
-              <div className="max-w-3xl">
-                <h1 className="text-4xl md:text-6xl font-bold mb-6">
-                  Fresh Farm Produce Delivered Daily
-                </h1>
-                <p className="text-xl mb-10">
-                  Farm-fresh vegetables, fruits, and groceries harvested at peak ripeness
-                </p>
-                <a
-                  href="/products"
-                  className="inline-flex items-center bg-white text-orange-600 px-8 py-4 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 text-lg"
-                >
-                  Shop Now
-                  <ArrowRight className="ml-3" size={22} />
-                </a>
-              </div>
-            </div>
-          </div>
         )}
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900">
-              Why Choose <span className="text-orange-600">Lando Ranch</span>
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              We bring the farm to your table with care, quality, and convenience
-            </p>
-          </div>
+      </div>
+      
+      {/* Mobile Banner - Reduced height */}
+      <div className="md:hidden relative h-[300px] overflow-hidden">
+        {banners.map((banner, index) => {
+          const imageUrl = getBannerImageUrl(banner, true);
+          const hasError = imageErrors.has(banner.id);
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              {
-                icon: <Leaf className="text-green-600" size={40} />,
-                title: '100% Organic',
-                description: 'Chemical-free produce from trusted local farms',
-                color: 'bg-green-50',
-                borderColor: 'border-green-100'
-              },
-              {
-                icon: <Truck className="text-orange-600" size={40} />,
-                title: 'Same-Day Delivery',
-                description: 'Fresh deliveries within hours of harvest',
-                color: 'bg-orange-50',
-                borderColor: 'border-orange-100'
-              },
-              {
-                icon: <Award className="text-amber-600" size={40} />,
-                title: 'Award Winning',
-                description: 'Recognized for quality and sustainability',
-                color: 'bg-amber-50',
-                borderColor: 'border-amber-100'
-              },
-              {
-                icon: <Heart className="text-red-500" size={40} />,
-                title: 'Farm Fresh',
-                description: 'Harvested at peak ripeness for best flavor',
-                color: 'bg-red-50',
-                borderColor: 'border-red-100'
-              }
-            ].map((feature, index) => (
-              <div 
-                key={index} 
-                className={`${feature.color} p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border ${feature.borderColor}`}
-              >
-                <div className="w-20 h-20 rounded-2xl bg-white flex items-center justify-center mb-6 mx-auto shadow-sm">
-                  {feature.icon}
+          return (
+            <div
+              key={banner.id}
+              className={`absolute inset-0 transition-opacity duration-700 ${
+                index === activeBannerIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              }`}
+            >
+              {hasError ? (
+                <div className="absolute inset-0 bg-gradient-to-b from-orange-500 to-orange-600 flex items-end pb-4">
+                  <div className="text-white p-4">
+                    <h2 className="text-xl font-bold mb-1">{banner.title}</h2>
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3 text-center">{feature.title}</h3>
-                <p className="text-gray-600 text-center">{feature.description}</p>
-              </div>
+              ) : (
+                <>
+                  <img
+                    src={imageUrl}
+                    alt={banner.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={() => handleImageError(banner.id)}
+                  />
+                  
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+                  
+                  <div className="relative h-full flex items-end pb-4 px-4">
+                    <div>
+                      <h1 className="text-xl font-bold mb-2 text-white">
+                        {banner.title}
+                      </h1>
+                      {banner.subtitle && (
+                        <p className="text-sm mb-4 text-white">
+                          {banner.subtitle}
+                        </p>
+                      )}
+                      {banner.button_text && (
+                        <a
+                          href={banner.button_link || '#'}
+                          className="inline-flex items-center bg-white text-orange-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-50 transition-all duration-300 text-sm"
+                          onClick={() => handleBannerClick(banner.id)}
+                        >
+                          {banner.button_text}
+                          <ArrowRight className="ml-2" size={16} />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
+        
+        {/* Mobile Dots */}
+        {banners.length > 1 && (
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-1.5 z-20">
+            {banners.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveBannerIndex(index)}
+                className={`w-2 h-2 rounded-full ${
+                  index === activeBannerIndex ? 'bg-white' : 'bg-white/50'
+                }`}
+                aria-label={`Go to banner ${index + 1}`}
+              />
             ))}
           </div>
+        )}
+      </div>
+    </>
+  ) : (
+    // Fallback if no banners - also reduced height
+    <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+      <div className="container mx-auto px-4 py-12 md:py-16">
+        <div className="max-w-3xl">
+          <h1 className="text-3xl md:text-5xl font-bold mb-4">
+            Fresh Farm Produce Delivered Daily
+          </h1>
+          <p className="text-lg md:text-xl mb-8">
+            Farm-fresh vegetables, fruits, and groceries harvested at peak ripeness
+          </p>
+          <a
+            href="/products"
+            className="inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 text-base"
+          >
+            Shop Now
+            <ArrowRight className="ml-3" size={20} />
+          </a>
         </div>
-      </section>
+      </div>
+    </div>
+  )}
+</section>
+
+
+
+
+      {/* Features Section - Redesigned */}
+<section className="py-20 bg-gradient-to-b from-orange-50/50 to-white">
+  <div className="container mx-auto px-4">
+    {/* Header */}
+    <div className="text-center mb-16">
+      {/* <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2 rounded-full mb-6">
+        <CheckCircle size={20} />
+        <span className="text-sm font-semibold">Premium Quality</span>
+      </div> */}
+      <h2 className="text-4xl md:text-6xl font-bold mb-6 text-gray-900">
+        Why <span className="relative inline-block">
+          <span className="relative z-10 text-orange-600">Lando</span>
+          <span className="absolute bottom-0 left-0 w-full h-3 bg-orange-200/60 -rotate-1 -z-0"></span>
+        </span> Stands Out
+      </h2>
+      <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+        Famous and renowned throughout the land for our exceptional quality and service
+      </p>
+    </div>
+    
+    {/* Features Grid */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      {[
+        {
+          icon: <Leaf className="text-green-600" size={48} />,
+          title: '100% Organic',
+          description: 'Purely natural, chemical-free produce from trusted local farms',
+          stats: '100% Natural',
+          gradient: 'from-green-500 to-emerald-600',
+          bgColor: 'bg-gradient-to-br from-green-50 to-emerald-50',
+          borderColor: 'border-green-200',
+          shadowColor: 'shadow-green-100'
+        },
+        {
+          icon: <Truck className="text-orange-600" size={48} />,
+          title: 'Same-Day Delivery',
+          description: 'Harvested & delivered fresh within hours, never frozen',
+          stats: 'Within 24 Hours',
+          gradient: 'from-orange-500 to-amber-600',
+          bgColor: 'bg-gradient-to-br from-orange-50 to-amber-50',
+          borderColor: 'border-orange-200',
+          shadowColor: 'shadow-orange-100'
+        },
+        {
+          icon: <Award className="text-purple-600" size={48} />,
+          title: 'Award Winning',
+          description: 'Recognized for excellence in quality and sustainability',
+          stats: '5+ Awards',
+          gradient: 'from-purple-500 to-violet-600',
+          bgColor: 'bg-gradient-to-br from-purple-50 to-violet-50',
+          borderColor: 'border-purple-200',
+          shadowColor: 'shadow-purple-100'
+        },
+        {
+          icon: <Heart className="text-pink-600" size={48} />,
+          title: 'Farm Fresh',
+          description: 'Harvested at peak ripeness for maximum flavor & nutrition',
+          stats: 'Peak Freshness',
+          gradient: 'from-pink-500 to-rose-600',
+          bgColor: 'bg-gradient-to-br from-pink-50 to-rose-50',
+          borderColor: 'border-pink-200',
+          shadowColor: 'shadow-pink-100'
+        }
+      ].map((feature, index) => (
+        <div 
+          key={index} 
+          className="group relative"
+        >
+          {/* Animated Border */}
+          <div className={`absolute -inset-0.5 bg-gradient-to-r ${feature.gradient} rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-500 group-hover:duration-200`}></div>
+          
+          {/* Main Card */}
+          <div className={`relative ${feature.bgColor} p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 group-hover:-translate-y-2 border ${feature.borderColor} overflow-hidden`}>
+            
+            {/* Floating Icon Container */}
+            <div className="relative mb-8">
+              <div className={`absolute inset-0 bg-gradient-to-r ${feature.gradient} opacity-10 rounded-2xl`}></div>
+              <div className={`relative w-24 h-24 rounded-2xl bg-white shadow-lg flex items-center justify-center mx-auto`}>
+                {feature.icon}
+                
+                {/* Icon Glow Effect */}
+                <div className={`absolute inset-0 bg-gradient-to-r ${feature.gradient} opacity-20 blur-xl rounded-full`}></div>
+              </div>
+              
+              {/* Stats Badge */}
+              <div className={`absolute -bottom-2 right-4 bg-gradient-to-r ${feature.gradient} text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg`}>
+                {feature.stats}
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="relative">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
+                {feature.title}
+              </h3>
+              <p className="text-gray-600 text-center leading-relaxed mb-6">
+                {feature.description}
+              </p>
+              
+              {/* Feature Highlights */}
+              <div className="space-y-3">
+                {feature.title === '100% Organic' && (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-green-700">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span>No pesticides or chemicals</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-green-700">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span>Locally sourced from trusted farms</span>
+                    </div>
+                  </>
+                )}
+                {feature.title === 'Same-Day Delivery' && (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-orange-700">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span>Harvested fresh daily</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-orange-700">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span>Direct farm-to-table delivery</span>
+                    </div>
+                  </>
+                )}
+                {feature.title === 'Award Winning' && (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-purple-700">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <span>Quality excellence awards</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-purple-700">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <span>Sustainability recognition</span>
+                    </div>
+                  </>
+                )}
+                {feature.title === 'Farm Fresh' && (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-pink-700">
+                      <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                      <span>Harvested at peak ripeness</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-pink-700">
+                      <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                      <span>Maximum flavor & nutrition</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            {/* Hover Indicator */}
+            <div className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r ${feature.gradient} rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+          </div>
+          
+          {/* Card Number */}
+          <div className={`absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-r ${feature.gradient} text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10`}>
+            {index + 1}
+          </div>
+        </div>
+      ))}
+    </div>
+    
+    {/* Bottom CTA */}
+    <div className="mt-20 text-center">
+      <div className="inline-flex items-center gap-4 bg-white rounded-2xl shadow-lg px-8 py-4 mb-8">
+        <div className="flex items-center gap-2">
+          <Users className="text-orange-600" size={24} />
+          <span className="text-lg font-bold text-gray-900">10,000+</span>
+          <span className="text-gray-600">Happy Families</span>
+        </div>
+        <div className="h-8 w-px bg-gray-200"></div>
+        <div className="flex items-center gap-2">
+          <ThumbsUp className="text-green-600" size={24} />
+          <span className="text-lg font-bold text-gray-900">98%</span>
+          <span className="text-gray-600">Satisfaction Rate</span>
+        </div>
+        <div className="h-8 w-px bg-gray-200"></div>
+        <div className="flex items-center gap-2">
+          <TrendingUp className="text-blue-600" size={24} />
+          <span className="text-lg font-bold text-gray-900">50+</span>
+          <span className="text-gray-600">Local Farms</span>
+        </div>
+      </div>
+      
+      <a
+        href="/about"
+        className="group inline-flex items-center gap-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-10 py-5 rounded-2xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all duration-300 text-lg shadow-xl hover:shadow-2xl"
+      >
+        <span>Discover Our Story</span>
+        <ArrowRight className="group-hover:translate-x-2 transition-transform duration-300" size={24} />
+      </a>
+    </div>
+  </div>
+</section>
+
+
 
       {/* Featured Categories */}
       <section className="py-16 bg-gray-50">
@@ -582,7 +726,7 @@ const HomePage: React.FC = () => {
           
           {/* Categories Grid */}
           {categories.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {categories
                 .filter(category => category.image)
                 .sort((a, b) => a.name.localeCompare(b.name))
