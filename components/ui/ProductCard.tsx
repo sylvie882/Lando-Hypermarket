@@ -554,6 +554,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
               )}
             </button>
           )}
+          
         </div>
       </div>
     </div>
