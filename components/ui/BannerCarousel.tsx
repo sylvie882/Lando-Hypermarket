@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight, AlertCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 
 interface Banner {
@@ -43,7 +43,6 @@ const BannerCarousel: React.FC = () => {
       
       console.log('Fetching banners...');
       const response = await api.banners.getHomepage();
-      console.log('API Response:', response);
       
       let bannerData: Banner[] = [];
       
@@ -55,21 +54,21 @@ const BannerCarousel: React.FC = () => {
           bannerData = response.data.data;
         } else if (response.data.success && Array.isArray(response.data.data)) {
           bannerData = response.data.data;
+        } else if (typeof response.data === 'object') {
+          bannerData = [response.data];
         }
       }
-      
-      console.log('Processed banners:', bannerData);
       
       // Filter active homepage banners
       const homepageBanners = bannerData
         .filter(banner => 
           banner.is_active && 
           banner.type === 'homepage' &&
-          banner.image
+          (banner.image || banner.image_url)
         )
         .sort((a, b) => a.order - b.order);
       
-      console.log('Homepage banners:', homepageBanners);
+      console.log('Loaded banners:', homepageBanners);
       setBanners(homepageBanners);
       
     } catch (error: any) {
@@ -80,38 +79,41 @@ const BannerCarousel: React.FC = () => {
     }
   };
 
-  // Get the correct image URL
+  // Simple, direct image URL construction
   const getImageUrl = (banner: Banner, isMobile = false): string => {
-    // Try image_url from API first
+    // Priority 1: Use the URL fields from API
     if (!isMobile && banner.image_url) {
-      console.log('Using image_url:', banner.image_url);
       return banner.image_url;
     }
     
     if (isMobile && banner.mobile_image_url) {
-      console.log('Using mobile_image_url:', banner.mobile_image_url);
       return banner.mobile_image_url;
     }
     
-    // Fallback: Construct URL from image path
+    // Priority 2: Construct from image paths
     const imagePath = isMobile ? banner.mobile_image || banner.image : banner.image;
     
     if (!imagePath) {
-      console.warn('No image path found for banner:', banner.id);
-      return '/placeholder-banner.jpg';
+      return '/default-banner.jpg'; // Make sure this file exists in public folder
     }
     
-    // Check if already a full URL
+    // If it's already a full URL, return it
     if (imagePath.startsWith('http')) {
-      console.log('Image is already full URL:', imagePath);
       return imagePath;
     }
     
-    // Construct full URL
-    const baseUrl = ' https://api.hypermarket.co.ke';
-    const url = `${baseUrl}/storage/${imagePath.replace(/^banners\//, 'banners/')}`;
-    console.log('Constructed URL:', url);
-    return url;
+    // Clean the path
+    let cleanPath = imagePath;
+    if (cleanPath.startsWith('/')) {
+      cleanPath = cleanPath.substring(1);
+    }
+    
+    // Direct URL construction - based on your working example
+    const baseUrl = 'https://api.hypermarket.co.ke';
+    const finalUrl = `${baseUrl}/storage/${cleanPath}`;
+    
+    console.log('Generated banner URL:', finalUrl);
+    return finalUrl;
   };
 
   const nextSlide = () => {
@@ -132,48 +134,23 @@ const BannerCarousel: React.FC = () => {
     }
   };
 
-  // Debug: Log image URLs when banners change
+  // Auto-rotate slides
   useEffect(() => {
-    if (banners.length > 0) {
-      console.log('=== DEBUG: Banner Image URLs ===');
-      banners.forEach((banner, index) => {
-        const desktopUrl = getImageUrl(banner, false);
-        const mobileUrl = getImageUrl(banner, true);
-        
-        console.log(`Banner ${index} - ${banner.title}:`, {
-          id: banner.id,
-          image_field: banner.image,
-          image_url_field: banner.image_url,
-          desktopUrl,
-          mobile_image_field: banner.mobile_image,
-          mobile_image_url_field: banner.mobile_image_url,
-          mobileUrl,
-        });
-        
-        // Test if URLs are accessible
-        if (typeof window !== 'undefined') {
-          // Create image elements to test loading
-          const testDesktop = new Image();
-          testDesktop.onload = () => console.log(`✓ Desktop image ${index} loads OK`);
-          testDesktop.onerror = () => console.error(`✗ Desktop image ${index} failed to load`);
-          testDesktop.src = desktopUrl;
-          
-          const testMobile = new Image();
-          testMobile.onload = () => console.log(`✓ Mobile image ${index} loads OK`);
-          testMobile.onerror = () => console.error(`✗ Mobile image ${index} failed to load`);
-          testMobile.src = mobileUrl;
-        }
-      });
-      console.log('=== END DEBUG ===');
-    }
-  }, [banners]);
+    if (banners.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      nextSlide();
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [banners.length]);
 
   if (isLoading) {
     return (
-      <div className="h-[400px] md:h-[600px] bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse">
+      <div className="h-[400px] md:h-[600px] bg-gradient-to-r from-gray-100 to-gray-200 animate-pulse">
         <div className="container mx-auto px-4 h-full flex items-center justify-center">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent"></div>
             <p className="mt-4 text-gray-600">Loading banners...</p>
           </div>
         </div>
@@ -183,16 +160,17 @@ const BannerCarousel: React.FC = () => {
 
   if (error) {
     return (
-      <div className="h-[400px] md:h-[600px] bg-gradient-to-r from-red-500 to-red-600">
+      <div className="h-[400px] md:h-[600px] bg-gradient-to-r from-red-50 to-red-100 border border-red-200">
         <div className="container mx-auto px-4 h-full flex items-center justify-center">
-          <div className="text-center text-white">
-            <h2 className="text-2xl font-bold mb-4">Error Loading Banners</h2>
-            <p className="mb-4">{error}</p>
+          <div className="text-center max-w-md">
+            <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+            <h2 className="text-xl font-bold text-red-800 mb-2">Error Loading Banners</h2>
+            <p className="text-red-600 mb-6">{error}</p>
             <button
               onClick={fetchBanners}
-              className="bg-white text-red-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100"
+              className="bg-orange-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-orange-600 transition-colors"
             >
-              Retry
+              Try Again
             </button>
           </div>
         </div>
@@ -221,7 +199,7 @@ const BannerCarousel: React.FC = () => {
   }
 
   return (
-    <div className="relative overflow-hidden">
+    <div className="relative overflow-hidden group">
       {/* Desktop Banners */}
       <div className="hidden md:block h-[600px]">
         {banners.map((banner, index) => {
@@ -230,16 +208,24 @@ const BannerCarousel: React.FC = () => {
           return (
             <div
               key={banner.id}
-              className={`absolute inset-0 transition-opacity duration-500 ${
-                index === activeIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              className={`absolute inset-0 transition-all duration-500 ease-in-out ${
+                index === activeIndex 
+                  ? 'opacity-100 z-10 translate-x-0' 
+                  : 'opacity-0 z-0 translate-x-full'
               }`}
-              style={{
-                backgroundImage: `url(${imageUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-black/30" />
+              {/* Background Image */}
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                  backgroundImage: `url(${imageUrl})`,
+                }}
+              />
+              
+              {/* Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/20" />
+              
+              {/* Content */}
               <div className="relative h-full flex items-center">
                 <div className="container mx-auto px-4">
                   <div className="max-w-2xl text-white">
@@ -253,9 +239,9 @@ const BannerCarousel: React.FC = () => {
                       <a
                         href={banner.button_link}
                         onClick={() => handleBannerClick(banner.id)}
-                        target="_blank"
+                        target={banner.button_link.startsWith('http') ? '_blank' : '_self'}
                         rel="noopener noreferrer"
-                        className="inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors duration-300"
+                        className="inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-300 hover:scale-105"
                       >
                         {banner.button_text}
                         <ArrowRight className="ml-2" size={20} />
@@ -277,16 +263,24 @@ const BannerCarousel: React.FC = () => {
           return (
             <div
               key={banner.id}
-              className={`absolute inset-0 transition-opacity duration-500 ${
-                index === activeIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              className={`absolute inset-0 transition-all duration-500 ease-in-out ${
+                index === activeIndex 
+                  ? 'opacity-100 z-10 translate-x-0' 
+                  : 'opacity-0 z-0 translate-x-full'
               }`}
-              style={{
-                backgroundImage: `url(${mobileImageUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
             >
-              <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/20" />
+              {/* Background Image */}
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                  backgroundImage: `url(${mobileImageUrl})`,
+                }}
+              />
+              
+              {/* Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
+              
+              {/* Content */}
               <div className="relative h-full flex items-end pb-8">
                 <div className="container mx-auto px-4">
                   <div className="text-white">
@@ -294,13 +288,13 @@ const BannerCarousel: React.FC = () => {
                       {banner.title}
                     </h2>
                     {banner.subtitle && (
-                      <p className="text-base mb-4">{banner.subtitle}</p>
+                      <p className="text-base mb-4 opacity-90">{banner.subtitle}</p>
                     )}
                     {banner.button_text && banner.button_link && (
                       <a
                         href={banner.button_link}
                         onClick={() => handleBannerClick(banner.id)}
-                        target="_blank"
+                        target={banner.button_link.startsWith('http') ? '_blank' : '_self'}
                         rel="noopener noreferrer"
                         className="inline-flex items-center bg-white text-orange-600 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-100 transition-colors duration-300"
                       >
@@ -320,25 +314,29 @@ const BannerCarousel: React.FC = () => {
         <>
           <button
             onClick={prevSlide}
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-all duration-300 z-20"
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition-all duration-300 z-20 opacity-0 group-hover:opacity-100 hover:scale-110"
             aria-label="Previous slide"
           >
             <ChevronLeft size={24} />
           </button>
           <button
             onClick={nextSlide}
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-all duration-300 z-20"
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition-all duration-300 z-20 opacity-0 group-hover:opacity-100 hover:scale-110"
             aria-label="Next slide"
           >
             <ChevronRight size={24} />
           </button>
+          
+          {/* Indicators */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-2 z-20">
             {banners.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setActiveIndex(index)}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  index === activeIndex ? 'bg-white scale-125' : 'bg-white/50'
+                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                  index === activeIndex 
+                    ? 'bg-white scale-125' 
+                    : 'bg-white/50 hover:bg-white/80'
                 }`}
                 aria-label={`Go to slide ${index + 1}`}
               />
