@@ -1,12 +1,22 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
-// Use environment variable directly or fallback - ensure it includes /api
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke/api';
+// CORRECT: Use relative path for browser, absolute for server-side rendering
+const getApiUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    // Browser: use relative path (goes through Vercel proxy: /api → api.hypermarket.co.ke/api)
+    return process.env.NEXT_PUBLIC_API_URL || '/api';
+  } else {
+    // Server-side rendering: direct to API (for SSR/SSG)
+    return process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke/api';
+  }
+};
 
-// Helper to get base URL without /api for storage URLs
+const API_URL = getApiUrl();
+
+// Helper to get base URL for storage (images, files)
 export const getBaseUrl = (): string => {
-  const url = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke/api';
-  return url.replace(/\/api$/, '');
+  // Storage URLs should always point to API domain directly
+  return 'https://api.hypermarket.co.ke';
 };
 
 class ApiService {
@@ -16,7 +26,7 @@ class ApiService {
   constructor() {
     this.baseUrl = getBaseUrl();
     this.api = axios.create({
-      baseURL: API_URL, // This includes /api
+      baseURL: API_URL, // This is either '/api' (browser) or full URL (server)
       headers: {
         'Accept': 'application/json',
       },
@@ -30,6 +40,7 @@ class ApiService {
   getStorageUrl(path: string): string {
     // Remove leading slash if present
     const cleanPath = path.replace(/^\//, '');
+    // Storage URLs always point to API domain
     return `${this.baseUrl}/storage/${cleanPath}`;
   }
 
@@ -44,8 +55,18 @@ class ApiService {
       return imagePath;
     }
     
-    // Otherwise, construct the storage URL
-    return this.getStorageUrl(imagePath);
+    // If it's a Laravel storage path (starts with storage/)
+    if (imagePath.startsWith('storage/')) {
+      return `${this.baseUrl}/${imagePath}`;
+    }
+    
+    // If it's a relative path that needs storage prefix
+    if (imagePath.includes('categories/') || imagePath.includes('products/')) {
+      return `${this.baseUrl}/storage/${imagePath}`;
+    }
+    
+    // Otherwise, assume it's a frontend relative path
+    return imagePath;
   }
 
   private setupInterceptors(): void {
