@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { Product, Category, PaginatedResponse } from '@/types';
+import { Product, Category } from '@/types';
 import ProductCard from '@/components/ui/ProductCard';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import Pagination from '@/components/shared/Pagination';
-import { Filter, Grid, List, ChevronDown, Search, X } from 'lucide-react';
+import { Filter, Grid, List, ChevronDown, Search } from 'lucide-react';
 
 const ProductsPage: React.FC = () => {
   const searchParams = useSearchParams();
@@ -16,6 +16,7 @@ const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     current_page: 1,
     last_page: 1,
@@ -23,179 +24,158 @@ const ProductsPage: React.FC = () => {
     total: 0,
   });
   
-  const [filters, setFilters] = useState({
-    search: searchParams.get('search') || '',
-    category_id: searchParams.get('category_id') || '',
-    min_price: searchParams.get('min_price') || '',
-    max_price: searchParams.get('max_price') || '',
-    in_stock: searchParams.get('in_stock') === 'true',
-    featured: searchParams.get('featured') === 'true',
-    sort: searchParams.get('sort') || 'created_at',
-    order: searchParams.get('order') || 'desc',
-    page: Number(searchParams.get('page')) || 1,
+  // Initialize filters from URL or defaults
+  const [filters, setFilters] = useState(() => {
+    return {
+      search: searchParams?.get('search') || '',
+      category_id: searchParams?.get('category_id') || '',
+      min_price: searchParams?.get('min_price') || '',
+      max_price: searchParams?.get('max_price') || '',
+      in_stock: searchParams?.get('in_stock') === 'true',
+      featured: searchParams?.get('featured') === 'true',
+      sort: searchParams?.get('sort') || 'created_at',
+      order: searchParams?.get('order') || 'desc',
+      page: Number(searchParams?.get('page') || '1'),
+    };
   });
   
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Fetch categories
+  // Fetch categories once on mount
   useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.categories.getAll();
+        if (response.data) {
+          setCategories(Array.isArray(response.data) ? response.data : []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      }
+    };
+    
     fetchCategories();
   }, []);
 
   // Fetch products when filters change
   useEffect(() => {
-    fetchProducts();
-  }, [filters]);
-
-  const fetchCategories = async () => {
-    try {
-      const response = await api.categories.getAll();
-      setCategories(response.data);
-    } catch (error) {
-      console.error('Failed to fetch categories:', error);
-    }
-  };
-
-  const fetchProducts = async () => {
-    setIsLoading(true);
-    try {
-      const params = {
-        search: filters.search,
-        category_id: filters.category_id,
-        min_price: filters.min_price,
-        max_price: filters.max_price,
-        in_stock: filters.in_stock,
-        featured: filters.featured,
-        sort: filters.sort,
-        order: filters.order,
-        page: filters.page,
-        per_page: 12,
-      };
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      setError(null);
       
-      // Remove empty params using reduce (functional approach)
-      const filteredParams = Object.entries(params).reduce((acc, [key, value]) => {
-        if (value !== '' && value !== false && value !== 0) {
-          acc[key] = value;
-        }
-        return acc;
-      }, {} as Record<string, any>);
-      
-      console.log('Fetching products with params:', filteredParams);
-      
-      const response = await api.products.getAll(filteredParams);
-      console.log('Products API Response:', response);
-      
-      // Handle different API response structures
-      let productsData: Product[] = [];
-      let paginationData = {
-        current_page: 1,
-        last_page: 1,
-        per_page: 12,
-        total: 0,
-      };
-      
-      if (response.data) {
-        // Case 1: Laravel paginated response
-        if (response.data.data && Array.isArray(response.data.data)) {
-          productsData = response.data.data;
-          if (response.data.meta) {
+      try {
+        // Build query parameters
+        const params: Record<string, any> = {
+          page: filters.page,
+          per_page: 12,
+        };
+        
+        // Add filters only if they have values
+        if (filters.search.trim()) params.search = filters.search.trim();
+        if (filters.category_id) params.category_id = filters.category_id;
+        if (filters.min_price) params.min_price = filters.min_price;
+        if (filters.max_price) params.max_price = filters.max_price;
+        if (filters.in_stock) params.in_stock = true;
+        if (filters.featured) params.featured = true;
+        if (filters.sort) params.sort = filters.sort;
+        if (filters.order) params.order = filters.order;
+        
+        console.log('Fetching products with params:', params);
+        
+        const response = await api.products.getAll(params);
+        
+        // Handle API response
+        if (response.data) {
+          let productsData: Product[] = [];
+          let paginationData = pagination;
+          
+          // Check for different response structures
+          if (Array.isArray(response.data)) {
+            // Direct array response
+            productsData = response.data;
             paginationData = {
-              current_page: response.data.meta.current_page || response.data.current_page || 1,
-              last_page: response.data.meta.last_page || response.data.last_page || 1,
-              per_page: response.data.meta.per_page || response.data.per_page || 12,
-              total: response.data.meta.total || response.data.total || 0,
+              current_page: 1,
+              last_page: 1,
+              per_page: 12,
+              total: response.data.length,
             };
-          } else {
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            // Laravel paginated response
+            productsData = response.data.data;
+            if (response.data.meta) {
+              paginationData = {
+                current_page: response.data.meta.current_page || 1,
+                last_page: response.data.meta.last_page || 1,
+                per_page: response.data.meta.per_page || 12,
+                total: response.data.meta.total || 0,
+              };
+            } else if (response.data.current_page) {
+              paginationData = {
+                current_page: response.data.current_page,
+                last_page: response.data.last_page || 1,
+                per_page: response.data.per_page || 12,
+                total: response.data.total || 0,
+              };
+            }
+          } else if (response.data.products && Array.isArray(response.data.products)) {
+            // Custom structure with products array
+            productsData = response.data.products;
             paginationData = {
               current_page: response.data.current_page || 1,
               last_page: response.data.last_page || 1,
               per_page: response.data.per_page || 12,
-              total: response.data.total || 0,
+              total: response.data.total || response.data.products.length,
             };
           }
+          
+          console.log('Setting products:', productsData.length);
+          console.log('Setting pagination:', paginationData);
+          
+          setProducts(productsData);
+          setPagination(paginationData);
+          
+          // Update URL with current filters (without page refresh)
+          const newParams = new URLSearchParams();
+          Object.entries(params).forEach(([key, value]) => {
+            if (value !== undefined && value !== '') {
+              newParams.set(key, String(value));
+            }
+          });
+          
+          // Always include page parameter
+          newParams.set('page', String(filters.page));
+          
+          const newUrl = `/products?${newParams.toString()}`;
+          router.replace(newUrl, { scroll: false });
+          
+        } else {
+          setError('No data received from server');
+          setProducts([]);
         }
-        // Case 2: Direct array response
-        else if (Array.isArray(response.data)) {
-          productsData = response.data;
-          paginationData = {
-            current_page: 1,
-            last_page: 1,
-            per_page: response.data.length,
-            total: response.data.length,
-          };
-        }
-        // Case 3: Direct object with products array
-        else if (response.data.products && Array.isArray(response.data.products)) {
-          productsData = response.data.products;
-          paginationData = {
-            current_page: response.data.current_page || 1,
-            last_page: response.data.last_page || 1,
-            per_page: response.data.per_page || 12,
-            total: response.data.total || response.data.products.length || 0,
-          };
-        }
+        
+      } catch (error: any) {
+        console.error('Failed to fetch products:', error);
+        setError(error.message || 'Failed to load products');
+        setProducts([]);
+      } finally {
+        setIsLoading(false);
       }
-      
-      console.log('Processed products:', productsData.length);
-      console.log('Processed pagination:', paginationData);
-      
-      setProducts(productsData);
-      setPagination(paginationData);
-      
-      // Update URL with current filters
-      const newParams = new URLSearchParams();
-      Object.entries(filteredParams).forEach(([key, value]) => {
-        if (value && value !== '') {
-          newParams.set(key, String(value));
-        }
-      });
-      
-      // Always include page parameter
-      newParams.set('page', String(filters.page));
-      
-      const newUrl = `/products?${newParams.toString()}`;
-      console.log('Updating URL to:', newUrl);
-      router.push(newUrl, { scroll: false });
-      
-    } catch (error: any) {
-      console.error('Failed to fetch products:', error);
-      
-      if (error.response) {
-        console.error('Error response:', {
-          status: error.response.status,
-          data: error.response.data,
-          headers: error.response.headers
-        });
-      } else if (error.request) {
-        console.error('Error request:', error.request);
-      } else {
-        console.error('Error message:', error.message);
-      }
-      
-      // Set empty products on error
-      setProducts([]);
-      setPagination(prev => ({
-        ...prev,
-        current_page: 1,
-        total: 0,
-      }));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+    
+    fetchProducts();
+  }, [filters, router]);
 
-  const handleFilterChange = (key: string, value: any) => {
-    console.log(`Filter changed: ${key} = ${value}`);
+  const handleFilterChange = (key: keyof typeof filters, value: any) => {
+    console.log(`Filter change: ${key} = ${value}`);
     
     setFilters(prev => {
       const newFilters = {
         ...prev,
         [key]: value,
-        ...(key !== 'page' ? { page: 1 } : {}), // Reset to page 1 for filter changes
+        ...(key !== 'page' ? { page: 1 } : {}), // Reset to page 1 for non-page changes
       };
       
-      console.log('New filters:', newFilters);
       return newFilters;
     });
   };
@@ -216,24 +196,24 @@ const ProductsPage: React.FC = () => {
   };
 
   const handlePageChange = (page: number) => {
-    console.log(`Changing to page ${page}`);
+    console.log(`Page change to: ${page}`);
     handleFilterChange('page', page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const sortOptions = [
-    { value: 'created_at', label: 'Newest' },
-    { value: 'price', label: 'Price: Low to High' },
-    { value: 'price_desc', label: 'Price: High to Low' },
-    { value: 'rating', label: 'Highest Rated' },
-    { value: 'sold_count', label: 'Most Popular' },
+    { value: 'created_at', label: 'Newest', sort: 'created_at', order: 'desc' },
+    { value: 'price_asc', label: 'Price: Low to High', sort: 'price', order: 'asc' },
+    { value: 'price_desc', label: 'Price: High to Low', sort: 'price', order: 'desc' },
+    { value: 'rating', label: 'Highest Rated', sort: 'rating', order: 'desc' },
+    { value: 'sold_count', label: 'Most Popular', sort: 'sold_count', order: 'desc' },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Filters Sidebar */}
+          {/* Filters Sidebar - Mobile/Desktop */}
           <div className={`lg:w-1/4 ${showFilters ? 'block' : 'hidden lg:block'}`}>
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-24">
               <div className="flex justify-between items-center mb-6">
@@ -293,6 +273,7 @@ const ProductsPage: React.FC = () => {
                     value={filters.min_price}
                     onChange={(e) => handleFilterChange('min_price', e.target.value)}
                     placeholder="Min"
+                    min="0"
                     className="px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                   <input
@@ -300,6 +281,7 @@ const ProductsPage: React.FC = () => {
                     value={filters.max_price}
                     onChange={(e) => handleFilterChange('max_price', e.target.value)}
                     placeholder="Max"
+                    min="0"
                     className="px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
@@ -307,7 +289,7 @@ const ProductsPage: React.FC = () => {
 
               {/* Availability */}
               <div className="mb-6">
-                <div className="flex items-center">
+                <label className="flex items-center cursor-pointer">
                   <input
                     type="checkbox"
                     id="in_stock"
@@ -315,15 +297,15 @@ const ProductsPage: React.FC = () => {
                     onChange={(e) => handleFilterChange('in_stock', e.target.checked)}
                     className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="in_stock" className="ml-2 text-sm text-gray-700">
+                  <span className="ml-2 text-sm text-gray-700">
                     In Stock Only
-                  </label>
-                </div>
+                  </span>
+                </label>
               </div>
 
               {/* Featured */}
               <div className="mb-6">
-                <div className="flex items-center">
+                <label className="flex items-center cursor-pointer">
                   <input
                     type="checkbox"
                     id="featured"
@@ -331,10 +313,10 @@ const ProductsPage: React.FC = () => {
                     onChange={(e) => handleFilterChange('featured', e.target.checked)}
                     className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="featured" className="ml-2 text-sm text-gray-700">
+                  <span className="ml-2 text-sm text-gray-700">
                     Featured Products Only
-                  </label>
-                </div>
+                  </span>
+                </label>
               </div>
 
               <button
@@ -352,14 +334,18 @@ const ProductsPage: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-                  <p className="text-gray-600 mt-1">
-                    {isLoading ? 'Loading...' : 
-                      pagination.total === 0 ? 'No products found' :
-                      `Showing ${((pagination.current_page - 1) * pagination.per_page) + 1}-
-                      ${Math.min(pagination.current_page * pagination.per_page, pagination.total)} 
-                      of ${pagination.total} products`}
-                  </p>
+                  <h1 className="text-2xl font-bold text-gray-900">All Products</h1>
+                  {error ? (
+                    <p className="text-red-600 mt-1">{error}</p>
+                  ) : (
+                    <p className="text-gray-600 mt-1">
+                      {isLoading ? 'Loading products...' : 
+                        pagination.total === 0 ? 'No products found' :
+                        `Showing ${Math.min(((pagination.current_page - 1) * pagination.per_page) + 1, pagination.total)}-
+                        ${Math.min(pagination.current_page * pagination.per_page, pagination.total)} 
+                        of ${pagination.total} products`}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -372,44 +358,42 @@ const ProductsPage: React.FC = () => {
                     Filters
                   </button>
 
-                  {/* View Mode */}
+                  {/* View Mode Toggle */}
                   <div className="flex border border-gray-300 rounded-lg overflow-hidden">
                     <button
                       onClick={() => setViewMode('grid')}
                       className={`p-2 ${viewMode === 'grid' ? 'bg-gray-100' : 'bg-white'}`}
+                      aria-label="Grid view"
                     >
                       <Grid size={20} />
                     </button>
                     <button
                       onClick={() => setViewMode('list')}
                       className={`p-2 ${viewMode === 'list' ? 'bg-gray-100' : 'bg-white'}`}
+                      aria-label="List view"
                     >
                       <List size={20} />
                     </button>
                   </div>
 
-                  {/* Sort */}
+                  {/* Sort Dropdown */}
                   <div className="relative">
                     <select
-                      value={filters.sort === 'price_desc' ? 'price_desc' : `${filters.sort}_${filters.order}`}
+                      value={sortOptions.find(opt => 
+                        opt.sort === filters.sort && opt.order === filters.order
+                      )?.value || 'created_at'}
                       onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === 'price_desc') {
-                          handleFilterChange('sort', 'price');
-                          handleFilterChange('order', 'desc');
-                        } else {
-                          const [sort, order] = value.split('_');
-                          handleFilterChange('sort', sort);
-                          handleFilterChange('order', order);
+                        const option = sortOptions.find(opt => opt.value === e.target.value);
+                        if (option) {
+                          handleFilterChange('sort', option.sort);
+                          handleFilterChange('order', option.order);
                         }
                       }}
                       className="appearance-none px-4 py-2 pr-10 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      aria-label="Sort products"
                     >
                       {sortOptions.map((option) => (
-                        <option 
-                          key={option.value} 
-                          value={option.value === 'price_desc' ? 'price_desc' : `${option.value}_asc`}
-                        >
+                        <option key={option.value} value={option.value}>
                           {option.label}
                         </option>
                       ))}
@@ -420,13 +404,32 @@ const ProductsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Products Grid */}
+            {/* Products Display */}
             {isLoading ? (
               <div className="flex justify-center items-center h-96">
                 <LoadingSpinner size="lg" />
               </div>
+            ) : error ? (
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <div className="max-w-md mx-auto">
+                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search size={24} className="text-red-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    Error Loading Products
+                  </h3>
+                  <p className="text-gray-600 mb-4">{error}</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
             ) : products.length > 0 ? (
               <>
+                {/* Products Grid/List */}
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {products.map((product) => (
@@ -442,6 +445,9 @@ const ProductsPage: React.FC = () => {
                             src={product.thumbnail || (product as any).images?.[0] || '/placeholder-product.jpg'}
                             alt={product.name}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = '/placeholder-product.jpg';
+                            }}
                           />
                         </div>
                         <div className="ml-4 flex-1">
@@ -460,7 +466,13 @@ const ProductsPage: React.FC = () => {
                                 </span>
                               )}
                             </div>
-                            <button className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                            <button 
+                              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                              onClick={() => {
+                                // Add to cart logic here
+                                console.log('Add to cart:', product.id);
+                              }}
+                            >
                               Add to Cart
                             </button>
                           </div>
@@ -470,7 +482,7 @@ const ProductsPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Pagination - Only show if there are multiple pages */}
+                {/* Pagination */}
                 {pagination.last_page > 1 && (
                   <div className="mt-8">
                     <Pagination
