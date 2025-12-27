@@ -80,29 +80,38 @@ const BannerCarousel: React.FC = () => {
     }
   };
 
-  // FIXED: Simplified getImageUrl function
+  // Get the correct image URL
   const getImageUrl = (banner: Banner, isMobile = false): string => {
     // Try image_url from API first
     if (!isMobile && banner.image_url) {
-      console.log('Using image_url from API:', banner.image_url);
+      console.log('Using image_url:', banner.image_url);
       return banner.image_url;
     }
     
     if (isMobile && banner.mobile_image_url) {
-      console.log('Using mobile_image_url from API:', banner.mobile_image_url);
+      console.log('Using mobile_image_url:', banner.mobile_image_url);
       return banner.mobile_image_url;
     }
     
-    // Fallback: Use the API service's getImageUrl method
+    // Fallback: Construct URL from image path
     const imagePath = isMobile ? banner.mobile_image || banner.image : banner.image;
     
     if (!imagePath) {
       console.warn('No image path found for banner:', banner.id);
-      return 'https://via.placeholder.com/1200x600/4F46E5/FFFFFF?text=No+Image';
+      return '/placeholder-banner.jpg';
     }
     
-    // Use the API service's method - this should work correctly
-    return api.getImageUrl(imagePath, 'https://via.placeholder.com/1200x600/4F46E5/FFFFFF?text=Banner+Image');
+    // Check if already a full URL
+    if (imagePath.startsWith('http')) {
+      console.log('Image is already full URL:', imagePath);
+      return imagePath;
+    }
+    
+    // Construct full URL
+    const baseUrl = ' https://api.hypermarket.co.ke';
+    const url = `${baseUrl}/storage/${imagePath.replace(/^banners\//, 'banners/')}`;
+    console.log('Constructed URL:', url);
+    return url;
   };
 
   const nextSlide = () => {
@@ -140,6 +149,20 @@ const BannerCarousel: React.FC = () => {
           mobile_image_url_field: banner.mobile_image_url,
           mobileUrl,
         });
+        
+        // Test if URLs are accessible
+        if (typeof window !== 'undefined') {
+          // Create image elements to test loading
+          const testDesktop = new Image();
+          testDesktop.onload = () => console.log(`✓ Desktop image ${index} loads OK`);
+          testDesktop.onerror = () => console.error(`✗ Desktop image ${index} failed to load`);
+          testDesktop.src = desktopUrl;
+          
+          const testMobile = new Image();
+          testMobile.onload = () => console.log(`✓ Mobile image ${index} loads OK`);
+          testMobile.onerror = () => console.error(`✗ Mobile image ${index} failed to load`);
+          testMobile.src = mobileUrl;
+        }
       });
       console.log('=== END DEBUG ===');
     }
