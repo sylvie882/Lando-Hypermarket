@@ -12,6 +12,7 @@ interface CategoryCardProps {
 const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // Get category icon based on name
   const getCategoryIcon = () => {
@@ -52,26 +53,9 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
     return 'from-gray-100 to-gray-200';
   };
 
-  // FIXED: Correct image URL resolver
+  // SIMPLE FIX: Always use api.hypermarket.co.ke
   const getImageUrl = (): string | null => {
-    // If image_url exists, use it (clean up any whitespace)
-    if (category.image_url) {
-      let url = category.image_url.trim();
-      
-      // Remove any leading space before https
-      if (url.startsWith(' https://')) {
-        url = url.substring(1); // Remove the space
-      }
-      
-      // Ensure it's a valid URL
-      if (!url.startsWith('http')) {
-        url = `https://${url}`;
-      }
-      
-      return url;
-    }
-    
-    // If image field exists, construct URL
+    // If we have image path, construct URL with api.hypermarket.co.ke
     if (category.image) {
       let cleanImage = category.image.trim();
       
@@ -80,22 +64,46 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
         cleanImage = cleanImage.substring(1);
       }
       
-      // Remove 'storage/' if already in path
+      // Remove 'storage/' if it's already in the path
       if (cleanImage.startsWith('storage/')) {
         cleanImage = cleanImage.substring('storage/'.length);
       }
       
-      // Construct the full URL
-      return `https://api.hypermarket.co.ke/storage/${cleanImage}`;
+      // Remove 'categories/' if it's already in the path (some might have it)
+      if (cleanImage.startsWith('categories/')) {
+        cleanImage = cleanImage.substring('categories/'.length);
+      }
+      
+      // Construct URL with correct domain
+      return `https://api.hypermarket.co.ke/storage/categories/${cleanImage}`;
     }
     
-    return null; // No image, we'll use gradient
+    // If image_url exists, convert it to use api.hypermarket.co.ke
+    if (category.image_url) {
+      let url = category.image_url.trim();
+      
+      // Replace hypermarket.co.ke with api.hypermarket.co.ke
+      url = url.replace('https://hypermarket.co.ke', 'https://api.hypermarket.co.ke');
+      url = url.replace('http://hypermarket.co.ke', 'https://api.hypermarket.co.ke');
+      url = url.replace('hypermarket.co.ke', 'api.hypermarket.co.ke');
+      
+      return url;
+    }
+    
+    return null;
   };
 
   const imageUrl = getImageUrl();
   const productCount = category.active_products_count || category.products_count || 0;
   const icon = getCategoryIcon();
   const gradient = getCategoryColor();
+
+  // Debug: Log the constructed URL
+  React.useEffect(() => {
+    if (imageUrl) {
+      console.log(`Category ${category.name} image URL:`, imageUrl);
+    }
+  }, [category.name, imageUrl]);
 
   return (
     <Link
@@ -111,7 +119,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
       <div className="relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 overflow-hidden">
         {/* Image container */}
         <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
-          {imageUrl ? (
+          {imageUrl && !imageError ? (
             <>
               {/* Loading shimmer */}
               {!imageLoaded && (
@@ -126,10 +134,13 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
                   isHovered ? 'scale-110' : 'scale-100'
                 } ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                 loading="lazy"
-                onLoad={() => setImageLoaded(true)}
+                onLoad={() => {
+                  setImageLoaded(true);
+                  console.log(`✅ Category image loaded: ${category.name}`);
+                }}
                 onError={(e) => {
-                  console.error('Category image failed to load:', imageUrl);
-                  // Fallback to gradient if image fails
+                  console.error(`❌ Category image failed: ${imageUrl}`);
+                  setImageError(true);
                   e.currentTarget.style.display = 'none';
                 }}
               />
