@@ -309,12 +309,12 @@ const ReviewList: React.FC<ReviewListProps> = ({ productId, productName, product
                   {review.images.map((image: string, index: number) => (
                     <img
                       key={index}
-                      src={`https://hypermarket.co.ke/storage/${image}`}
+                      src={` https://api.hypermarket.co.ke/storage/${image}`}
                       alt={`Review image ${index + 1}`}
                       className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-90"
                       onClick={() => {
                         // You can implement a lightbox here
-                        window.open(`https://hypermarket.co.ke/storage/${image}`, '_blank');
+                        window.open(` https://api.hypermarket.co.ke/storage/${image}`, '_blank');
                       }}
                     />
                   ))}

@@ -108,7 +108,7 @@ const BannerCarousel: React.FC = () => {
     }
     
     // Construct full URL
-    const baseUrl = 'https://hypermarket.co.ke';
+    const baseUrl = ' https://api.hypermarket.co.ke';
     const url = `${baseUrl}/storage/${imagePath.replace(/^banners\//, 'banners/')}`;
     console.log('Constructed URL:', url);
     return url;
