@@ -49,6 +49,8 @@ interface Banner {
   impressions: number;
   created_at: string;
   updated_at: string;
+  image_url?: string; // ADD THIS LINE
+  mobile_image_url?: string; // ADD THIS LINE
 }
 
 interface CategoryData {
@@ -100,6 +102,15 @@ const HomePage: React.FC = () => {
 
   // SIMPLIFIED: Direct URL construction for banners
   const getBannerImageUrl = (banner: Banner, isMobile = false): string => {
+    // Priority: Use image_url if available
+    if (!isMobile && banner.image_url) {
+      return banner.image_url;
+    }
+    
+    if (isMobile && banner.mobile_image_url) {
+      return banner.mobile_image_url;
+    }
+    
     const imagePath = isMobile ? banner.mobile_image || banner.image : banner.image;
     
     if (!imagePath) {
@@ -186,7 +197,7 @@ const HomePage: React.FC = () => {
           .filter(banner => {
             const isActive = banner.is_active === true;
             const isHomepage = banner.type === 'homepage';
-            const hasImage = banner.image || banner.image_url;
+            const hasImage = banner.image || banner.image_url; // Now this should work
             
             return isActive && isHomepage && hasImage;
           })
