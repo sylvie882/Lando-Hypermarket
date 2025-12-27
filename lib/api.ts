@@ -5,8 +5,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.k
 
 // Helper to get base URL without /api for storage URLs
 export const getBaseUrl = (): string => {
-  const url = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke/api';
-  return url.replace(/\/api$/, '');
+  // Return the base URL without /api
+  return process.env.NEXT_PUBLIC_STORAGE_URL || 'https://api.hypermarket.co.ke';
 };
 
 class ApiService {
@@ -30,13 +30,20 @@ class ApiService {
   getStorageUrl(path: string): string {
     // Remove leading slash if present
     const cleanPath = path.replace(/^\//, '');
+    
+    // If path already includes 'storage/', use as is
+    if (cleanPath.startsWith('storage/')) {
+      return `${this.baseUrl}/${cleanPath}`;
+    }
+    
+    // Otherwise add storage prefix
     return `${this.baseUrl}/storage/${cleanPath}`;
   }
 
-  // Helper method to get image URL with fallback
+  // Helper method to get image URL with fallback - FIXED VERSION
   getImageUrl(imagePath: string | null | undefined, fallback?: string): string {
     if (!imagePath) {
-      return fallback || '/images/placeholder.jpg';
+      return fallback || 'https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=No+Image';
     }
     
     // If it's already a full URL, return it as-is
@@ -44,8 +51,17 @@ class ApiService {
       return imagePath;
     }
     
-    // Otherwise, construct the storage URL
-    return this.getStorageUrl(imagePath);
+    // Debug: Log what we're processing
+    console.log('Processing image path:', {
+      original: imagePath,
+      baseUrl: this.baseUrl
+    });
+    
+    // Construct the storage URL
+    const url = this.getStorageUrl(imagePath);
+    
+    console.log('Constructed URL:', url);
+    return url;
   }
 
   private setupInterceptors(): void {
@@ -551,6 +567,5 @@ class ApiService {
   patch = <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => 
     this.api.patch<T>(url, data, config);
 }
-
 
 export const api = new ApiService();

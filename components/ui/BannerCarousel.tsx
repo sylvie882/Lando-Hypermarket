@@ -84,12 +84,12 @@ const BannerCarousel: React.FC = () => {
   const getImageUrl = (banner: Banner, isMobile = false): string => {
     // Try image_url from API first
     if (!isMobile && banner.image_url) {
-      console.log('Using image_url:', banner.image_url);
+      console.log('Using image_url from API:', banner.image_url);
       return banner.image_url;
     }
     
     if (isMobile && banner.mobile_image_url) {
-      console.log('Using mobile_image_url:', banner.mobile_image_url);
+      console.log('Using mobile_image_url from API:', banner.mobile_image_url);
       return banner.mobile_image_url;
     }
     
@@ -98,19 +98,29 @@ const BannerCarousel: React.FC = () => {
     
     if (!imagePath) {
       console.warn('No image path found for banner:', banner.id);
-      return '/placeholder-banner.jpg';
+      return 'https://via.placeholder.com/1200x600/4F46E5/FFFFFF?text=No+Image';
     }
     
     // Check if already a full URL
-    if (imagePath.startsWith('http')) {
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
       console.log('Image is already full URL:', imagePath);
       return imagePath;
     }
     
-    // Construct full URL
-    const baseUrl = ' https://api.hypermarket.co.ke';
-    const url = `${baseUrl}/storage/${imagePath.replace(/^banners\//, 'banners/')}`;
-    console.log('Constructed URL:', url);
+    // Construct full URL - FIXED VERSION
+    const baseUrl = 'https://api.hypermarket.co.ke';
+    const cleanPath = imagePath.replace(/^\//, ''); // Remove leading slash
+    
+    // Check if path already includes 'storage'
+    if (cleanPath.startsWith('storage/')) {
+      const url = `${baseUrl}/${cleanPath}`;
+      console.log('Constructed URL (with storage):', url);
+      return url;
+    }
+    
+    // Otherwise add storage prefix
+    const url = `${baseUrl}/storage/${cleanPath}`;
+    console.log('Constructed URL (added storage):', url);
     return url;
   };
 
@@ -149,20 +159,6 @@ const BannerCarousel: React.FC = () => {
           mobile_image_url_field: banner.mobile_image_url,
           mobileUrl,
         });
-        
-        // Test if URLs are accessible
-        if (typeof window !== 'undefined') {
-          // Create image elements to test loading
-          const testDesktop = new Image();
-          testDesktop.onload = () => console.log(`✓ Desktop image ${index} loads OK`);
-          testDesktop.onerror = () => console.error(`✗ Desktop image ${index} failed to load`);
-          testDesktop.src = desktopUrl;
-          
-          const testMobile = new Image();
-          testMobile.onload = () => console.log(`✓ Mobile image ${index} loads OK`);
-          testMobile.onerror = () => console.error(`✗ Mobile image ${index} failed to load`);
-          testMobile.src = mobileUrl;
-        }
       });
       console.log('=== END DEBUG ===');
     }
