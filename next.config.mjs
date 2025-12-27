@@ -5,6 +5,11 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
+        hostname: 'api.hypermarket.co.ke', // ADD THIS LINE
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'hypermarket.co.ke',
         pathname: '/**',
       },

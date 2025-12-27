@@ -6,7 +6,27 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.k
 // Helper to get base URL without /api for storage URLs
 export const getBaseUrl = (): string => {
   const url = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke/api';
-  return url.replace(/\/api$/, '');
+  
+  // Remove trailing /api if present
+  let baseUrl = url.trim();
+  
+  // Remove trailing slash if present
+  if (baseUrl.endsWith('/')) {
+    baseUrl = baseUrl.slice(0, -1);
+  }
+  
+  // Remove /api suffix if present
+  if (baseUrl.endsWith('/api')) {
+    baseUrl = baseUrl.slice(0, -4); // Remove '/api'
+  }
+  
+  // Ensure it doesn't end with slash
+  if (baseUrl.endsWith('/')) {
+    baseUrl = baseUrl.slice(0, -1);
+  }
+  
+  console.log('Base URL for storage:', baseUrl);
+  return baseUrl;
 };
 
 class ApiService {
@@ -15,8 +35,14 @@ class ApiService {
 
   constructor() {
     this.baseUrl = getBaseUrl();
+    console.log('API Service initialized with:', {
+      apiUrl: API_URL,
+      baseUrl: this.baseUrl,
+      envVar: process.env.NEXT_PUBLIC_API_URL
+    });
+    
     this.api = axios.create({
-      baseURL: API_URL, // This includes /api
+      baseURL: API_URL, // This includes /api for API calls
       headers: {
         'Accept': 'application/json',
       },
@@ -28,9 +54,18 @@ class ApiService {
 
   // Add a method to get storage URLs
   getStorageUrl(path: string): string {
+    if (!path) {
+      return '/images/placeholder.jpg';
+    }
+    
     // Remove leading slash if present
     const cleanPath = path.replace(/^\//, '');
-    return `${this.baseUrl}/storage/${cleanPath}`;
+    
+    // Construct URL
+    const storageUrl = `${this.baseUrl}/storage/${cleanPath}`;
+    console.log('Storage URL constructed:', { original: path, cleaned: cleanPath, final: storageUrl });
+    
+    return storageUrl;
   }
 
   // Helper method to get image URL with fallback
@@ -115,6 +150,7 @@ class ApiService {
     );
   }
 
+  // ... rest of your API methods remain the same ...
   // Auth APIs
   auth = {
     login: (credentials: { email: string; password: string }) => 
@@ -551,6 +587,5 @@ class ApiService {
   patch = <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => 
     this.api.patch<T>(url, data, config);
 }
-
 
 export const api = new ApiService();
