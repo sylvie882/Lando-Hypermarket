@@ -102,15 +102,6 @@ const HomePage: React.FC = () => {
 
   // SIMPLIFIED: Direct URL construction for banners
   const getBannerImageUrl = (banner: Banner, isMobile = false): string => {
-    // Priority: Use image_url if available
-    if (!isMobile && banner.image_url) {
-      return banner.image_url;
-    }
-    
-    if (isMobile && banner.mobile_image_url) {
-      return banner.mobile_image_url;
-    }
-    
     const imagePath = isMobile ? banner.mobile_image || banner.image : banner.image;
     
     if (!imagePath) {
@@ -197,7 +188,7 @@ const HomePage: React.FC = () => {
           .filter(banner => {
             const isActive = banner.is_active === true;
             const isHomepage = banner.type === 'homepage';
-            const hasImage = banner.image || banner.image_url; // Now this should work
+            const hasImage = banner.image || banner.image_url;
             
             return isActive && isHomepage && hasImage;
           })
