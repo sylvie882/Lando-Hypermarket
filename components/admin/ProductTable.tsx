@@ -56,7 +56,7 @@ export default function ProductTable({ products, onEdit, onDelete }: ProductTabl
     
     // Clean path and construct URL
     const cleanPath = image.replace(/^\//, '');
-    return `http://localhost:8000/storage/${cleanPath}`;
+    return `https://hypermarket.co.ke/storage/${cleanPath}`;
   };
 
   return (

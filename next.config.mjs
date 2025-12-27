@@ -4,69 +4,31 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '8000',
-        pathname: '/storage/**',
+        protocol: 'https',
+        hostname: 'hypermarket.co.ke',
+        pathname: '/**',
       },
       {
         protocol: 'http',
         hostname: 'localhost',
-        pathname: '/storage/**',
+        pathname: '/**',
       },
       {
         protocol: 'http',
         hostname: '127.0.0.1',
-        port: '8000',
-        pathname: '/storage/**',
-      },
-      {
-        protocol: 'http',
-        hostname: '127.0.0.1',
-        pathname: '/storage/**',
-      },
-      // Add these for the image URLs from your API
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-        pathname: '**', // Allow all paths from localhost
-      },
-      {
-        protocol: 'http',
-        hostname: '127.0.0.1',
-        pathname: '**', // Allow all paths from 127.0.0.1
+        pathname: '/**',
       },
     ],
-    // For local development, you might need to disable image optimization
     unoptimized: process.env.NODE_ENV === 'development',
   },
   
-  // IMPORTANT: Increase the body size limit for API routes
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
+  // Remove the rewrites function entirely for now
+  // async rewrites() {
+  //   return [];
+  // },
   
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '10mb',
-    },
-  },
-  
-  // Add this to allow external images without optimization
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'Access-Control-Allow-Origin',
-            value: '*',
-          },
-        ],
-      },
-    ];
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://hypermarket.co.ke/api',
   },
 };
 

@@ -110,17 +110,46 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
     }).format(amount);
   };
 
-  // Get image URL
+  // Get image URL - FIXED VERSION
   const getImageUrl = () => {
-    if (!product.thumbnail) {
-      return '/images/placeholder-product.jpg';
+    // First, check if main_image exists (from API response)
+    if (product.main_image) {
+      // If it's already a full URL (like "https://hypermarket.co.ke/images/default-product.jpg")
+      if (product.main_image.startsWith('http')) {
+        return product.main_image;
+      }
+      // If it's a relative path from storage
+      return api.getImageUrl(product.main_image);
     }
     
-    // Clean any leading slash
-    const cleanThumbnail = product.thumbnail.replace(/^\//, '');
+    // Then check thumbnail
+    if (product.thumbnail) {
+      if (product.thumbnail.startsWith('http')) {
+        return product.thumbnail;
+      }
+      return api.getImageUrl(product.thumbnail);
+    }
     
-    // Just add the thumbnail to the base storage URL
-    return `http://localhost:8000/storage/${cleanThumbnail}`;
+    // Then check images array
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+      const firstImage = product.images[0];
+      if (firstImage.startsWith('http')) {
+        return firstImage;
+      }
+      return api.getImageUrl(firstImage);
+    }
+    
+    // Then check gallery_urls array from API response
+    if (product.gallery_urls && Array.isArray(product.gallery_urls) && product.gallery_urls.length > 0) {
+      const firstGalleryUrl = product.gallery_urls[0];
+      if (firstGalleryUrl.startsWith('http')) {
+        return firstGalleryUrl;
+      }
+      return api.getImageUrl(firstGalleryUrl);
+    }
+    
+    // Fallback
+    return '/images/placeholder-product.jpg';
   };
 
   const imageUrl = getImageUrl();
@@ -158,7 +187,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
 
     setIsAddingToWishlist(true);
     try {
-      if (inWishlist) {
+      // First check if it's in wishlist
+      const checkResponse = await api.wishlist.check(product.id);
+      const isInWishlist = checkResponse.data?.in_wishlist || false;
+      
+      if (isInWishlist) {
         await api.wishlist.remove(product.id);
         setInWishlist(false);
         toast.success('Removed from wishlist');
@@ -173,6 +206,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
       setIsAddingToWishlist(false);
     }
   };
+
+  // Check wishlist status on mount
+  useEffect(() => {
+    const checkWishlistStatus = async () => {
+      if (isAuthenticated && product.id) {
+        try {
+          const checkResponse = await api.wishlist.check(product.id);
+          setInWishlist(checkResponse.data?.in_wishlist || false);
+        } catch (error) {
+          console.error('Error checking wishlist:', error);
+        }
+      }
+    };
+    
+    checkWishlistStatus();
+  }, [isAuthenticated, product.id]);
 
   const handleReviewClick = () => {
     if (!isAuthenticated) {

@@ -73,7 +73,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
           setThumbnailPreview(product.thumbnail);
         } else {
           // It might be a relative path, construct full URL
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://hypermarket.co.ke';
           setThumbnailPreview(`${baseUrl}/storage/${product.thumbnail}`);
         }
       }
@@ -89,7 +89,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
           } else if (img.startsWith('data:')) {
             return img;
           } else {
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://hypermarket.co.ke';
             return `${baseUrl}/storage/${img}`;
           }
         });

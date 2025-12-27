@@ -58,15 +58,15 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
     // If image_url exists but has wrong port, fix it
     if (category.image_url) {
       return category.image_url.replace(
-        'http://localhost/storage/',
-        'http://localhost:8000/storage/'
+        'https://hypermarket.co.ke/storage/',
+        'https://hypermarket.co.ke/storage/'
       );
     }
     
     // If image field exists, construct URL with correct port
     if (category.image) {
       const cleanImage = category.image.replace(/^\//, '');
-      return `http://localhost:8000/storage/${cleanImage}`;
+      return `https://hypermarket.co.ke/storage/${cleanImage}`;
     }
     
     return null; // No image, we'll use gradient

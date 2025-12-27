@@ -1,13 +1,22 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+// Use environment variable directly or fallback - ensure it includes /api
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://hypermarket.co.ke/api';
+
+// Helper to get base URL without /api for storage URLs
+export const getBaseUrl = (): string => {
+  const url = process.env.NEXT_PUBLIC_API_URL || 'https://hypermarket.co.ke/api';
+  return url.replace(/\/api$/, '');
+};
 
 class ApiService {
   private api: AxiosInstance;
+  private baseUrl: string;
 
   constructor() {
+    this.baseUrl = getBaseUrl();
     this.api = axios.create({
-      baseURL: API_URL,
+      baseURL: API_URL, // This includes /api
       headers: {
         'Accept': 'application/json',
       },
@@ -15,6 +24,28 @@ class ApiService {
     });
 
     this.setupInterceptors();
+  }
+
+  // Add a method to get storage URLs
+  getStorageUrl(path: string): string {
+    // Remove leading slash if present
+    const cleanPath = path.replace(/^\//, '');
+    return `${this.baseUrl}/storage/${cleanPath}`;
+  }
+
+  // Helper method to get image URL with fallback
+  getImageUrl(imagePath: string | null | undefined, fallback?: string): string {
+    if (!imagePath) {
+      return fallback || '/images/placeholder.jpg';
+    }
+    
+    // If it's already a full URL, return it as-is
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:')) {
+      return imagePath;
+    }
+    
+    // Otherwise, construct the storage URL
+    return this.getStorageUrl(imagePath);
   }
 
   private setupInterceptors(): void {
