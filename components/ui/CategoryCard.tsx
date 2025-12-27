@@ -1,4 +1,3 @@
-// components/ui/CategoryCard.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -53,20 +52,41 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
     return 'from-gray-100 to-gray-200';
   };
 
-  // FIX: Correct image URL resolver
-  const getImageUrl = () => {
-    // If image_url exists but has wrong port, fix it
+  // FIXED: Correct image URL resolver
+  const getImageUrl = (): string | null => {
+    // If image_url exists, use it (clean up any whitespace)
     if (category.image_url) {
-      return category.image_url.replace(
-        ' https://api.hypermarket.co.ke/storage/',
-        ' https://api.hypermarket.co.ke/storage/'
-      );
+      let url = category.image_url.trim();
+      
+      // Remove any leading space before https
+      if (url.startsWith(' https://')) {
+        url = url.substring(1); // Remove the space
+      }
+      
+      // Ensure it's a valid URL
+      if (!url.startsWith('http')) {
+        url = `https://${url}`;
+      }
+      
+      return url;
     }
     
-    // If image field exists, construct URL with correct port
+    // If image field exists, construct URL
     if (category.image) {
-      const cleanImage = category.image.replace(/^\//, '');
-      return ` https://api.hypermarket.co.ke/storage/${cleanImage}`;
+      let cleanImage = category.image.trim();
+      
+      // Remove leading slash if present
+      if (cleanImage.startsWith('/')) {
+        cleanImage = cleanImage.substring(1);
+      }
+      
+      // Remove 'storage/' if already in path
+      if (cleanImage.startsWith('storage/')) {
+        cleanImage = cleanImage.substring('storage/'.length);
+      }
+      
+      // Construct the full URL
+      return `https://api.hypermarket.co.ke/storage/${cleanImage}`;
     }
     
     return null; // No image, we'll use gradient
@@ -108,6 +128,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
                 loading="lazy"
                 onLoad={() => setImageLoaded(true)}
                 onError={(e) => {
+                  console.error('Category image failed to load:', imageUrl);
                   // Fallback to gradient if image fails
                   e.currentTarget.style.display = 'none';
                 }}
