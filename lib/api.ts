@@ -1,11 +1,11 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 // Use environment variable directly or fallback - ensure it includes /api
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://hypermarket.co.ke/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke/api';
 
 // Helper to get base URL without /api for storage URLs
 export const getBaseUrl = (): string => {
-  const url = process.env.NEXT_PUBLIC_API_URL || 'https://hypermarket.co.ke/api';
+  const url = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke/api';
   return url.replace(/\/api$/, '');
 };
 
