@@ -22,10 +22,8 @@ const nextConfig = {
     unoptimized: process.env.NODE_ENV === 'development',
   },
   
-  // Remove the rewrites function entirely for now
-  // async rewrites() {
-  //   return [];
-  // },
+  // Remove any __dirname usage
+  // Don't use require() or __dirname in next.config.js
   
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://hypermarket.co.ke/api',
