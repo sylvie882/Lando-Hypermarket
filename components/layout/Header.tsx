@@ -301,8 +301,8 @@ const Header: React.FC = () => {
                     </div>
                   </div>
                   
-                  {/* Logo Text */}
-                  <div className="ml-2 sm:ml-3 md:ml-4">
+                  {/* Logo Text - Conditionally hide on mobile when user is logged in */}
+                  <div className={`ml-2 sm:ml-3 md:ml-4 ${isMobile && isAuthenticated ? 'hidden' : ''}`}>
                     <div className="relative">
                       <div className="absolute -inset-0.5 bg-white/50 blur-sm opacity-50 rounded-lg"></div>
                       
