@@ -476,7 +476,7 @@ export default function EditBannerPage() {
     toast.success('Mobile image marked for removal');
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   
   try {
@@ -490,63 +490,54 @@ export default function EditBannerPage() {
       return;
     }
 
-    if (formData.order === null || formData.order === undefined) {
-      toast.error('Display order is required');
-      setSaving(false);
-      return;
-    }
-
-    // Create FormData - MATCHING CREATE BANNER FORMAT
+    // Create FormData - SIMPLIFIED AND CORRECT
     const data = new FormData();
     
-    // Add form fields (EXACTLY like create banner)
-    Object.entries(formData).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
-        if (key === 'is_active') {
-          data.append(key, value ? '1' : '0');
-        } else if (key === 'order') {
-          data.append(key, String(value));
-        } else if (typeof value === 'boolean') {
-          data.append(key, value.toString());
-        } else {
-          data.append(key, String(value));
-        }
-      }
-    });
-
+    // Add all form fields
+    data.append('title', formData.title);
+    data.append('subtitle', formData.subtitle || '');
+    data.append('description', formData.description || '');
+    data.append('button_text', formData.button_text || '');
+    data.append('button_link', formData.button_link || '');
+    data.append('order', formData.order.toString());
+    data.append('is_active', formData.is_active ? '1' : '0');
+    data.append('type', formData.type);
+    data.append('category_slug', formData.category_slug || '');
+    
+    // Handle dates - send empty string if empty
+    data.append('start_date', formData.start_date || '');
+    data.append('end_date', formData.end_date || '');
+    
     // Handle desktop image
     if (newImage) {
       data.append('image', newImage);
-      console.log(`Sending new desktop image: ${newImage.name} (${(newImage.size / 1024 / 1024).toFixed(2)}MB)`);
+      console.log(`Sending new desktop image: ${newImage.name}`);
     } else if (shouldRemoveDesktop) {
-      // If backend expects file deletion differently, adjust this
-      // For now, send empty string like create banner does
-      data.append('image', ''); // Or 'remove' flag if backend expects it
-    } else {
-      // Keep existing image - no image field sent
-      console.log('Keeping existing desktop image');
+      // Send remove_image flag
+      data.append('remove_image', '1');
+      console.log('Sending remove_image flag');
     }
+    // If neither, image field won't be sent (keeps existing)
 
-    // Handle mobile image - MATCH CREATE BANNER EXACTLY
+    // Handle mobile image
     if (newMobileImage) {
       data.append('mobile_image', newMobileImage);
-      console.log(`Sending new mobile image: ${newMobileImage.name} (${(newMobileImage.size / 1024 / 1024).toFixed(2)}MB)`);
+      console.log(`Sending new mobile image: ${newMobileImage.name}`);
     } else if (shouldRemoveMobile) {
-      // Send empty string like create banner
-      data.append('mobile_image', '');
-      console.log('Sending empty mobile_image field');
-    } else {
-      // Keep existing mobile image - send empty string to match create banner
-      data.append('mobile_image', '');
-      console.log('Sending empty mobile_image (keep existing)');
+      // Send remove_mobile_image flag
+      data.append('remove_mobile_image', '1');
+      console.log('Sending remove_mobile_image flag');
     }
+    // If neither, mobile_image field won't be sent (keeps existing)
 
     // Log FormData for debugging
-    console.log('Submitting FormData for edit:');
+    console.log('Submitting FormData:');
     for (let [key, value] of data.entries()) {
-      console.log(`${key}:`, value instanceof File ? 
-        `File: ${value.name} (${(value.size / 1024 / 1024).toFixed(2)}MB)` : 
-        value);
+      if (value instanceof File) {
+        console.log(`${key}: File - ${value.name} (${(value.size / 1024 / 1024).toFixed(2)}MB)`);
+      } else {
+        console.log(`${key}: ${value}`);
+      }
     }
 
     // Send update request
@@ -554,34 +545,27 @@ export default function EditBannerPage() {
     
     toast.success('Banner updated successfully!');
     
-    // Clear new image states
+    // Clear states
     setNewImage(null);
     setNewMobileImage(null);
     setShouldRemoveDesktop(false);
     setShouldRemoveMobile(false);
     
-    // Navigate back after a short delay
+    // Navigate back
     setTimeout(() => {
       router.push('/admin/banners');
     }, 1500);
     
   } catch (err: any) {
     console.error('Update error:', err);
-    console.error('Full error response:', err.response?.data);
     
     let errorMessage = 'Failed to update banner';
     
     if (err.response?.data?.message) {
       errorMessage = err.response.data.message;
-    } else if (err.response?.data?.error) {
-      errorMessage = err.response.data.error;
     } else if (err.response?.data?.errors) {
       const errors = err.response.data.errors;
-      errorMessage = Object.values(errors)
-        .flat()
-        .join(', ');
-    } else if (err.message) {
-      errorMessage = err.message;
+      errorMessage = Object.values(errors).flat().join(', ');
     }
     
     setError(errorMessage);
@@ -590,6 +574,7 @@ export default function EditBannerPage() {
     setSaving(false);
   }
 };
+
 
   const getPlaceholderImage = (type: 'desktop' | 'mobile') => {
     const width = type === 'desktop' ? 1200 : 768;
