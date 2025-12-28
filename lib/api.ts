@@ -58,6 +58,11 @@ class ApiService {
       return '/images/placeholder.jpg';
     }
     
+    // If it's already a full URL, return it as-is
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+      return path;
+    }
+    
     // Remove leading slash if present
     const cleanPath = path.replace(/^\//, '');
     
@@ -150,7 +155,6 @@ class ApiService {
     );
   }
 
-  // ... rest of your API methods remain the same ...
   // Auth APIs
   auth = {
     login: (credentials: { email: string; password: string }) => 
@@ -481,40 +485,40 @@ class ApiService {
     getReviewStats: (id: string | number) => this.api.get(`/products/${id}/review-stats`),
 
     // Personalized recommendations
-  getPersonalizedRecommendations: (params?: { limit?: number }) =>
-    api.get('/personalized/recommendations', { params }),
+    getPersonalizedRecommendations: (params?: { limit?: number }) =>
+      this.api.get('/personalized/recommendations', { params }),
 
-  // Personalized offers
-  getPersonalizedOffers: (params?: { per_page?: number }) =>
-    api.get('/personalized/offers', { params }),
+    // Personalized offers
+    getPersonalizedOffers: (params?: { per_page?: number }) =>
+      this.api.get('/personalized/offers', { params }),
 
-  // User preferences
-  getUserPreferences: () =>
-    api.get('/preferences'),
+    // User preferences
+    getUserPreferences: () =>
+      this.api.get('/preferences'),
 
-  // Update preferences
-  updatePreferences: (data: any) =>
-    api.put('/preferences', data),
+    // Update preferences
+    updatePreferences: (data: any) =>
+      this.api.put('/preferences', data),
 
-  // Shopping analytics
-  getShoppingAnalytics: () =>
-    api.get('/shopping-analytics'),
+    // Shopping analytics
+    getShoppingAnalytics: () =>
+      this.api.get('/shopping-analytics'),
 
-  // Track product view
-  trackView: (productId: number) =>
-    api.post(`/products/${productId}/track-view`),
+    // Track product view
+    trackView: (productId: number) =>
+      this.api.post(`/products/${productId}/track-view`),
 
-  // Track offer interaction
-  trackOfferInteraction: (data: any) =>
-    api.post('/track-offer-interaction', data),
+    // Track offer interaction
+    trackOfferInteraction: (data: any) =>
+      this.api.post('/track-offer-interaction', data),
 
-  // Get real-time offers
-  getRealTimeOffers: (params?: any) =>
-    api.get('/real-time-offers', { params }),
+    // Get real-time offers
+    getRealTimeOffers: (params?: any) =>
+      this.api.get('/real-time-offers', { params }),
 
-  // Add these too for testing
-  getPersonalizedPricing: (productId: number) =>
-    api.get(`/products/${productId}/personalized-pricing`),
+    // Add these too for testing
+    getPersonalizedPricing: (productId: number) =>
+      this.api.get(`/products/${productId}/personalized-pricing`),
   };
 
   categories = {
@@ -624,4 +628,5 @@ class ApiService {
     this.api.patch<T>(url, data, config);
 }
 
+// Export a singleton instance
 export const api = new ApiService();
