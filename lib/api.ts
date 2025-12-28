@@ -7,6 +7,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.k
 export const getBaseUrl = (): string => {
   const url = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke/api';
   
+  console.log('Original URL for base URL calculation:', url);
+  
   // Remove trailing /api if present
   let baseUrl = url.trim();
   
@@ -52,7 +54,7 @@ class ApiService {
     this.setupInterceptors();
   }
 
-  // Add a method to get storage URLs
+  // Add a method to get storage URLs - FIXED VERSION
   getStorageUrl(path: string): string {
     if (!path) {
       return '/images/placeholder.jpg';
@@ -66,9 +68,35 @@ class ApiService {
     // Remove leading slash if present
     const cleanPath = path.replace(/^\//, '');
     
-    // Construct URL
-    const storageUrl = `${this.baseUrl}/storage/${cleanPath}`;
-    console.log('Storage URL constructed:', { original: path, cleaned: cleanPath, final: storageUrl });
+    // Debug the path
+    console.log('Processing path for storage URL:', {
+      original: path,
+      cleaned: cleanPath,
+      startsWithBanners: cleanPath.startsWith('banners/'),
+      startsWithStorage: cleanPath.startsWith('storage/')
+    });
+    
+    // Construct URL - handle different path formats
+    let storageUrl: string;
+    
+    if (cleanPath.startsWith('storage/')) {
+      // Path already includes 'storage/', e.g., 'storage/banners/filename.jpg'
+      // Use it directly with baseUrl
+      storageUrl = `${this.baseUrl}/${cleanPath}`;
+    } else if (cleanPath.startsWith('banners/') || cleanPath.startsWith('categories/') || cleanPath.startsWith('products/')) {
+      // Path is like 'banners/filename.jpg' - needs 'storage/' prefix
+      storageUrl = `${this.baseUrl}/storage/${cleanPath}`;
+    } else {
+      // Default case - assume it's a relative path in storage
+      storageUrl = `${this.baseUrl}/storage/${cleanPath}`;
+    }
+    
+    console.log('Storage URL constructed:', { 
+      original: path, 
+      cleaned: cleanPath, 
+      final: storageUrl,
+      baseUrl: this.baseUrl 
+    });
     
     return storageUrl;
   }
@@ -354,7 +382,10 @@ class ApiService {
     createBanner: (data: FormData) => this.api.post('/admin/banners', data),
     updateBanner: (id: number, data: FormData) => {
       // For Laravel file uploads with PUT, we need to use POST with _method=PUT
-      data.append('_method', 'PUT');
+      // Check if data is already FormData and add _method=PUT
+      if (data instanceof FormData) {
+        data.append('_method', 'PUT');
+      }
       return this.api.post(`/admin/banners/${id}`, data);
     },
     deleteBanner: (id: number) => this.api.delete(`/admin/banners/${id}`),

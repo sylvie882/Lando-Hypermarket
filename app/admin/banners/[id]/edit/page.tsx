@@ -490,7 +490,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       return;
     }
 
-    // Create FormData - SIMPLIFIED AND CORRECT
+    // Create FormData
     const data = new FormData();
     
     // Add all form fields
@@ -532,16 +532,20 @@ const handleSubmit = async (e: React.FormEvent) => {
 
     // Log FormData for debugging
     console.log('Submitting FormData:');
+    const formDataEntries: {[key: string]: string} = {};
     for (let [key, value] of data.entries()) {
       if (value instanceof File) {
-        console.log(`${key}: File - ${value.name} (${(value.size / 1024 / 1024).toFixed(2)}MB)`);
+        formDataEntries[key] = `File: ${value.name} (${(value.size / 1024 / 1024).toFixed(2)}MB)`;
       } else {
-        console.log(`${key}: ${value}`);
+        formDataEntries[key] = value as string;
       }
     }
+    console.log(formDataEntries);
 
-    // Send update request
-    await api.admin.updateBanner(parseInt(bannerId), data);
+    // Send update request - the _method=PUT will be added by api.admin.updateBanner
+    const response = await api.admin.updateBanner(parseInt(bannerId), data);
+    
+    console.log('Update response:', response.data);
     
     toast.success('Banner updated successfully!');
     
@@ -558,6 +562,11 @@ const handleSubmit = async (e: React.FormEvent) => {
     
   } catch (err: any) {
     console.error('Update error:', err);
+    console.error('Full error details:', {
+      status: err.response?.status,
+      data: err.response?.data,
+      message: err.message
+    });
     
     let errorMessage = 'Failed to update banner';
     
@@ -566,6 +575,8 @@ const handleSubmit = async (e: React.FormEvent) => {
     } else if (err.response?.data?.errors) {
       const errors = err.response.data.errors;
       errorMessage = Object.values(errors).flat().join(', ');
+    } else if (err.message) {
+      errorMessage = err.message;
     }
     
     setError(errorMessage);
@@ -574,7 +585,6 @@ const handleSubmit = async (e: React.FormEvent) => {
     setSaving(false);
   }
 };
-
 
   const getPlaceholderImage = (type: 'desktop' | 'mobile') => {
     const width = type === 'desktop' ? 1200 : 768;
