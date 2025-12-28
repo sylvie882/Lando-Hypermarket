@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth';
@@ -8,7 +8,7 @@ import { api } from '@/lib/api';
 import { ShoppingCart, User, Search, Menu, X, Bell, Heart, Truck, Shield, Phone, LogIn, UserPlus, XCircle, Leaf, Sparkles, ChevronDown } from 'lucide-react';
 
 const Header: React.FC = () => {
-  const { user, isAuthenticated, logout, refreshUser, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, logout, isLoading: authLoading } = useAuth();
   const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -19,6 +19,7 @@ const Header: React.FC = () => {
   const [activeLink, setActiveLink] = useState('/');
   const [scrolled, setScrolled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Check for mobile screen size
   useEffect(() => {
@@ -43,29 +44,41 @@ const Header: React.FC = () => {
     }
   }, []);
 
+  // Fetch user data and counts
   useEffect(() => {
-    if (isAuthenticated && !authLoading) {
-      fetchCartCount();
-      fetchWishlistCount();
-      fetchUnreadNotifications();
-    } else {
-      setCartCount(0);
-      setWishlistCount(0);
-      setUnreadNotifications(0);
+    const fetchData = async () => {
+      setIsLoading(true);
       try {
-        const savedCart = localStorage.getItem('cart');
-        if (savedCart) {
-          const cartItems = JSON.parse(savedCart);
-          const count = cartItems.reduce((total: number, item: any) => total + (item.quantity || 1), 0);
-          setCartCount(count);
+        if (isAuthenticated && !authLoading) {
+          await Promise.all([
+            fetchCartCount(),
+            fetchWishlistCount(),
+            fetchUnreadNotifications()
+          ]);
+        } else {
+          // For non-authenticated users, load cart from localStorage
+          try {
+            const savedCart = localStorage.getItem('cart');
+            if (savedCart) {
+              const cartItems = JSON.parse(savedCart);
+              const count = cartItems.reduce((total: number, item: any) => total + (item.quantity || 1), 0);
+              setCartCount(count);
+            }
+          } catch (e) {
+            console.error('Failed to load cart from localStorage:', e);
+          }
         }
-      } catch (e) {
-        console.error('Failed to load cart from localStorage:', e);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
+
+    fetchData();
   }, [isAuthenticated, authLoading]);
 
-  const fetchCartCount = async () => {
+  const fetchCartCount = useCallback(async () => {
     try {
       const response = await api.cart.getCount();
       setCartCount(response.data.count || 0);
@@ -82,25 +95,25 @@ const Header: React.FC = () => {
         console.error('Failed to load cart from localStorage:', e);
       }
     }
-  };
+  }, []);
 
-  const fetchWishlistCount = async () => {
+  const fetchWishlistCount = useCallback(async () => {
     try {
       const response = await api.wishlist.getCount();
       setWishlistCount(response.data.count || 0);
     } catch (error) {
       console.error('Failed to fetch wishlist count:', error);
     }
-  };
+  }, []);
 
-  const fetchUnreadNotifications = async () => {
+  const fetchUnreadNotifications = useCallback(async () => {
     try {
       const response = await api.notifications.getUnreadCount();
       setUnreadNotifications(response.data.count || 0);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     }
-  };
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,6 +133,9 @@ const Header: React.FC = () => {
     try {
       await logout();
       setUserMenuOpen(false);
+      setCartCount(0);
+      setWishlistCount(0);
+      setUnreadNotifications(0);
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -135,6 +151,7 @@ const Header: React.FC = () => {
 
   const isActive = (path: string) => activeLink === path;
 
+  // Handle body overflow
   useEffect(() => {
     if (mobileMenuOpen || searchOpen) {
       document.body.style.overflow = 'hidden';
@@ -146,9 +163,37 @@ const Header: React.FC = () => {
     };
   }, [mobileMenuOpen, searchOpen]);
 
+  // Close menus on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (userMenuOpen && !target.closest('.user-menu-container')) {
+        setUserMenuOpen(false);
+      }
+      if (mobileMenuOpen && !target.closest('.mobile-menu-container') && !target.closest('.menu-toggle')) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [userMenuOpen, mobileMenuOpen]);
+
+  // Hide user menu on scroll
+  useEffect(() => {
+    const handleScrollClose = () => {
+      if (userMenuOpen) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScrollClose);
+    return () => window.removeEventListener('scroll', handleScrollClose);
+  }, [userMenuOpen]);
+
   return (
     <>
-      <header className={`sticky top-0 z-50 transition-all duration-300 ${
+      <header className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled ? 'bg-white/95 backdrop-blur-md shadow-lg' : 'bg-white'
       }`}>
         {/* Top Bar - Green Dominant */}
@@ -274,16 +319,17 @@ const Header: React.FC = () => {
         <div className="bg-gradient-to-r from-orange-50 to-orange-100/50">
           <div className="container mx-auto px-3 sm:px-4">
             <div className="flex items-center justify-between h-16 sm:h-20">
-              {/* Logo & Mobile Menu */}
+              {/* Logo & Mobile Menu Toggle */}
               <div className="flex items-center flex-shrink-0">
                 <button
-                  className="lg:hidden p-1.5 sm:p-2 rounded-lg hover:bg-orange-200/30 transition-colors mr-1 sm:mr-2"
+                  className="lg:hidden p-1.5 sm:p-2 rounded-lg hover:bg-orange-200/30 transition-colors mr-1 sm:mr-2 menu-toggle"
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   aria-label="Toggle mobile menu"
+                  aria-expanded={mobileMenuOpen}
                 >
                   {mobileMenuOpen ? <X size={20} className="text-orange-600" /> : <Menu size={20} className="text-orange-600" />}
                 </button>
-                <Link href="/" className="flex items-center group">
+                <Link href="/" className="flex items-center group" onClick={() => setMobileMenuOpen(false)}>
                   {/* Logo Container */}
                   <div className="relative h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 rounded-full overflow-hidden border-2 sm:border-3 border-white shadow-lg group-hover:shadow-xl transition-all duration-300">
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/20 via-orange-300/20 to-amber-200/20"></div>
@@ -301,8 +347,8 @@ const Header: React.FC = () => {
                     </div>
                   </div>
                   
-                  {/* Logo Text - Conditionally hide on mobile when user is logged in */}
-                  <div className={`ml-2 sm:ml-3 md:ml-4 ${isMobile && isAuthenticated ? 'hidden' : ''}`}>
+                  {/* Logo Text - Always show on desktop, conditionally on mobile based on auth */}
+                  <div className={`ml-2 sm:ml-3 md:ml-4 ${isMobile && isAuthenticated && cartCount > 0 ? 'hidden sm:block' : ''}`}>
                     <div className="relative">
                       <div className="absolute -inset-0.5 bg-white/50 blur-sm opacity-50 rounded-lg"></div>
                       
@@ -331,7 +377,7 @@ const Header: React.FC = () => {
                 </Link>
               </div>
 
-              {/* Desktop Navigation */}
+              {/* Desktop Navigation - Always visible */}
               <nav className="hidden lg:flex items-center space-x-1 ml-4 lg:ml-8">
                 <Link 
                   href="/" 
@@ -340,7 +386,10 @@ const Header: React.FC = () => {
                       ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md' 
                       : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
                   }`}
-                  onClick={() => setActiveLink('/')}
+                  onClick={() => {
+                    setActiveLink('/');
+                    setMobileMenuOpen(false);
+                  }}
                 >
                   Home
                 </Link>
@@ -351,7 +400,10 @@ const Header: React.FC = () => {
                       ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md' 
                       : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
                   }`}
-                  onClick={() => setActiveLink('/products')}
+                  onClick={() => {
+                    setActiveLink('/products');
+                    setMobileMenuOpen(false);
+                  }}
                 >
                   Products
                 </Link>
@@ -362,7 +414,10 @@ const Header: React.FC = () => {
                       ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md' 
                       : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
                 }`}
-                  onClick={() => setActiveLink('/categories')}
+                  onClick={() => {
+                    setActiveLink('/categories');
+                    setMobileMenuOpen(false);
+                  }}
                 >
                   Categories
                 </Link>
@@ -373,7 +428,10 @@ const Header: React.FC = () => {
                       ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md' 
                       : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
                   }`}
-                  onClick={() => setActiveLink('/deals')}
+                  onClick={() => {
+                    setActiveLink('/deals');
+                    setMobileMenuOpen(false);
+                  }}
                 >
                   <span className="flex items-center space-x-1">
                     <span>Deals</span>
@@ -389,15 +447,18 @@ const Header: React.FC = () => {
                       ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md' 
                       : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
                   }`}
-                  onClick={() => setActiveLink('/support')}
+                  onClick={() => {
+                    setActiveLink('/support');
+                    setMobileMenuOpen(false);
+                  }}
                 >
                   Support
                 </Link>
               </nav>
 
-              {/* User Actions */}
+              {/* User Actions - Responsive layout */}
               <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3 lg:space-x-4">
-                {/* Search Icon */}
+                {/* Search Icon - Always visible */}
                 <button 
                   className="p-1.5 sm:p-2 rounded-lg hover:bg-orange-200/30 transition-colors group"
                   onClick={() => setSearchOpen(true)}
@@ -408,10 +469,12 @@ const Header: React.FC = () => {
                   </div>
                 </button>
 
-                {/* Wishlist */}
+                {/* Wishlist - Hide on mobile when user has cart items to save space */}
                 <Link 
                   href="/profile/wishlist" 
-                  className="hidden md:flex relative group p-1.5 sm:p-2 rounded-lg hover:bg-orange-200/30 transition-colors"
+                  className={`relative group p-1.5 sm:p-2 rounded-lg hover:bg-orange-200/30 transition-colors ${
+                    isMobile && cartCount > 0 && isAuthenticated ? 'hidden sm:flex' : 'hidden md:flex'
+                  }`}
                 >
                   <Heart size={18} className="text-gray-700 group-hover:text-orange-600 transition-colors" />
                   {wishlistCount > 0 && (
@@ -421,7 +484,7 @@ const Header: React.FC = () => {
                   )}
                 </Link>
 
-                {/* Cart */}
+                {/* Cart - Always visible */}
                 <Link 
                   href="/cart" 
                   className="relative group p-1.5 sm:p-2 rounded-lg hover:bg-orange-200/30 transition-colors"
@@ -436,13 +499,15 @@ const Header: React.FC = () => {
                   </div>
                 </Link>
 
-                {/* Notification & Profile */}
-                {isAuthenticated ? (
-                  <div className="flex items-center space-x-1 sm:space-x-2">
-                    {/* Notifications */}
+                {/* User Profile & Notifications */}
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  {/* Notifications - Hide on small mobile when space is limited */}
+                  {isAuthenticated && (
                     <Link 
                       href="/profile/notifications" 
-                      className="hidden sm:flex relative group p-1.5 sm:p-2 rounded-lg hover:bg-orange-200/30 transition-colors"
+                      className={`relative group p-1.5 sm:p-2 rounded-lg hover:bg-orange-200/30 transition-colors ${
+                        isMobile && cartCount > 0 ? 'hidden xs:flex' : 'hidden sm:flex'
+                      }`}
                     >
                       <Bell size={18} className="text-gray-700 group-hover:text-orange-600 transition-colors" />
                       {unreadNotifications > 0 && (
@@ -451,346 +516,428 @@ const Header: React.FC = () => {
                         </span>
                       )}
                     </Link>
+                  )}
 
-                    {/* User Profile */}
-                    <div className="relative">
-                      <button
-                        onClick={handleUserMenuClick}
-                        className="flex items-center focus:outline-none group p-0.5 sm:p-1 rounded-lg hover:bg-orange-200/30 transition-colors"
-                        aria-label="User menu"
-                      >
-                        <div className="relative h-7 w-7 sm:h-8 sm:w-8 rounded-full overflow-hidden border-2 border-orange-200 group-hover:border-orange-300 transition-colors shadow-sm">
-                          {user?.avatar ? (
-                            <Image
-                              src={user.avatar}
-                              alt={user.name}
-                              fill
-                              className="object-cover"
-                            />
-                          ) : (
-                            <div className="h-full w-full bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
-                              <User size={14} className="text-orange-600" />
-                            </div>
-                          )}
-                        </div>
-                        <ChevronDown size={12} className="ml-0.5 text-gray-500 hidden sm:block" />
-                      </button>
-
-                      {userMenuOpen && (
-                        <div className="absolute right-0 mt-2 w-48 sm:w-52 bg-white rounded-xl shadow-xl py-2 border border-orange-100 overflow-hidden z-50">
-                          <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-white">
-                            <div className="font-medium text-gray-900 truncate text-sm sm:text-base">{user?.name}</div>
-                            <div className="text-xs sm:text-sm text-orange-600 truncate">{user?.email}</div>
-                          </div>
-                          <div className="py-1">
-                            <Link
-                              href="/profile"
-                              className="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition-colors group"
-                              onClick={() => setUserMenuOpen(false)}
-                            >
-                              <User size={14} className="mr-2 sm:mr-3 text-gray-400 group-hover:text-orange-500" />
-                              My Profile
-                            </Link>
-                            <Link
-                              href="/orders"
-                              className="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition-colors group"
-                              onClick={() => setUserMenuOpen(false)}
-                            >
-                              <ShoppingCart size={14} className="mr-2 sm:mr-3 text-gray-400 group-hover:text-orange-500" />
-                              My Orders
-                            </Link>
-                            <Link
-                              href="/profile/wishlist"
-                              className="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition-colors group"
-                              onClick={() => setUserMenuOpen(false)}
-                            >
-                              <Heart size={14} className="mr-2 sm:mr-3 text-gray-400 group-hover:text-orange-500" />
-                              Wishlist
-                              {wishlistCount > 0 && (
-                                <span className="ml-auto bg-orange-100 text-orange-600 text-xs px-1.5 py-0.5 rounded-full">
-                                  {wishlistCount}
-                                </span>
-                              )}
-                            </Link>
-                            {user?.role === 'admin' && (
-                              <Link
-                                href="/admin/dashboard"
-                                className="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition-colors group"
-                                onClick={() => setUserMenuOpen(false)}
-                              >
-                                <span className="mr-2 sm:mr-3 text-orange-500">👑</span>
-                                Admin
-                              </Link>
-                            )}
-                            {user?.role === 'delivery_staff' && (
-                              <Link
-                                href="/delivery-staff/deliveries"
-                                className="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition-colors group"
-                                onClick={() => setUserMenuOpen(false)}
-                              >
-                                <span className="mr-2 sm:mr-3 text-orange-500">🚚</span>
-                                Deliveries
-                              </Link>
-                            )}
-                          </div>
-                          <div className="border-t border-orange-100 pt-1">
-                            <button
-                              onClick={handleLogout}
-                              className="flex items-center w-full px-3 sm:px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors group"
-                            >
-                              <span className="mr-2 sm:mr-3">🚪</span>
-                              Logout
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  // Show login button for non-authenticated users
-                  <Link
-                    href="/auth/login"
-                    className="hidden sm:flex items-center px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg hover:from-orange-600 hover:to-orange-700 shadow-sm transition-all"
-                  >
-                    <LogIn size={14} className="mr-1 sm:mr-2" />
-                    Login
-                  </Link>
-                )}
-              </div>
-            </div>
-
-            {/* Mobile Menu */}
-            {mobileMenuOpen && (
-              <div className="lg:hidden border-t border-orange-200 py-3 animate-slideDown">
-                {/* Mobile Search */}
-                <div className="px-3 mb-4">
-                  <div className="relative">
-                    <button
-                      onClick={() => {
-                        setSearchOpen(true);
-                        setMobileMenuOpen(false);
-                      }}
-                      className="w-full px-4 py-3 text-left text-gray-600 bg-white border border-orange-200 rounded-lg hover:border-orange-300 transition-colors flex items-center"
-                    >
-                      <Search size={18} className="text-gray-400 mr-3" />
-                      <span>Search products...</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Mobile Auth Status */}
-                {isAuthenticated ? (
-                  <div className="px-3 mb-4">
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-white rounded-lg border border-orange-100">
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-orange-300">
-                          {user?.avatar ? (
-                            <Image
-                              src={user.avatar}
-                              alt={user.name}
-                              fill
-                              className="object-cover"
-                            />
-                          ) : (
-                            <div className="h-full w-full bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
-                              <User size={16} className="text-orange-600" />
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900 text-sm sm:text-base">{user?.name?.split(' ')[0] || 'User'}</div>
-                          <div className="text-xs text-orange-600">View Profile</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        {unreadNotifications > 0 && (
-                          <Link 
-                            href="/profile/notifications" 
-                            className="relative p-2 rounded-lg hover:bg-orange-100 transition-colors"
-                            onClick={() => setMobileMenuOpen(false)}
-                          >
-                            <Bell size={18} className="text-gray-600" />
-                            <span className="absolute -top-0.5 -right-0.5 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                              {unreadNotifications}
-                            </span>
-                          </Link>
-                        )}
-                        <Link 
-                          href="/cart" 
-                          className="relative p-2 rounded-lg hover:bg-orange-100 transition-colors"
-                          onClick={() => setMobileMenuOpen(false)}
+                  {/* User Profile/Login */}
+                  <div className="relative user-menu-container">
+                    {isAuthenticated ? (
+                      <>
+                        <button
+                          onClick={handleUserMenuClick}
+                          className="flex items-center focus:outline-none group p-0.5 sm:p-1 rounded-lg hover:bg-orange-200/30 transition-colors"
+                          aria-label="User menu"
+                          aria-expanded={userMenuOpen}
                         >
-                          <ShoppingCart size={18} className="text-gray-600" />
-                          {cartCount > 0 && (
-                            <span className="absolute -top-0.5 -right-0.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                              {cartCount}
-                            </span>
-                          )}
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="px-3 mb-4">
-                    <div className="text-center text-xs sm:text-sm text-orange-600 mb-2">Welcome! Please login or sign up.</div>
-                    <div className="grid grid-cols-2 gap-2">
+                          <div className="relative h-7 w-7 sm:h-8 sm:w-8 rounded-full overflow-hidden border-2 border-orange-200 group-hover:border-orange-300 transition-colors shadow-sm">
+                            {user?.avatar ? (
+                              <Image
+                                src={user.avatar}
+                                alt={user.name}
+                                fill
+                                className="object-cover"
+                                sizes="(max-width: 640px) 28px, 32px"
+                              />
+                            ) : (
+                              <div className="h-full w-full bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
+                                <User size={14} className="text-orange-600" />
+                              </div>
+                            )}
+                          </div>
+                          <ChevronDown size={12} className="ml-0.5 text-gray-500 hidden sm:block" />
+                        </button>
+
+                        {userMenuOpen && (
+                          <div className="absolute right-0 mt-2 w-48 sm:w-52 bg-white rounded-xl shadow-xl py-2 border border-orange-100 overflow-hidden z-50 animate-fadeIn">
+                            <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-white">
+                              <div className="font-medium text-gray-900 truncate text-sm sm:text-base">{user?.name}</div>
+                              <div className="text-xs sm:text-sm text-orange-600 truncate">{user?.email}</div>
+                            </div>
+                            <div className="py-1">
+                              <Link
+                                href="/profile"
+                                className="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition-colors group"
+                                onClick={() => setUserMenuOpen(false)}
+                              >
+                                <User size={14} className="mr-2 sm:mr-3 text-gray-400 group-hover:text-orange-500" />
+                                My Profile
+                              </Link>
+                              <Link
+                                href="/orders"
+                                className="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition-colors group"
+                                onClick={() => setUserMenuOpen(false)}
+                              >
+                                <ShoppingCart size={14} className="mr-2 sm:mr-3 text-gray-400 group-hover:text-orange-500" />
+                                My Orders
+                              </Link>
+                              <Link
+                                href="/profile/wishlist"
+                                className="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition-colors group"
+                                onClick={() => setUserMenuOpen(false)}
+                              >
+                                <Heart size={14} className="mr-2 sm:mr-3 text-gray-400 group-hover:text-orange-500" />
+                                Wishlist
+                                {wishlistCount > 0 && (
+                                  <span className="ml-auto bg-orange-100 text-orange-600 text-xs px-1.5 py-0.5 rounded-full">
+                                    {wishlistCount}
+                                  </span>
+                                )}
+                              </Link>
+                              {user?.role === 'admin' && (
+                                <Link
+                                  href="/admin/dashboard"
+                                  className="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition-colors group"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <span className="mr-2 sm:mr-3 text-orange-500">👑</span>
+                                  Admin Dashboard
+                                </Link>
+                              )}
+                              {user?.role === 'delivery_staff' && (
+                                <Link
+                                  href="/delivery-staff/deliveries"
+                                  className="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition-colors group"
+                                  onClick={() => setUserMenuOpen(false)}
+                                >
+                                  <span className="mr-2 sm:mr-3 text-orange-500">🚚</span>
+                                  Deliveries
+                                </Link>
+                              )}
+                            </div>
+                            <div className="border-t border-orange-100 pt-1">
+                              <button
+                                onClick={handleLogout}
+                                className="flex items-center w-full px-3 sm:px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors group"
+                              >
+                                <span className="mr-2 sm:mr-3">🚪</span>
+                                Logout
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      // Login button for non-authenticated users
                       <Link
                         href="/auth/login"
-                        className="px-3 py-2.5 text-center text-sm font-medium text-gray-700 border border-orange-300 rounded-lg hover:border-orange-400 hover:text-orange-600 transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
+                        className="hidden sm:flex items-center px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg hover:from-orange-600 hover:to-orange-700 shadow-sm transition-all"
                       >
+                        <LogIn size={14} className="mr-1 sm:mr-2" />
                         Login
                       </Link>
-                      <Link
-                        href="/auth/register"
-                        className="px-3 py-2.5 text-center text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg hover:from-orange-600 hover:to-orange-700 shadow-sm transition-all"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Sign Up
-                      </Link>
-                    </div>
-                  </div>
-                )}
-
-                {/* Navigation Links */}
-                <div className="flex flex-col space-y-1">
-                  <Link
-                    href="/"
-                    className={`px-3 py-3 text-base rounded-lg transition-all duration-200 ${
-                      isActive('/')
-                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
-                        : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
-                    }`}
-                    onClick={() => {
-                      setActiveLink('/');
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    <span className="flex items-center">
-                      <span className="w-6 mr-2 text-center">🏠</span>
-                      Home
-                    </span>
-                  </Link>
-                  <Link
-                    href="/products"
-                    className={`px-3 py-3 text-base rounded-lg transition-all duration-200 ${
-                      isActive('/products')
-                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
-                        : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
-                    }`}
-                    onClick={() => {
-                      setActiveLink('/products');
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    <span className="flex items-center">
-                      <span className="w-6 mr-2 text-center">🛒</span>
-                      Products
-                    </span>
-                  </Link>
-                  <Link
-                    href="/categories"
-                    className={`px-3 py-3 text-base rounded-lg transition-all duration-200 ${
-                      isActive('/categories')
-                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
-                        : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
-                    }`}
-                    onClick={() => {
-                      setActiveLink('/categories');
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    <span className="flex items-center">
-                      <span className="w-6 mr-2 text-center">📁</span>
-                      Categories
-                    </span>
-                  </Link>
-                  <Link
-                    href="/deals"
-                    className={`px-3 py-3 text-base rounded-lg transition-all duration-200 ${
-                      isActive('/deals')
-                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md'
-                        : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
-                    }`}
-                    onClick={() => {
-                      setActiveLink('/deals');
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    <span className="flex items-center justify-between">
-                      <span className="flex items-center">
-                        <span className="w-6 mr-2 text-center">🔥</span>
-                        Deals
-                      </span>
-                      <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                        HOT
-                      </span>
-                    </span>
-                  </Link>
-                  <Link
-                    href="/support"
-                    className={`px-3 py-3 text-base rounded-lg transition-all duration-200 ${
-                      isActive('/support')
-                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
-                        : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
-                    }`}
-                    onClick={() => {
-                      setActiveLink('/support');
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    <span className="flex items-center">
-                      <span className="w-6 mr-2 text-center">💬</span>
-                      Support
-                    </span>
-                  </Link>
-                </div>
-
-                {/* Additional Mobile Links */}
-                <div className="mt-4 px-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Link
-                      href="/help"
-                      className="px-3 py-2.5 text-center text-sm text-gray-600 border border-orange-100 rounded-lg hover:border-orange-200 hover:text-orange-600 transition-colors"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Help Center
-                    </Link>
-                    <Link
-                      href="/track-order"
-                      className="px-3 py-2.5 text-center text-sm text-gray-600 border border-orange-100 rounded-lg hover:border-orange-200 hover:text-orange-600 transition-colors"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Track Order
-                    </Link>
+                    )}
                   </div>
                 </div>
-
-                {/* Wishlist for mobile */}
-                {isAuthenticated && (
-                  <div className="mt-4 px-3">
-                    <Link
-                      href="/profile/wishlist"
-                      className="flex items-center justify-between px-3 py-3 text-base text-gray-700 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <span className="flex items-center">
-                        <span className="w-6 mr-2 text-center">❤️</span>
-                        My Wishlist
-                      </span>
-                      {wishlistCount > 0 && (
-                        <span className="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs px-2 py-0.5 rounded-full">
-                          {wishlistCount}
-                        </span>
-                      )}
-                    </Link>
-                  </div>
-                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </header>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden mobile-menu-container">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 animate-fadeIn"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          
+          {/* Menu Content */}
+          <div className="fixed inset-x-0 top-[136px] sm:top-[148px] bottom-0 bg-white z-40 overflow-y-auto animate-slideInFromTop">
+            <div className="container mx-auto px-3 sm:px-4 py-3">
+              {/* Mobile Search */}
+              <div className="mb-4">
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setSearchOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-3 text-left text-gray-600 bg-white border border-orange-200 rounded-lg hover:border-orange-300 transition-colors flex items-center"
+                  >
+                    <Search size={18} className="text-gray-400 mr-3" />
+                    <span>Search products...</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Mobile Auth Status */}
+              {isAuthenticated ? (
+                <div className="mb-4">
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-white rounded-lg border border-orange-100">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-orange-300">
+                        {user?.avatar ? (
+                          <Image
+                            src={user.avatar}
+                            alt={user.name}
+                            fill
+                            className="object-cover"
+                            sizes="32px"
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
+                            <User size={16} className="text-orange-600" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900 text-sm sm:text-base">{user?.name?.split(' ')[0] || 'User'}</div>
+                        <div className="text-xs text-orange-600">View Profile</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      {unreadNotifications > 0 && (
+                        <Link 
+                          href="/profile/notifications" 
+                          className="relative p-2 rounded-lg hover:bg-orange-100 transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <Bell size={18} className="text-gray-600" />
+                          <span className="absolute -top-0.5 -right-0.5 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                            {unreadNotifications}
+                          </span>
+                        </Link>
+                      )}
+                      <Link 
+                        href="/cart" 
+                        className="relative p-2 rounded-lg hover:bg-orange-100 transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <ShoppingCart size={18} className="text-gray-600" />
+                        {cartCount > 0 && (
+                          <span className="absolute -top-0.5 -right-0.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                            {cartCount}
+                          </span>
+                        )}
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-4">
+                  <div className="text-center text-xs sm:text-sm text-orange-600 mb-2">Welcome! Please login or sign up.</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      href="/auth/login"
+                      className="px-3 py-2.5 text-center text-sm font-medium text-gray-700 border border-orange-300 rounded-lg hover:border-orange-400 hover:text-orange-600 transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      href="/auth/register"
+                      className="px-3 py-2.5 text-center text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg hover:from-orange-600 hover:to-orange-700 shadow-sm transition-all"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Sign Up
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Links */}
+              <div className="flex flex-col space-y-1 mb-4">
+                <Link
+                  href="/"
+                  className={`px-3 py-3 text-base rounded-lg transition-all duration-200 ${
+                    isActive('/')
+                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+                      : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
+                  }`}
+                  onClick={() => {
+                    setActiveLink('/');
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <span className="flex items-center">
+                    <span className="w-6 mr-2 text-center">🏠</span>
+                    Home
+                  </span>
+                </Link>
+                <Link
+                  href="/products"
+                  className={`px-3 py-3 text-base rounded-lg transition-all duration-200 ${
+                    isActive('/products')
+                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+                      : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
+                  }`}
+                  onClick={() => {
+                    setActiveLink('/products');
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <span className="flex items-center">
+                    <span className="w-6 mr-2 text-center">🛒</span>
+                    Products
+                  </span>
+                </Link>
+                <Link
+                  href="/categories"
+                  className={`px-3 py-3 text-base rounded-lg transition-all duration-200 ${
+                    isActive('/categories')
+                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+                      : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
+                  }`}
+                  onClick={() => {
+                    setActiveLink('/categories');
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <span className="flex items-center">
+                    <span className="w-6 mr-2 text-center">📁</span>
+                    Categories
+                  </span>
+                </Link>
+                <Link
+                  href="/deals"
+                  className={`px-3 py-3 text-base rounded-lg transition-all duration-200 ${
+                    isActive('/deals')
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md'
+                      : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
+                  }`}
+                  onClick={() => {
+                    setActiveLink('/deals');
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <span className="flex items-center justify-between">
+                    <span className="flex items-center">
+                      <span className="w-6 mr-2 text-center">🔥</span>
+                      Deals
+                    </span>
+                    <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                      HOT
+                    </span>
+                  </span>
+                </Link>
+                <Link
+                  href="/support"
+                  className={`px-3 py-3 text-base rounded-lg transition-all duration-200 ${
+                    isActive('/support')
+                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+                      : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
+                  }`}
+                  onClick={() => {
+                    setActiveLink('/support');
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <span className="flex items-center">
+                    <span className="w-6 mr-2 text-center">💬</span>
+                    Support
+                  </span>
+                </Link>
+              </div>
+
+              {/* Additional Mobile Links */}
+              <div className="mb-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    href="/help"
+                    className="px-3 py-2.5 text-center text-sm text-gray-600 border border-orange-100 rounded-lg hover:border-orange-200 hover:text-orange-600 transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Help Center
+                  </Link>
+                  <Link
+                    href="/track-order"
+                    className="px-3 py-2.5 text-center text-sm text-gray-600 border border-orange-100 rounded-lg hover:border-orange-200 hover:text-orange-600 transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Track Order
+                  </Link>
+                </div>
+              </div>
+
+              {/* Wishlist for mobile */}
+              {isAuthenticated && (
+                <div className="mb-4">
+                  <Link
+                    href="/profile/wishlist"
+                    className="flex items-center justify-between px-3 py-3 text-base text-gray-700 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <span className="flex items-center">
+                      <span className="w-6 mr-2 text-center">❤️</span>
+                      My Wishlist
+                    </span>
+                    {wishlistCount > 0 && (
+                      <span className="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs px-2 py-0.5 rounded-full">
+                        {wishlistCount}
+                      </span>
+                    )}
+                  </Link>
+                </div>
+              )}
+
+              {/* User-specific links for mobile */}
+              {isAuthenticated && (
+                <div className="border-t border-orange-100 pt-4">
+                  <div className="flex flex-col space-y-1">
+                    <Link
+                      href="/profile"
+                      className="px-3 py-2.5 text-sm text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <span className="flex items-center">
+                        <span className="w-6 mr-2 text-center">👤</span>
+                        My Profile
+                      </span>
+                    </Link>
+                    <Link
+                      href="/orders"
+                      className="px-3 py-2.5 text-sm text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <span className="flex items-center">
+                        <span className="w-6 mr-2 text-center">📦</span>
+                        My Orders
+                      </span>
+                    </Link>
+                    {user?.role === 'admin' && (
+                      <Link
+                        href="/admin/dashboard"
+                        className="px-3 py-2.5 text-sm text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <span className="flex items-center">
+                          <span className="w-6 mr-2 text-center">👑</span>
+                          Admin Dashboard
+                        </span>
+                      </Link>
+                    )}
+                    {user?.role === 'delivery_staff' && (
+                      <Link
+                        href="/delivery-staff/deliveries"
+                        className="px-3 py-2.5 text-sm text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <span className="flex items-center">
+                          <span className="w-6 mr-2 text-center">🚚</span>
+                          Deliveries
+                        </span>
+                      </Link>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full mt-4 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 border border-red-100 rounded-lg transition-colors"
+                  >
+                    <span className="flex items-center justify-center">
+                      <span className="w-6 mr-2 text-center">🚪</span>
+                      Logout
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
