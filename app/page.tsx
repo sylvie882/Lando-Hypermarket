@@ -518,6 +518,85 @@ const HomePage: React.FC = () => {
 
   BannerImage.displayName = 'BannerImage';
 
+  // Create a separate component for mobile banner items to isolate hooks
+  const MobileBannerItem = React.memo(({ 
+    banner, 
+    index 
+  }: { 
+    banner: Banner; 
+    index: number;
+  }) => {
+    const isActive = index === activeBannerIndex;
+    const imageUrl = useMemo(() => getBannerImageUrl(banner, true), [banner]);
+    const hasError = imageErrors.has(banner.id);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+      if (isActive && !isLoaded && !hasError) {
+        const img = new Image();
+        img.src = imageUrl;
+        img.onload = () => setIsLoaded(true);
+        img.onerror = () => handleImageError(banner.id);
+      }
+    }, [isActive, imageUrl, banner.id, isLoaded, hasError]);
+
+    return (
+      <div
+        key={banner.id}
+        className={`absolute inset-0 transition-opacity duration-700 ${
+          isActive ? 'opacity-100 z-10' : 'opacity-0 z-0'
+        }`}
+      >
+        {hasError ? (
+          <div className="absolute inset-0 bg-gradient-to-b from-orange-500 to-orange-600 flex items-end pb-4">
+            <div className="text-white p-4">
+              <h2 className="text-xl font-bold mb-1">{banner.title}</h2>
+            </div>
+          </div>
+        ) : (
+          <>
+            {(isLoaded || preloadedImages.has(banner.id)) && (
+              <img
+                src={imageUrl}
+                alt={banner.title}
+                className="absolute inset-0 w-full h-full object-cover"
+                loading={isActive ? "eager" : "lazy"}
+                onError={() => handleImageError(banner.id)}
+              />
+            )}
+            
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+            
+            <div className="relative h-full flex items-end pb-4 px-4">
+              <div>
+                <h1 className="text-xl font-bold mb-2 text-white">
+                  {banner.title}
+                </h1>
+                {banner.subtitle && (
+                  <p className="text-sm mb-4 text-white">
+                    {banner.subtitle}
+                  </p>
+                )}
+                {banner.button_text && (
+                  <a
+                    href={banner.button_link || '#'}
+                    className="inline-flex items-center bg-white text-orange-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-50 transition-all duration-300 text-sm"
+                    onClick={() => handleBannerClick(banner.id)}
+                  >
+                    {banner.button_text}
+                    <ArrowRight className="ml-2" size={16} />
+                  </a>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  });
+
+  MobileBannerItem.displayName = 'MobileBannerItem';
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -736,75 +815,13 @@ const HomePage: React.FC = () => {
             </div>
             
             <div className="md:hidden relative h-[300px] overflow-hidden">
-              {banners.map((banner, index) => {
-                const isActive = index === activeBannerIndex;
-                const imageUrl = getBannerImageUrl(banner, true);
-                const hasError = imageErrors.has(banner.id);
-                const [isLoaded, setIsLoaded] = useState(false);
-
-                useEffect(() => {
-                  if (isActive && !isLoaded && !hasError) {
-                    const img = new Image();
-                    img.src = imageUrl;
-                    img.onload = () => setIsLoaded(true);
-                    img.onerror = () => handleImageError(banner.id);
-                  }
-                }, [isActive, imageUrl, banner.id, isLoaded, hasError]);
-
-                return (
-                  <div
-                    key={banner.id}
-                    className={`absolute inset-0 transition-opacity duration-700 ${
-                      isActive ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                    }`}
-                  >
-                    {hasError ? (
-                      <div className="absolute inset-0 bg-gradient-to-b from-orange-500 to-orange-600 flex items-end pb-4">
-                        <div className="text-white p-4">
-                          <h2 className="text-xl font-bold mb-1">{banner.title}</h2>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        {(isLoaded || preloadedImages.has(banner.id)) && (
-                          <img
-                            src={imageUrl}
-                            alt={banner.title}
-                            className="absolute inset-0 w-full h-full object-cover"
-                            loading={isActive ? "eager" : "lazy"}
-                            onError={() => handleImageError(banner.id)}
-                          />
-                        )}
-                        
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
-                        
-                        <div className="relative h-full flex items-end pb-4 px-4">
-                          <div>
-                            <h1 className="text-xl font-bold mb-2 text-white">
-                              {banner.title}
-                            </h1>
-                            {banner.subtitle && (
-                              <p className="text-sm mb-4 text-white">
-                                {banner.subtitle}
-                              </p>
-                            )}
-                            {banner.button_text && (
-                              <a
-                                href={banner.button_link || '#'}
-                                className="inline-flex items-center bg-white text-orange-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-50 transition-all duration-300 text-sm"
-                                onClick={() => handleBannerClick(banner.id)}
-                              >
-                                {banner.button_text}
-                                <ArrowRight className="ml-2" size={16} />
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+              {banners.map((banner, index) => (
+                <MobileBannerItem 
+                  key={banner.id}
+                  banner={banner}
+                  index={index}
+                />
+              ))}
               
               {banners.length > 1 && (
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-1.5 z-20">
