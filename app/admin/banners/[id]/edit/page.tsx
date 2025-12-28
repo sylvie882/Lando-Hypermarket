@@ -163,7 +163,7 @@ export default function EditBannerPage() {
         
         console.log(`Large file (${(file.size / 1024 / 1024).toFixed(2)}MB) - skipping compression to avoid memory issues`);
         
-        // Show warning toast
+        // FIXED: Use toast with warning styling instead of toast.warning()
         toast('Large image detected. Using original file (backend will optimize).', {
           icon: '⚠️',
           style: {
@@ -182,12 +182,11 @@ export default function EditBannerPage() {
   const fetchBanner = async () => {
     try {
       setLoading(true);
-      setError('');
       
-      // Try to get banner by ID first
+      // Try direct fetch first
       try {
         const response = await api.admin.getBanner(parseInt(bannerId));
-        const bannerData = response.data;
+        const bannerData = response.data?.data || response.data;
         
         if (bannerData) {
           setFormData({
@@ -204,10 +203,9 @@ export default function EditBannerPage() {
             category_slug: bannerData.category_slug || '',
           });
           
-          // Set current images and previews
           if (bannerData.image) {
             setCurrentImage(bannerData.image);
-            const imageUrl = api.getImageUrl(bannerData.image);
+            const imageUrl = bannerData.image_url || await getImageUrl(bannerData.image);
             setImagePreview(imageUrl);
           } else {
             setCurrentImage('');
@@ -216,7 +214,7 @@ export default function EditBannerPage() {
           
           if (bannerData.mobile_image) {
             setCurrentMobileImage(bannerData.mobile_image);
-            const mobileImageUrl = api.getImageUrl(bannerData.mobile_image);
+            const mobileImageUrl = bannerData.mobile_image_url || await getImageUrl(bannerData.mobile_image);
             setMobileImagePreview(mobileImageUrl);
           } else {
             setCurrentMobileImage('');
@@ -230,61 +228,60 @@ export default function EditBannerPage() {
         console.log('Direct fetch failed, trying list API:', directErr);
       }
       
-      // Fallback to list API if direct fetch fails
-      try {
-        const response = await api.admin.getBanners();
-        let bannersData: any[] = [];
-        
-        if (Array.isArray(response.data)) {
-          bannersData = response.data;
-        } else if (response.data?.data && Array.isArray(response.data.data)) {
-          bannersData = response.data.data;
-        } else if (response.data?.data?.data && Array.isArray(response.data.data.data)) {
-          bannersData = response.data.data.data;
-        }
-        
-        const bannerIdNum = parseInt(bannerId);
-        const banner = bannersData.find((b: any) => 
-          b.id === bannerIdNum || String(b.id) === bannerId
-        );
-        
-        if (!banner) {
-          throw new Error('Banner not found');
-        }
+      // Fallback to list API
+      const response = await api.admin.getBanners();
+      let bannersData: any[] = [];
+      
+      if (response.data?.data?.data) {
+        bannersData = response.data.data.data;
+      } else if (response.data?.data) {
+        bannersData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        bannersData = response.data;
+      }
+      
+      const bannerIdNum = parseInt(bannerId);
+      const banner = bannersData.find((b: any) => 
+        b.id === bannerIdNum || String(b.id) === bannerId
+      );
+      
+      if (!banner) {
+        setError('Banner not found');
+        toast.error('Banner not found');
+        setLoading(false);
+        return;
+      }
 
-        setFormData({
-          title: banner.title || '',
-          subtitle: banner.subtitle || '',
-          description: banner.description || '',
-          button_text: banner.button_text || '',
-          button_link: banner.button_link || '',
-          order: banner.order || 0,
-          is_active: banner.is_active !== false,
-          start_date: banner.start_date ? new Date(banner.start_date).toISOString().split('T')[0] : '',
-          end_date: banner.end_date ? new Date(banner.end_date).toISOString().split('T')[0] : '',
-          type: banner.type || 'homepage',
-          category_slug: banner.category_slug || '',
-        });
+      setFormData({
+        title: banner.title || '',
+        subtitle: banner.subtitle || '',
+        description: banner.description || '',
+        button_text: banner.button_text || '',
+        button_link: banner.button_link || '',
+        order: banner.order || 0,
+        is_active: banner.is_active !== false,
+        start_date: banner.start_date ? new Date(banner.start_date).toISOString().split('T')[0] : '',
+        end_date: banner.end_date ? new Date(banner.end_date).toISOString().split('T')[0] : '',
+        type: banner.type || 'homepage',
+        category_slug: banner.category_slug || '',
+      });
 
-        // Set images using api.getImageUrl
-        if (banner.image) {
-          setCurrentImage(banner.image);
-          setImagePreview(api.getImageUrl(banner.image));
-        } else {
-          setCurrentImage('');
-          setImagePreview(getPlaceholderImage('desktop'));
-        }
-        
-        if (banner.mobile_image) {
-          setCurrentMobileImage(banner.mobile_image);
-          setMobileImagePreview(api.getImageUrl(banner.mobile_image));
-        } else {
-          setCurrentMobileImage('');
-          setMobileImagePreview(getPlaceholderImage('mobile'));
-        }
-
-      } catch (fallbackErr) {
-        throw new Error('Banner not found in list');
+      if (banner.image) {
+        setCurrentImage(banner.image);
+        const imageUrl = banner.image_url || await getImageUrl(banner.image);
+        setImagePreview(imageUrl);
+      } else {
+        setCurrentImage('');
+        setImagePreview(getPlaceholderImage('desktop'));
+      }
+      
+      if (banner.mobile_image) {
+        setCurrentMobileImage(banner.mobile_image);
+        const mobileImageUrl = banner.mobile_image_url || await getImageUrl(banner.mobile_image);
+        setMobileImagePreview(mobileImageUrl);
+      } else {
+        setCurrentMobileImage('');
+        setMobileImagePreview(getPlaceholderImage('mobile'));
       }
 
     } catch (err: any) {
@@ -293,6 +290,35 @@ export default function EditBannerPage() {
       toast.error('Failed to load banner');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getImageUrl = async (imagePath: string): Promise<string> => {
+    if (!imagePath) return getPlaceholderImage('desktop');
+    
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    }
+    
+    const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    
+    if (cleanPath.includes('storage/')) {
+      return `${baseUrl}/${cleanPath}`;
+    } else if (cleanPath.startsWith('banners/')) {
+      return `${baseUrl}/storage/${cleanPath}`;
+    } else {
+      try {
+        const testUrl = `${baseUrl}/storage/${cleanPath}`;
+        const response = await fetch(testUrl, { method: 'HEAD' });
+        if (response.ok) {
+          return testUrl;
+        }
+      } catch (e) {
+        console.log('Image not found at storage path:', cleanPath);
+      }
+      
+      return getPlaceholderImage('desktop');
     }
   };
 
@@ -329,7 +355,7 @@ export default function EditBannerPage() {
       return;
     }
 
-    // Set preview immediately
+    // Set preview immediately (but limit preview size for very large files)
     const reader = new FileReader();
     reader.onload = () => {
       if (type === 'desktop') {
@@ -357,6 +383,8 @@ export default function EditBannerPage() {
 
     try {
       setCompressing(true);
+      const toastId = toast.loading(`Processing ${type} image (${(file.size / 1024 / 1024).toFixed(2)}MB)...`);
+      
       const maxWidth = type === 'desktop' ? 1920 : 768;
       let processedFile;
       
@@ -368,10 +396,12 @@ export default function EditBannerPage() {
         
         if (parseFloat(processedMB) < parseFloat(originalMB)) {
           toast.success(`Image compressed from ${originalMB}MB to ${processedMB}MB`, { 
+            id: toastId,
             duration: 4000 
           });
         } else {
           toast.success(`Processing complete (${processedMB}MB)`, { 
+            id: toastId,
             duration: 3000 
           });
         }
@@ -379,6 +409,7 @@ export default function EditBannerPage() {
         console.error('Compression failed:', compressErr);
         processedFile = file;
         toast.success(`Using original image (${(file.size / 1024 / 1024).toFixed(2)}MB)`, { 
+          id: toastId,
           duration: 3000 
         });
       }
@@ -393,16 +424,18 @@ export default function EditBannerPage() {
       console.error('Image processing error:', err);
       toast.error('Failed to process image');
       
-      // Reset preview
+      // Reset preview to original image
       if (type === 'desktop') {
         if (currentImage) {
-          setImagePreview(api.getImageUrl(currentImage));
+          const url = await getImageUrl(currentImage);
+          setImagePreview(url);
         } else {
           setImagePreview(getPlaceholderImage('desktop'));
         }
       } else {
         if (currentMobileImage) {
-          setMobileImagePreview(api.getImageUrl(currentMobileImage));
+          const url = await getImageUrl(currentMobileImage);
+          setMobileImagePreview(url);
         } else {
           setMobileImagePreview(getPlaceholderImage('mobile'));
         }
@@ -421,6 +454,7 @@ export default function EditBannerPage() {
 
   const clearDesktopImage = () => {
     setNewImage(null);
+    setCurrentImage('');
     setImagePreview(getPlaceholderImage('desktop'));
     setShouldRemoveDesktop(true); // Mark for removal
     
@@ -432,6 +466,7 @@ export default function EditBannerPage() {
 
   const clearMobileImage = () => {
     setNewMobileImage(null);
+    setCurrentMobileImage('');
     setMobileImagePreview(getPlaceholderImage('mobile'));
     setShouldRemoveMobile(true); // Mark for removal
     
@@ -441,116 +476,120 @@ export default function EditBannerPage() {
     toast.success('Mobile image marked for removal');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      setSaving(true);
-      setError('');
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  try {
+    setSaving(true);
+    setError('');
 
-      // Validation
-      if (!formData.title.trim()) {
-        toast.error('Title is required');
-        setSaving(false);
-        return;
-      }
-
-      // Create FormData
-      const data = new FormData();
-      
-      // Add all form fields
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
-          if (key === 'is_active') {
-            data.append(key, value ? '1' : '0');
-          } else if (typeof value === 'boolean') {
-            data.append(key, value.toString());
-          } else if (typeof value === 'number') {
-            data.append(key, value.toString());
-          } else {
-            data.append(key, String(value));
-          }
-        }
-      });
-
-      // Handle desktop image
-      if (newImage) {
-        data.append('image', newImage);
-        console.log(`Sending new desktop image: ${newImage.name} (${(newImage.size / 1024 / 1024).toFixed(2)}MB)`);
-      } else if (shouldRemoveDesktop && currentImage) {
-        // If we should remove the image and there's a current image
-        // Some backends use '_method' or 'remove_image' field
-        // Let's try sending empty string first
-        data.append('image', '');
-        console.log('Marking desktop image for removal');
-      }
-      // If neither newImage nor shouldRemoveDesktop, don't append anything (keeps existing)
-
-      // Handle mobile image
-      if (newMobileImage) {
-        data.append('mobile_image', newMobileImage);
-        console.log(`Sending new mobile image: ${newMobileImage.name} (${(newMobileImage.size / 1024 / 1024).toFixed(2)}MB)`);
-      } else if (shouldRemoveMobile && currentMobileImage) {
-        data.append('mobile_image', '');
-        console.log('Marking mobile image for removal');
-      } else if (currentMobileImage || shouldRemoveMobile) {
-        // Always send mobile_image field if there's a current image or we want to remove it
-        data.append('mobile_image', currentMobileImage || '');
-      }
-
-      // Log FormData for debugging
-      console.log('Submitting FormData for edit:');
-      const formDataEntries: {[key: string]: string} = {};
-      for (let [key, value] of data.entries()) {
-        if (value instanceof File) {
-          formDataEntries[key] = `File: ${value.name} (${(value.size / 1024 / 1024).toFixed(2)}MB)`;
-        } else {
-          formDataEntries[key] = value as string;
-        }
-      }
-      console.log(formDataEntries);
-
-      // Send update request using api.admin.updateBanner
-      await api.admin.updateBanner(parseInt(bannerId), data);
-      
-      toast.success('Banner updated successfully!');
-      
-      // Clear new image states
-      setNewImage(null);
-      setNewMobileImage(null);
-      setShouldRemoveDesktop(false);
-      setShouldRemoveMobile(false);
-      
-      // Navigate back after a short delay
-      setTimeout(() => {
-        router.push('/admin/banners');
-      }, 1500);
-      
-    } catch (err: any) {
-      console.error('Update error:', err);
-      console.error('Full error response:', err.response?.data);
-      
-      let errorMessage = 'Failed to update banner';
-      
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
-      } else if (err.response?.data?.errors) {
-        const errors = err.response.data.errors;
-        errorMessage = Object.values(errors)
-          .flat()
-          .join(', ');
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
+    // Validation
+    if (!formData.title.trim()) {
+      toast.error('Title is required');
       setSaving(false);
+      return;
     }
-  };
+
+    if (formData.order === null || formData.order === undefined) {
+      toast.error('Display order is required');
+      setSaving(false);
+      return;
+    }
+
+    // Create FormData - MATCHING CREATE BANNER FORMAT
+    const data = new FormData();
+    
+    // Add form fields (EXACTLY like create banner)
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        if (key === 'is_active') {
+          data.append(key, value ? '1' : '0');
+        } else if (key === 'order') {
+          data.append(key, String(value));
+        } else if (typeof value === 'boolean') {
+          data.append(key, value.toString());
+        } else {
+          data.append(key, String(value));
+        }
+      }
+    });
+
+    // Handle desktop image
+    if (newImage) {
+      data.append('image', newImage);
+      console.log(`Sending new desktop image: ${newImage.name} (${(newImage.size / 1024 / 1024).toFixed(2)}MB)`);
+    } else if (shouldRemoveDesktop) {
+      // If backend expects file deletion differently, adjust this
+      // For now, send empty string like create banner does
+      data.append('image', ''); // Or 'remove' flag if backend expects it
+    } else {
+      // Keep existing image - no image field sent
+      console.log('Keeping existing desktop image');
+    }
+
+    // Handle mobile image - MATCH CREATE BANNER EXACTLY
+    if (newMobileImage) {
+      data.append('mobile_image', newMobileImage);
+      console.log(`Sending new mobile image: ${newMobileImage.name} (${(newMobileImage.size / 1024 / 1024).toFixed(2)}MB)`);
+    } else if (shouldRemoveMobile) {
+      // Send empty string like create banner
+      data.append('mobile_image', '');
+      console.log('Sending empty mobile_image field');
+    } else {
+      // Keep existing mobile image - send empty string to match create banner
+      data.append('mobile_image', '');
+      console.log('Sending empty mobile_image (keep existing)');
+    }
+
+    // Log FormData for debugging
+    console.log('Submitting FormData for edit:');
+    for (let [key, value] of data.entries()) {
+      console.log(`${key}:`, value instanceof File ? 
+        `File: ${value.name} (${(value.size / 1024 / 1024).toFixed(2)}MB)` : 
+        value);
+    }
+
+    // Send update request
+    await api.admin.updateBanner(parseInt(bannerId), data);
+    
+    toast.success('Banner updated successfully!');
+    
+    // Clear new image states
+    setNewImage(null);
+    setNewMobileImage(null);
+    setShouldRemoveDesktop(false);
+    setShouldRemoveMobile(false);
+    
+    // Navigate back after a short delay
+    setTimeout(() => {
+      router.push('/admin/banners');
+    }, 1500);
+    
+  } catch (err: any) {
+    console.error('Update error:', err);
+    console.error('Full error response:', err.response?.data);
+    
+    let errorMessage = 'Failed to update banner';
+    
+    if (err.response?.data?.message) {
+      errorMessage = err.response.data.message;
+    } else if (err.response?.data?.error) {
+      errorMessage = err.response.data.error;
+    } else if (err.response?.data?.errors) {
+      const errors = err.response.data.errors;
+      errorMessage = Object.values(errors)
+        .flat()
+        .join(', ');
+    } else if (err.message) {
+      errorMessage = err.message;
+    }
+    
+    setError(errorMessage);
+    toast.error(errorMessage);
+  } finally {
+    setSaving(false);
+  }
+};
 
   const getPlaceholderImage = (type: 'desktop' | 'mobile') => {
     const width = type === 'desktop' ? 1200 : 768;
@@ -998,23 +1037,23 @@ export default function EditBannerPage() {
 
                   <div className="flex space-x-4">
                     <button
-                      type="submit"
-                      disabled={saving || compressing}
-                      className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {saving ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          {(newImage && newImage.size > 50 * 1024 * 1024) || (newMobileImage && newMobileImage.size > 50 * 1024 * 1024) ? 
-                            'Uploading large files...' : 'Saving...'}
-                        </>
-                      ) : (
-                        <>
-                          <Save size={18} />
-                          Save Changes
-                        </>
-                      )}
-                    </button>
+  type="submit"
+  disabled={saving || compressing}
+  className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+>
+  {saving ? (
+    <>
+      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+      {(newImage && newImage.size > 50 * 1024 * 1024) || (newMobileImage && newMobileImage.size > 50 * 1024 * 1024) ? 
+        'Uploading large files...' : 'Saving...'}
+    </>
+  ) : (
+    <>
+      <Save size={18} />
+      Save Changes
+    </>
+  )}
+</button>
 
                     <button
                       type="button"
