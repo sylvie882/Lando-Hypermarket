@@ -347,12 +347,16 @@ class ApiService {
     getOrderTrackingHistory: (id: number) => 
       this.api.get(`/admin/orders/${id}/tracking-history`),
     
-    // Banner Management
+    // Banner Management - FIXED: updateBanner now uses POST with _method=PUT
     getBanners: (params?: any) => this.api.get('/admin/banners', { params }),
     getBanner: (id: number) => this.api.get(`/admin/banners/${id}`),
     getBannerStats: () => this.api.get('/admin/banners/stats'),
     createBanner: (data: FormData) => this.api.post('/admin/banners', data),
-    updateBanner: (id: number, data: FormData) => this.api.put(`/admin/banners/${id}`, data),
+    updateBanner: (id: number, data: FormData) => {
+      // For Laravel file uploads with PUT, we need to use POST with _method=PUT
+      data.append('_method', 'PUT');
+      return this.api.post(`/admin/banners/${id}`, data);
+    },
     deleteBanner: (id: number) => this.api.delete(`/admin/banners/${id}`),
     getBannerAnalytics: (bannerId: number, params?: any) => 
       this.api.get(`/admin/banners/${bannerId}/stats`, { params }),
