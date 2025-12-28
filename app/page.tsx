@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { Product, Category } from '@/types';
 import ProductCard from '@/components/ui/ProductCard';
@@ -20,7 +20,6 @@ import {
   CheckCircle,
   Sprout,
   Package,
-  Truck as TruckIcon,
   ShieldCheck,
   Clock4,
   TrendingUp,
@@ -122,20 +121,22 @@ const HomePage: React.FC = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showCustomerSupport, setShowCustomerSupport] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
+  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
+  const [preloadedImages, setPreloadedImages] = useState<Set<number>>(new Set());
   
-  // New personalized features state
   const [personalizedRecommendations, setPersonalizedRecommendations] = useState<Product[]>([]);
   const [personalizedOffers, setPersonalizedOffers] = useState<PersonalizedOffer[]>([]);
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
   const [isPersonalizationLoading, setIsPersonalizationLoading] = useState(false);
   const [showPersonalizedSection, setShowPersonalizedSection] = useState(false);
 
-  // WhatsApp phone number
+  const [visibleBanners, setVisibleBanners] = useState<Banner[]>([]);
+  const [displayCount, setDisplayCount] = useState(5);
+
   const whatsappNumber = '+254716354589';
   const whatsappMessage = encodeURIComponent('Hello! I have a question about your products.');
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
-  // Handle scroll to show/hide the top arrow
   useEffect(() => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 300);
@@ -145,7 +146,6 @@ const HomePage: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Scroll to top function
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
@@ -153,8 +153,7 @@ const HomePage: React.FC = () => {
     });
   };
 
-  // Get banner image URL
-  const getBannerImageUrl = (banner: Banner, isMobile = false): string => {
+  const getBannerImageUrl = useCallback((banner: Banner, isMobile = false): string => {
     const imagePath = isMobile ? banner.mobile_image || banner.image : banner.image;
     
     if (!imagePath) {
@@ -175,23 +174,77 @@ const HomePage: React.FC = () => {
     }
     
     const baseUrl = 'https://api.hypermarket.co.ke';
-    const finalUrl = `${baseUrl}/storage/${cleanPath}`;
     
-    return finalUrl;
-  };
+    const params = new URLSearchParams({
+      width: isMobile ? '800' : '1920',
+      quality: '75',
+      format: 'auto'
+    });
+    
+    return `${baseUrl}/storage/${cleanPath}?${params}`;
+  }, []);
 
-  // Load personalized data for authenticated users
+  const preloadBannerImage = useCallback((bannerId: number, banner: Banner, isMobile: boolean) => {
+    if (preloadedImages.has(bannerId)) return;
+    
+    const img = new Image();
+    const imageUrl = getBannerImageUrl(banner, isMobile);
+    
+    img.onload = () => {
+      setPreloadedImages(prev => new Set(prev).add(bannerId));
+    };
+    
+    img.onerror = () => {
+      console.error(`Failed to preload banner ${bannerId}`);
+    };
+    
+    img.src = imageUrl;
+  }, [getBannerImageUrl, preloadedImages]);
+
+  const nextBanner = useCallback(() => {
+    if (banners.length <= 1) return;
+    
+    const nextIndex = activeBannerIndex === banners.length - 1 ? 0 : activeBannerIndex + 1;
+    
+    if (banners[nextIndex]) {
+      preloadBannerImage(banners[nextIndex].id, banners[nextIndex], false);
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        preloadBannerImage(banners[nextIndex].id, banners[nextIndex], true);
+      }
+    }
+    
+    const nextAfterNext = nextIndex === banners.length - 1 ? 0 : nextIndex + 1;
+    if (banners[nextAfterNext]) {
+      preloadBannerImage(banners[nextAfterNext].id, banners[nextAfterNext], false);
+    }
+    
+    setActiveBannerIndex(nextIndex);
+  }, [activeBannerIndex, banners, preloadBannerImage]);
+
+  const prevBanner = useCallback(() => {
+    if (banners.length <= 1) return;
+    
+    const prevIndex = activeBannerIndex === 0 ? banners.length - 1 : activeBannerIndex - 1;
+    
+    if (banners[prevIndex]) {
+      preloadBannerImage(banners[prevIndex].id, banners[prevIndex], false);
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        preloadBannerImage(banners[prevIndex].id, banners[prevIndex], true);
+      }
+    }
+    
+    setActiveBannerIndex(prevIndex);
+  }, [activeBannerIndex, banners, preloadBannerImage]);
+
   const loadPersonalizedData = async () => {
     try {
       setIsPersonalizationLoading(true);
       
-      // Check if user is authenticated
       const user = await api.auth.getCurrentUser();
       
       if (user && user.data) {
         setShowPersonalizedSection(true);
         
-        // Load personalized recommendations
         try {
           const recommendationsRes = await api.products.getPersonalizedRecommendations({ limit: 8 });
           if (recommendationsRes.data?.recommendations) {
@@ -201,7 +254,6 @@ const HomePage: React.FC = () => {
           console.error('Failed to load personalized recommendations:', error);
         }
         
-        // Load personalized offers
         try {
           const offersRes = await api.products.getPersonalizedOffers();
           if (offersRes.data?.offers?.data) {
@@ -211,7 +263,6 @@ const HomePage: React.FC = () => {
           console.error('Failed to load personalized offers:', error);
         }
         
-        // Load user preferences
         try {
           const preferencesRes = await api.products.getUserPreferences();
           if (preferencesRes.data?.preferences) {
@@ -230,6 +281,34 @@ const HomePage: React.FC = () => {
   };
 
   useEffect(() => {
+    if (banners.length > 0) {
+      const initialBanners = banners.slice(0, displayCount);
+      setVisibleBanners(initialBanners);
+      
+      initialBanners.slice(0, 2).forEach(banner => {
+        preloadBannerImage(banner.id, banner, false);
+        preloadBannerImage(banner.id, banner, true);
+      });
+      
+      const interval = setInterval(nextBanner, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [banners, displayCount, preloadBannerImage, nextBanner]);
+
+  const loadMoreBanners = useCallback(() => {
+    if (banners.length > displayCount) {
+      const nextDisplayCount = Math.min(displayCount + 3, banners.length);
+      setDisplayCount(nextDisplayCount);
+      setVisibleBanners(banners.slice(0, nextDisplayCount));
+      
+      banners.slice(displayCount, nextDisplayCount).forEach(banner => {
+        preloadBannerImage(banner.id, banner, false);
+        preloadBannerImage(banner.id, banner, true);
+      });
+    }
+  }, [banners, displayCount, preloadedImages]);
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -237,21 +316,18 @@ const HomePage: React.FC = () => {
     try {
       setIsLoading(true);
       
-      // Fetch data in parallel
       const [featuredRes, categoriesRes, bannersRes] = await Promise.allSettled([
         api.products.getFeatured(),
         api.categories.getAll(),
         api.banners.getHomepage()
       ]);
 
-      // Handle featured products
       if (featuredRes.status === 'fulfilled') {
         setFeaturedProducts(featuredRes.value.data || []);
       } else {
         console.error('Failed to fetch featured products:', featuredRes.reason);
       }
 
-      // Handle categories
       if (categoriesRes.status === 'fulfilled') {
         const categoriesData = categoriesRes.value.data || [];
         setCategories(categoriesData);
@@ -259,7 +335,6 @@ const HomePage: React.FC = () => {
         console.error('Failed to fetch categories:', categoriesRes.reason);
       }
 
-      // Handle banners
       if (bannersRes.status === 'fulfilled') {
         const response = bannersRes.value;
         console.log('Banners API response:', response);
@@ -278,30 +353,22 @@ const HomePage: React.FC = () => {
           }
         }
         
-        // Filter active homepage banners
         const activeBanners = bannerData
           .filter(banner => {
             const isActive = banner.is_active === true;
             const isHomepage = banner.type === 'homepage';
             const hasImage = banner.image || banner.image_url;
-            
             return isActive && isHomepage && hasImage;
           })
-          .sort((a, b) => a.order - b.order);
+          .sort((a, b) => a.order - b.order)
+          .slice(0, 10);
         
-        console.log('Active banners to display:', activeBanners);
+        console.log(`Found ${activeBanners.length} active banners (limited to 10)`);
         setBanners(activeBanners);
-        
-        // Test banner URLs
-        activeBanners.forEach((banner, index) => {
-          const url = getBannerImageUrl(banner, false);
-          console.log(`Banner ${index} test URL:`, url);
-        });
       } else {
         console.error('Failed to fetch banners:', bannersRes.reason);
       }
 
-      // Fetch new arrivals separately
       try {
         const productsRes = await api.products.getAll({ 
           per_page: 12, 
@@ -314,9 +381,7 @@ const HomePage: React.FC = () => {
         console.error('Failed to fetch new arrivals:', error);
       }
       
-      // Load personalized data after main content
       loadPersonalizedData();
-      
     } catch (error) {
       console.error('Failed to fetch homepage data:', error);
     } finally {
@@ -324,31 +389,6 @@ const HomePage: React.FC = () => {
     }
   };
 
-  const nextBanner = () => {
-    if (banners.length <= 1) return;
-    setActiveBannerIndex((prevIndex) => 
-      prevIndex === banners.length - 1 ? 0 : prevIndex + 1
-    );
-  };
-
-  const prevBanner = () => {
-    if (banners.length <= 1) return;
-    setActiveBannerIndex((prevIndex) => 
-      prevIndex === 0 ? banners.length - 1 : prevIndex - 1
-    );
-  };
-
-  useEffect(() => {
-    if (banners.length <= 1) return;
-    
-    const interval = setInterval(() => {
-      nextBanner();
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [banners.length]);
-
-  // Handle banner click tracking
   const handleBannerClick = async (bannerId: number) => {
     try {
       await api.banners.trackClick(bannerId);
@@ -357,13 +397,11 @@ const HomePage: React.FC = () => {
     }
   };
 
-  // Handle image error
-  const handleImageError = (bannerId: number) => {
+  const handleImageError = useCallback((bannerId: number) => {
     console.error(`Banner ${bannerId} image failed to load`);
     setImageErrors(prev => new Set(prev).add(bannerId));
-  };
+  }, []);
 
-  // Handle product view tracking
   const trackProductView = async (productId: number) => {
     try {
       await api.products.trackView(productId);
@@ -372,7 +410,6 @@ const HomePage: React.FC = () => {
     }
   };
 
-  // Handle offer interaction tracking
   const trackOfferInteraction = async (offerId: number | string, interactionType: string) => {
     try {
       await api.products.trackOfferInteraction({
@@ -385,12 +422,10 @@ const HomePage: React.FC = () => {
     }
   };
 
-  // Calculate discount percentage
   const calculateDiscountPercentage = (originalPrice: number, discountedPrice: number) => {
     return Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
   };
 
-  // Format price
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
@@ -399,7 +434,6 @@ const HomePage: React.FC = () => {
     }).format(price);
   };
 
-  // Get time until offer expires
   const getTimeUntilExpiry = (validUntil: string) => {
     const expiryDate = new Date(validUntil);
     const now = new Date();
@@ -417,12 +451,11 @@ const HomePage: React.FC = () => {
     }
   };
 
-  // Calculate user profile completion percentage
   const calculateProfileCompletion = () => {
     if (!userPreferences) return 0;
     
     let completedFields = 0;
-    const totalFields = 3; // price_min, price_max, categories
+    const totalFields = 3;
     
     if (userPreferences.preferred_price_min) completedFields++;
     if (userPreferences.preferred_price_max) completedFields++;
@@ -430,6 +463,60 @@ const HomePage: React.FC = () => {
     
     return Math.round((completedFields / totalFields) * 100);
   };
+
+  const BannerImage = React.memo(({ 
+    banner, 
+    isMobile, 
+    isActive 
+  }: { 
+    banner: Banner; 
+    isMobile: boolean; 
+    isActive: boolean;
+  }) => {
+    const imageUrl = useMemo(() => getBannerImageUrl(banner, isMobile), [banner, isMobile]);
+    const hasError = imageErrors.has(banner.id);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+      if (isActive && !isLoaded && !hasError) {
+        const img = new Image();
+        img.src = imageUrl;
+        img.onload = () => {
+          setIsLoaded(true);
+          setLoadedImages(prev => new Set(prev).add(banner.id));
+        };
+        img.onerror = () => handleImageError(banner.id);
+      }
+    }, [isActive, imageUrl, banner.id, isLoaded, hasError, handleImageError]);
+
+    return (
+      <>
+        {hasError ? (
+          <div className={`absolute inset-0 bg-gradient-to-r from-orange-500 to-orange-600 flex items-center justify-center ${!isActive ? 'hidden' : ''}`}>
+            <div className="text-center text-white p-8">
+              <h2 className="text-3xl font-bold mb-4">{banner.title}</h2>
+              <p className="text-xl">Image failed to load</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {(isLoaded || preloadedImages.has(banner.id)) && (
+              <img
+                src={imageUrl}
+                alt={banner.title}
+                className="absolute inset-0 w-full h-full object-cover"
+                loading={isActive ? "eager" : "lazy"}
+                onError={() => handleImageError(banner.id)}
+                onLoad={() => console.log(`✅ Banner ${banner.id} loaded`)}
+              />
+            )}
+          </>
+        )}
+      </>
+    );
+  });
+
+  BannerImage.displayName = 'BannerImage';
 
   if (isLoading) {
     return (
@@ -441,9 +528,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Floating Customer Support Buttons */}
       <div className="fixed right-6 z-50 flex flex-col gap-4" style={{ bottom: '40px' }}>
-        {/* Customer Support Button */}
         <div className="relative">
           <button
             onClick={() => setShowCustomerSupport(!showCustomerSupport)}
@@ -456,7 +541,6 @@ const HomePage: React.FC = () => {
             </span>
           </button>
           
-          {/* Support Options Dropdown */}
           {showCustomerSupport && (
             <div className="absolute right-0 bottom-full mb-4 bg-white rounded-xl shadow-2xl border border-gray-200 min-w-64 overflow-hidden animate-slide-up">
               <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
@@ -536,7 +620,6 @@ const HomePage: React.FC = () => {
           )}
         </div>
         
-        {/* WhatsApp Button */}
         <a
           href={whatsappUrl}
           target="_blank"
@@ -547,7 +630,6 @@ const HomePage: React.FC = () => {
           <MessageCircle size={28} />
         </a>
         
-        {/* Scroll to Top Button */}
         <button
           onClick={scrollToTop}
           className={`bg-orange-500 text-white p-4 rounded-full shadow-lg hover:bg-orange-600 transition-all duration-300 hover:scale-110 hover:shadow-xl ${
@@ -559,73 +641,56 @@ const HomePage: React.FC = () => {
         </button>
       </div>
 
-      {/* Banner Section */}
       <section className="relative">
         {banners.length > 0 ? (
           <>
-            {/* Desktop Banner */}
             <div className="hidden md:block relative h-[450px] overflow-hidden">
               {banners.map((banner, index) => {
-                const imageUrl = getBannerImageUrl(banner, false);
-                const hasError = imageErrors.has(banner.id);
+                const isActive = index === activeBannerIndex;
                 
                 return (
                   <div
                     key={banner.id}
                     className={`absolute inset-0 transition-opacity duration-700 ${
-                      index === activeBannerIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                      isActive ? 'opacity-100 z-10' : 'opacity-0 z-0'
                     }`}
                   >
-                    {hasError ? (
-                      <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-orange-600 flex items-center justify-center">
-                        <div className="text-center text-white p-8">
-                          <h2 className="text-3xl font-bold mb-4">{banner.title}</h2>
-                          <p className="text-xl">Image failed to load</p>
+                    <BannerImage 
+                      banner={banner} 
+                      isMobile={false} 
+                      isActive={isActive}
+                    />
+                    
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30" />
+                    
+                    <div className="relative h-full flex items-center">
+                      <div className="container mx-auto px-8">
+                        <div className="max-w-2xl">
+                          <h1 className="text-4xl font-bold mb-4 text-white">
+                            {banner.title}
+                          </h1>
+                          {banner.subtitle && (
+                            <p className="text-xl mb-8 text-white">
+                              {banner.subtitle}
+                            </p>
+                          )}
+                          {banner.button_text && (
+                            <a
+                              href={banner.button_link || '#'}
+                              className="inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 text-base"
+                              onClick={() => handleBannerClick(banner.id)}
+                            >
+                              {banner.button_text}
+                              <ArrowRight className="ml-3" size={20} />
+                            </a>
+                          )}
                         </div>
                       </div>
-                    ) : (
-                      <>
-                        <img
-                          src={imageUrl}
-                          alt={banner.title}
-                          className="absolute inset-0 w-full h-full object-cover"
-                          onError={() => handleImageError(banner.id)}
-                          onLoad={() => console.log(`✅ Banner ${banner.id} loaded`)}
-                        />
-                        
-                        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30" />
-                        
-                        <div className="relative h-full flex items-center">
-                          <div className="container mx-auto px-8">
-                            <div className="max-w-2xl">
-                              <h1 className="text-4xl font-bold mb-4 text-white">
-                                {banner.title}
-                              </h1>
-                              {banner.subtitle && (
-                                <p className="text-xl mb-8 text-white">
-                                  {banner.subtitle}
-                                </p>
-                              )}
-                              {banner.button_text && (
-                                <a
-                                  href={banner.button_link || '#'}
-                                  className="inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 text-base"
-                                  onClick={() => handleBannerClick(banner.id)}
-                                >
-                                  {banner.button_text}
-                                  <ArrowRight className="ml-3" size={20} />
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </>
-                    )}
+                    </div>
                   </div>
                 );
               })}
               
-              {/* Navigation */}
               {banners.length > 1 && (
                 <>
                   <button
@@ -657,19 +722,40 @@ const HomePage: React.FC = () => {
                   </div>
                 </>
               )}
+              
+              {banners.length > visibleBanners.length && (
+                <div className="absolute bottom-4 right-4 z-20">
+                  <button
+                    onClick={loadMoreBanners}
+                    className="bg-white/80 backdrop-blur-sm text-gray-800 text-sm font-medium px-3 py-1.5 rounded-full hover:bg-white transition-all duration-300"
+                  >
+                    Load more banners ({banners.length - visibleBanners.length} more)
+                  </button>
+                </div>
+              )}
             </div>
             
-            {/* Mobile Banner */}
             <div className="md:hidden relative h-[300px] overflow-hidden">
               {banners.map((banner, index) => {
+                const isActive = index === activeBannerIndex;
                 const imageUrl = getBannerImageUrl(banner, true);
                 const hasError = imageErrors.has(banner.id);
-                
+                const [isLoaded, setIsLoaded] = useState(false);
+
+                useEffect(() => {
+                  if (isActive && !isLoaded && !hasError) {
+                    const img = new Image();
+                    img.src = imageUrl;
+                    img.onload = () => setIsLoaded(true);
+                    img.onerror = () => handleImageError(banner.id);
+                  }
+                }, [isActive, imageUrl, banner.id, isLoaded, hasError]);
+
                 return (
                   <div
                     key={banner.id}
                     className={`absolute inset-0 transition-opacity duration-700 ${
-                      index === activeBannerIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                      isActive ? 'opacity-100 z-10' : 'opacity-0 z-0'
                     }`}
                   >
                     {hasError ? (
@@ -680,12 +766,15 @@ const HomePage: React.FC = () => {
                       </div>
                     ) : (
                       <>
-                        <img
-                          src={imageUrl}
-                          alt={banner.title}
-                          className="absolute inset-0 w-full h-full object-cover"
-                          onError={() => handleImageError(banner.id)}
-                        />
+                        {(isLoaded || preloadedImages.has(banner.id)) && (
+                          <img
+                            src={imageUrl}
+                            alt={banner.title}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            loading={isActive ? "eager" : "lazy"}
+                            onError={() => handleImageError(banner.id)}
+                          />
+                        )}
                         
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
                         
@@ -717,7 +806,6 @@ const HomePage: React.FC = () => {
                 );
               })}
               
-              {/* Mobile Dots */}
               {banners.length > 1 && (
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-1.5 z-20">
                   {banners.map((_, index) => (
@@ -735,7 +823,6 @@ const HomePage: React.FC = () => {
             </div>
           </>
         ) : (
-          // Fallback if no banners
           <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
             <div className="container mx-auto px-4 py-12 md:py-16">
               <div className="max-w-3xl">
@@ -758,7 +845,6 @@ const HomePage: React.FC = () => {
         )}
       </section>
 
-      {/* Personalized Recommendations Section */}
       {showPersonalizedSection && (
         <section className="py-16 bg-gradient-to-br from-purple-50 via-white to-blue-50">
           <div className="container mx-auto px-4">
@@ -778,7 +864,6 @@ const HomePage: React.FC = () => {
                   AI-powered recommendations based on your shopping preferences
                 </p>
                 
-                {/* Profile Completion */}
                 {userPreferences && (
                   <div className="mt-6 flex items-center gap-4">
                     <div className="w-48 bg-gray-200 rounded-full h-3">
@@ -826,7 +911,6 @@ const HomePage: React.FC = () => {
                       key={product.id} 
                       className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border border-gray-200 relative overflow-hidden group"
                     >
-                      {/* AI Recommendation Badge */}
                       <div className="absolute top-3 left-3 z-10">
                         <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1">
                           <Sparkles size={12} />
@@ -834,7 +918,6 @@ const HomePage: React.FC = () => {
                         </div>
                       </div>
                       
-                      {/* Personalization Score */}
                       {product.relevance_score && (
                         <div className="absolute top-3 right-3 z-10">
                           <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md flex items-center gap-1">
@@ -851,7 +934,6 @@ const HomePage: React.FC = () => {
                   ))}
                 </div>
                 
-                {/* Recommendation Explanation */}
                 <div className="mt-12 bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 rounded-xl">
@@ -926,7 +1008,6 @@ const HomePage: React.FC = () => {
         </section>
       )}
 
-      {/* Personalized Offers Section */}
       {showPersonalizedSection && personalizedOffers.length > 0 && (
         <section className="py-16 bg-gradient-to-br from-orange-50 via-white to-yellow-50">
           <div className="container mx-auto px-4">
@@ -964,7 +1045,6 @@ const HomePage: React.FC = () => {
                   className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group"
                   onClick={() => trackOfferInteraction(offer.id, 'click')}
                 >
-                  {/* Offer Header */}
                   <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-3">
@@ -998,7 +1078,6 @@ const HomePage: React.FC = () => {
                     </div>
                   </div>
                   
-                  {/* Product Info */}
                   <div className="p-6">
                     {offer.product && (
                       <>
@@ -1028,7 +1107,6 @@ const HomePage: React.FC = () => {
                           </div>
                         </div>
                         
-                        {/* Rules Applied */}
                         {offer.applied_rules && typeof offer.applied_rules === 'object' && (
                           <div className="mb-6">
                             <div className="text-sm font-medium text-gray-900 mb-2">Why you got this offer:</div>
@@ -1045,7 +1123,6 @@ const HomePage: React.FC = () => {
                           </div>
                         )}
                         
-                        {/* Action Button */}
                         <Link
                           href={`/products/${offer.product_id}`}
                           className="block w-full bg-gradient-to-r from-green-500 to-green-600 text-white text-center py-4 rounded-xl font-bold hover:shadow-lg transition-all duration-300 group-hover:from-green-600 group-hover:to-green-700"
@@ -1061,7 +1138,6 @@ const HomePage: React.FC = () => {
                     )}
                   </div>
                   
-                  {/* Offer Type Indicator */}
                   <div className="px-6 pb-4">
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2 text-gray-600">
@@ -1092,7 +1168,6 @@ const HomePage: React.FC = () => {
               </div>
             )}
             
-            {/* Offer Types Explanation */}
             <div className="mt-16 bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
               <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">
                 How We Create Your Personalized Offers
@@ -1141,7 +1216,6 @@ const HomePage: React.FC = () => {
         </section>
       )}
 
-      {/* Features Section */}
       <section className="py-5 bg-gradient-to-br from-white via-orange-50/20 to-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16 relative">
@@ -1320,7 +1394,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Featured Categories */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-12">
@@ -1341,7 +1414,6 @@ const HomePage: React.FC = () => {
             </a>
           </div>
           
-          {/* Categories Grid */}
           {categories.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {categories
@@ -1364,7 +1436,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Featured Products */}
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-12">
@@ -1404,7 +1475,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* New Arrivals */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-12">
@@ -1452,7 +1522,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Real-time Offers Section */}
       {showPersonalizedSection && (
         <section className="py-16 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
           <div className="container mx-auto px-4">
@@ -1519,7 +1588,6 @@ const HomePage: React.FC = () => {
         </section>
       )}
 
-      {/* Subscription Banner */}
       <section className="py-20 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
@@ -1553,7 +1621,6 @@ const HomePage: React.FC = () => {
               </a>
             </div>
             
-            {/* Features */}
             <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-8">
               {[
                 { icon: '🔄', title: 'Flexible Schedule', desc: 'Change delivery dates' },
@@ -1571,7 +1638,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
@@ -1615,7 +1681,6 @@ const HomePage: React.FC = () => {
                 key={index} 
                 className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-2 border border-gray-200"
               >
-                {/* Rating */}
                 <div className="flex items-center mb-6">
                   {[...Array(5)].map((_, i) => (
                     <Star
@@ -1627,12 +1692,10 @@ const HomePage: React.FC = () => {
                   ))}
                 </div>
                 
-                {/* Quote */}
                 <p className="text-gray-600 text-lg mb-8 leading-relaxed italic">
                   "{testimonial.content}"
                 </p>
                 
-                {/* Author */}
                 <div className="flex items-center">
                   <div className={`${testimonial.avatarColor} w-14 h-14 rounded-full flex items-center justify-center text-gray-800 font-bold text-xl mr-4`}>
                     {testimonial.name.charAt(0)}
@@ -1648,7 +1711,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA Banner */}
       <section className="py-16 bg-gradient-to-r from-green-600 to-green-700 text-white">
         <div className="container mx-auto px-4">
           <div className="rounded-2xl shadow-xl overflow-hidden">
