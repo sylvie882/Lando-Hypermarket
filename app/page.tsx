@@ -28,7 +28,10 @@ import {
   Users,
   ThumbsUp,
   MessageCircle,
-  ArrowUp
+  ArrowUp,
+  HelpCircle,
+  Bot,
+  Phone
 } from 'lucide-react';
 
 interface Banner {
@@ -75,6 +78,7 @@ const HomePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showCustomerSupport, setShowCustomerSupport] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
 
   // WhatsApp phone number
@@ -275,38 +279,136 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Floating WhatsApp Button */}
-      <a
-        href={whatsappUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-all duration-300 hover:scale-110 hover:shadow-xl"
-        aria-label="Chat on WhatsApp"
-      >
-        <MessageCircle size={28} />
-        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
-          <span className="inline-block">!</span>
-        </span>
-      </a>
-
-      {/* Floating Scroll to Top Button */}
-      <button
-        onClick={scrollToTop}
-        className={`fixed right-6 z-50 bg-orange-500 text-white p-4 rounded-full shadow-lg hover:bg-orange-600 transition-all duration-300 hover:scale-110 hover:shadow-xl ${
-          showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
-        }`}
-        style={{ bottom: '100px' }}
-        aria-label="Scroll to top"
-      >
-        <ArrowUp size={28} />
-      </button>
+      {/* Floating Customer Support Buttons - Right Side */}
+           {/* Floating Customer Support Buttons - Right Side */}
+      <div className="fixed right-6 z-50 flex flex-col gap-4" style={{ bottom: '40px' }}>
+        {/* Customer Support Button */}
+        <div className="relative">
+          <button
+            onClick={() => setShowCustomerSupport(!showCustomerSupport)}
+            className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 hover:scale-110 hover:shadow-xl"
+            aria-label="Customer Support"
+          >
+            <HelpCircle size={28} />
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
+              <span className="inline-block">?</span>
+            </span>
+          </button>
+          
+          {/* Support Options Dropdown */}
+          {showCustomerSupport && (
+            <div className="absolute right-0 bottom-full mb-4 bg-white rounded-xl shadow-2xl border border-gray-200 min-w-64 overflow-hidden animate-slide-up">
+              <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                <h3 className="font-bold text-lg">Customer Support</h3>
+                <p className="text-sm opacity-90">We're here to help!</p>
+              </div>
+              
+              <div className="p-3 space-y-2">
+                {/* Chat Support */}
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Open chat modal or initiate chat
+                    console.log('Open chat support');
+                  }}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-blue-50 transition-colors group"
+                >
+                  <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
+                    <MessageCircle size={20} className="text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">Chat Support</div>
+                    <div className="text-xs text-gray-500 flex items-center gap-1">
+                      <Bot size={12} />
+                      Live chat or chatbot
+                    </div>
+                  </div>
+                </a>
+                
+                {/* WhatsApp Support */}
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-green-50 transition-colors group"
+                >
+                  <div className="bg-green-100 p-2 rounded-lg group-hover:bg-green-200 transition-colors">
+                    <MessageCircle size={20} className="text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">WhatsApp</div>
+                    <div className="text-xs text-gray-500">Instant messaging support</div>
+                  </div>
+                </a>
+                
+                {/* Phone Support */}
+                <a
+                  href="tel:+254716354589"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 transition-colors group"
+                >
+                  <div className="bg-orange-100 p-2 rounded-lg group-hover:bg-orange-200 transition-colors">
+                    <Phone size={20} className="text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">Call Support</div>
+                    <div className="text-xs text-gray-500">+254 716 354 589</div>
+                  </div>
+                </a>
+                
+                {/* Help Center */}
+                <a
+                  href="/help"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-purple-50 transition-colors group"
+                >
+                  <div className="bg-purple-100 p-2 rounded-lg group-hover:bg-purple-200 transition-colors">
+                    <HelpCircle size={20} className="text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">Help Center</div>
+                    <div className="text-xs text-gray-500">FAQs & guides</div>
+                  </div>
+                </a>
+              </div>
+              
+              <div className="border-t border-gray-100 p-3 bg-gray-50">
+                <div className="text-xs text-gray-500 text-center">
+                  Typically replies in 2 minutes
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* WhatsApp Button - Moved down */}
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-all duration-300 hover:scale-110 hover:shadow-xl"
+          aria-label="Chat on WhatsApp"
+        >
+          <MessageCircle size={28} />
+        </a>
+        
+        {/* Scroll to Top Button */}
+        <button
+          onClick={scrollToTop}
+          className={`bg-orange-500 text-white p-4 rounded-full shadow-lg hover:bg-orange-600 transition-all duration-300 hover:scale-110 hover:shadow-xl ${
+            showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
+          }`}
+          aria-label="Scroll to top"
+        >
+          <ArrowUp size={28} />
+        </button>
+      </div>
 
       {/* SIMPLIFIED BANNER SECTION */}
 <section className="relative">
   {banners.length > 0 ? (
     <>
       {/* Desktop Banner - Reduced height */}
-      <div className="hidden md:block relative h-[400px] overflow-hidden">
+      <div className="hidden md:block relative h-[450px] overflow-hidden">
         {banners.map((banner, index) => {
           const imageUrl = getBannerImageUrl(banner, false);
           const hasError = imageErrors.has(banner.id);
@@ -502,20 +604,10 @@ const HomePage: React.FC = () => {
 </section>
 
       {/* Features Section - Redesigned with Image */}
-<section className="py-20 bg-gradient-to-br from-white via-orange-50/20 to-white">
+<section className="py-5 bg-gradient-to-br from-white via-orange-50/20 to-white">
   <div className="container mx-auto px-4">
     {/* Modern Header */}
     <div className="text-center mb-16 relative">
-      {/* <div className="inline-block mb-6">
-        <div className="relative">
-          <div className="absolute -inset-4 bg-gradient-to-r from-orange-400/20 to-green-400/20 blur-2xl rounded-full"></div>
-          <div className="relative inline-flex items-center gap-3 bg-white/80 backdrop-blur-sm border border-gray-200/50 px-6 py-3 rounded-full shadow-sm">
-            <div className="w-3 h-3 bg-gradient-to-r from-green-500 to-orange-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-medium text-gray-700">Premium Farm Experience</span>
-          </div>
-        </div>
-      </div> */}
-      
       <h2 className="text-4xl md:text-6xl font-bold mb-6">
         <span className="bg-gradient-to-r from-orange-600 to-green-600 bg-clip-text text-transparent">
           Why Lando Hypermarket
