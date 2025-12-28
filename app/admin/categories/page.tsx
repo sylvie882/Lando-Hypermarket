@@ -113,122 +113,117 @@ export default function CategoriesPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  if (isSubmitting) return;
+  
+  setIsSubmitting(true);
+  
+  console.log('Submitting form with:', {
+    editingCategoryId: editingCategory?.id,
+    formData,
+    hasImageFile: !!imageFile,
+    imageFileName: imageFile?.name,
+    imageFileSize: imageFile?.size,
+    removeImage,
+    isSubmitting
+  });
+  
+  try {
+    const formDataToSend = new FormData();
     
-    if (isSubmitting) return;
+    // Append all text fields
+    formDataToSend.append('name', formData.name);
     
-    setIsSubmitting(true);
-    
-    console.log('Submitting form with:', {
-      editingCategoryId: editingCategory?.id,
-      formData,
-      hasImageFile: !!imageFile,
-      imageFileName: imageFile?.name,
-      imageFileSize: imageFile?.size,
-      removeImage,
-      isSubmitting
-    });
-    
-    try {
-      const formDataToSend = new FormData();
-      
-      // Append all text fields
-      formDataToSend.append('name', formData.name);
-      
-      if (formData.slug) {
-        formDataToSend.append('slug', formData.slug);
-      }
-      
-      if (formData.description) {
-        formDataToSend.append('description', formData.description);
-      }
-      
-      formDataToSend.append('parent_id', formData.parent_id || '');
-      formDataToSend.append('order', formData.order);
-      formDataToSend.append('is_active', formData.is_active ? '1' : '0');
-      
-      // ========== FIXED IMAGE HANDLING ==========
-      console.log('Image handling state:', {
-        hasImageFile: !!imageFile,
-        removeImage,
-        isEditing: !!editingCategory
-      });
-      
-      if (imageFile && imageFile.size > 0) {
-        // Scenario 1: Upload new image
-        console.log('Adding new image file to FormData:', {
-          name: imageFile.name,
-          size: imageFile.size,
-          type: imageFile.type
-        });
-        formDataToSend.append('image', imageFile);
-        // Clear removeImage flag when uploading new image
-        setRemoveImage(false);
-      } else if (removeImage) {
-        // Scenario 2: Remove existing image
-        console.log('Setting remove_image flag to 1');
-        formDataToSend.append('remove_image', '1');
-      }
-      // Scenario 3: No image change - don't send anything
-      // ========== END FIX ==========
-      
-      // Log FormData contents for debugging
-      console.log('FormData contents:');
-      const formDataEntries: {[key: string]: string} = {};
-      for (let [key, value] of formDataToSend.entries()) {
-        if (value instanceof File) {
-          formDataEntries[key] = `${value.name} (${value.size} bytes)`;
-        } else {
-          formDataEntries[key] = value as string;
-        }
-      }
-      console.log(formDataEntries);
-      
-      let response;
-      if (editingCategory) {
-        console.log('Updating category:', editingCategory.id);
-        formDataToSend.append('_method', 'PUT');
-        response = await api.post(`/admin/categories/${editingCategory.id}`, formDataToSend, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-        alert('Category updated successfully');
-      } else {
-        console.log('Creating new category');
-        response = await api.post('/admin/categories', formDataToSend, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-        alert('Category created successfully');
-      }
-      
-      console.log('Response:', response.data);
-      resetForm();
-      fetchCategories();
-    } catch (error: any) {
-      console.error('Full error:', error);
-      console.error('Error response:', error.response?.data);
-      
-      if (error.response?.data?.errors) {
-        console.error('Validation errors:', error.response.data.errors);
-        
-        const errorMessages = Object.entries(error.response.data.errors)
-          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
-          .join('\n');
-        alert(`Validation errors:\n${errorMessages}`);
-      } else if (error.response?.data?.message) {
-        alert(error.response.data.message);
-      } else if (error.message) {
-        alert(error.message);
-      } else {
-        alert('Failed to save category. Please try again.');
-      }
-    } finally {
-      setIsSubmitting(false);
+    if (formData.slug) {
+      formDataToSend.append('slug', formData.slug);
     }
-  };
+    
+    if (formData.description) {
+      formDataToSend.append('description', formData.description);
+    }
+    
+    formDataToSend.append('parent_id', formData.parent_id || '');
+    formDataToSend.append('order', formData.order);
+    formDataToSend.append('is_active', formData.is_active ? '1' : '0');
+    
+    // Handle image
+    if (imageFile && imageFile.size > 0) {
+      console.log('Adding new image file to FormData:', {
+        name: imageFile.name,
+        size: imageFile.size,
+        type: imageFile.type
+      });
+      formDataToSend.append('image', imageFile);
+      // Clear removeImage flag when uploading new image
+      setRemoveImage(false);
+    } else if (removeImage) {
+      // Scenario 2: Remove existing image
+      console.log('Setting remove_image flag to 1');
+      formDataToSend.append('remove_image', '1');
+    }
+    // Scenario 3: No image change - don't send anything
+    
+    // Log FormData contents for debugging
+    console.log('FormData contents:');
+    const formDataEntries: {[key: string]: string} = {};
+    for (let [key, value] of formDataToSend.entries()) {
+      if (value instanceof File) {
+        formDataEntries[key] = `${value.name} (${value.size} bytes)`;
+      } else {
+        formDataEntries[key] = value as string;
+      }
+    }
+    console.log(formDataEntries);
+    
+    let response;
+    if (editingCategory) {
+      console.log('Updating category:', editingCategory.id);
+      formDataToSend.append('_method', 'PUT');
+      
+      // DON'T set Content-Type header for FormData - let browser set it
+      response = await api.post(`/admin/categories/${editingCategory.id}`, formDataToSend);
+      alert('Category updated successfully');
+    } else {
+      console.log('Creating new category');
+      
+      // DON'T set Content-Type header for FormData - let browser set it
+      response = await api.post('/admin/categories', formDataToSend);
+      alert('Category created successfully');
+    }
+    
+    console.log('Response:', response.data);
+    resetForm();
+    fetchCategories();
+  } catch (error: any) {
+    console.error('Full error:', error);
+    console.error('Error response:', error.response?.data);
+    
+    // Check for network errors
+    if (error.code === 'ERR_NETWORK' || error.message.includes('Failed to fetch') || error.message.includes('CONNECTION_REFUSED')) {
+      alert(`Network Error: Cannot connect to the server. Please check:
+1. The Laravel API server is running
+2. The API URL is correct: ${process.env.NEXT_PUBLIC_API_URL}
+3. CORS is properly configured
+4. You have internet connection`);
+    } else if (error.response?.data?.errors) {
+      console.error('Validation errors:', error.response.data.errors);
+      
+      const errorMessages = Object.entries(error.response.data.errors)
+        .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+        .join('\n');
+      alert(`Validation errors:\n${errorMessages}`);
+    } else if (error.response?.data?.message) {
+      alert(error.response.data.message);
+    } else if (error.message) {
+      alert(error.message);
+    } else {
+      alert('Failed to save category. Please try again.');
+    }
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this category?')) return;
