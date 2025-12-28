@@ -112,7 +112,7 @@ export default function CategoriesPage() {
     setRemoveImage(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   
   if (isSubmitting) return;
@@ -126,7 +126,8 @@ export default function CategoriesPage() {
     imageFileName: imageFile?.name,
     imageFileSize: imageFile?.size,
     removeImage,
-    isSubmitting
+    isSubmitting,
+    apiUrl: process.env.NEXT_PUBLIC_API_URL
   });
   
   try {
@@ -155,17 +156,14 @@ export default function CategoriesPage() {
         type: imageFile.type
       });
       formDataToSend.append('image', imageFile);
-      // Clear removeImage flag when uploading new image
       setRemoveImage(false);
     } else if (removeImage) {
-      // Scenario 2: Remove existing image
       console.log('Setting remove_image flag to 1');
       formDataToSend.append('remove_image', '1');
     }
-    // Scenario 3: No image change - don't send anything
     
     // Log FormData contents for debugging
-    console.log('FormData contents:');
+    console.log('FormData contents before sending:');
     const formDataEntries: {[key: string]: string} = {};
     for (let [key, value] of formDataToSend.entries()) {
       if (value instanceof File) {
@@ -177,53 +175,86 @@ export default function CategoriesPage() {
     console.log(formDataEntries);
     
     let response;
+    const url = editingCategory 
+      ? `/admin/categories/${editingCategory.id}`
+      : '/admin/categories';
+    
+    console.log(`Sending request to: ${process.env.NEXT_PUBLIC_API_URL}${url}`);
+    
     if (editingCategory) {
       console.log('Updating category:', editingCategory.id);
       formDataToSend.append('_method', 'PUT');
       
-      // DON'T set Content-Type header for FormData - let browser set it
-      response = await api.post(`/admin/categories/${editingCategory.id}`, formDataToSend);
+      // Use api.post with FormData
+      response = await api.post(url, formDataToSend);
       alert('Category updated successfully');
     } else {
       console.log('Creating new category');
       
-      // DON'T set Content-Type header for FormData - let browser set it
-      response = await api.post('/admin/categories', formDataToSend);
+      // Use api.post with FormData
+      response = await api.post(url, formDataToSend);
       alert('Category created successfully');
     }
     
-    console.log('Response:', response.data);
+    console.log('Response received:', response.data);
     resetForm();
     fetchCategories();
   } catch (error: any) {
-    console.error('Full error:', error);
-    console.error('Error response:', error.response?.data);
+    console.error('Full error details:', {
+      error: error,
+      message: error.message,
+      code: error.code,
+      response: error.response,
+      config: error.config,
+      request: error.request
+    });
     
-    // Check for network errors
-    if (error.code === 'ERR_NETWORK' || error.message.includes('Failed to fetch') || error.message.includes('CONNECTION_REFUSED')) {
-      alert(`Network Error: Cannot connect to the server. Please check:
-1. The Laravel API server is running
-2. The API URL is correct: ${process.env.NEXT_PUBLIC_API_URL}
-3. CORS is properly configured
-4. You have internet connection`);
-    } else if (error.response?.data?.errors) {
-      console.error('Validation errors:', error.response.data.errors);
+    // More detailed error handling
+    if (error.code === 'ERR_NETWORK' || error.message.includes('Failed to fetch')) {
+      alert(`Network Error: Cannot connect to the server.\n\nPlease check:
+1. Laravel API server is running at: ${process.env.NEXT_PUBLIC_API_URL}
+2. CORS is properly configured
+3. You have internet connection
+4. Server is accessible from your browser
+
+You can test the API directly by opening: ${process.env.NEXT_PUBLIC_API_URL}/sanctum/csrf-cookie`);
+    } else if (error.response) {
+      console.error('Server responded with error:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers
+      });
       
-      const errorMessages = Object.entries(error.response.data.errors)
-        .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
-        .join('\n');
-      alert(`Validation errors:\n${errorMessages}`);
-    } else if (error.response?.data?.message) {
-      alert(error.response.data.message);
-    } else if (error.message) {
-      alert(error.message);
+      if (error.response.status === 401) {
+        alert('Session expired. Please login again.');
+        // Redirect to login
+        window.location.href = '/admin/login';
+      } else if (error.response.status === 403) {
+        alert('You do not have permission to perform this action.');
+      } else if (error.response.status === 422) {
+        console.error('Validation errors:', error.response.data.errors);
+        const errorMessages = Object.entries(error.response.data.errors)
+          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+          .join('\n');
+        alert(`Validation errors:\n${errorMessages}`);
+      } else if (error.response.data?.message) {
+        alert(`Server Error: ${error.response.data.message}`);
+      } else {
+        alert(`Server Error: ${error.response.status} ${error.response.statusText}`);
+      }
+    } else if (error.request) {
+      console.error('No response received:', error.request);
+      alert('No response from server. Please check if the server is running.');
     } else {
-      alert('Failed to save category. Please try again.');
+      console.error('Error setting up request:', error.message);
+      alert(`Error: ${error.message}`);
     }
   } finally {
     setIsSubmitting(false);
   }
 };
+
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this category?')) return;
