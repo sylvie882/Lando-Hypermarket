@@ -24,7 +24,7 @@ export default function Footer() {
                 />
               </div>
               <div>
-                <h3 className="text-xl font-bold">Lando Ranch</h3>
+                <h3 className="text-xl font-bold">Lando Hypermarket</h3>
                 <p className="text-gray-300 text-sm mt-1">
                   Premium quality products delivered fresh to your door
                 </p>

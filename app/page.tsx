@@ -501,202 +501,209 @@ const HomePage: React.FC = () => {
   )}
 </section>
 
-
-
-
-      {/* Features Section - Redesigned */}
-<section className="py-20 bg-gradient-to-b from-orange-50/50 to-white">
+      {/* Features Section - Redesigned with Image */}
+<section className="py-20 bg-gradient-to-br from-white via-orange-50/20 to-white">
   <div className="container mx-auto px-4">
-    {/* Header */}
-    <div className="text-center mb-16">
-      {/* <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2 rounded-full mb-6">
-        <CheckCircle size={20} />
-        <span className="text-sm font-semibold">Premium Quality</span>
+    {/* Modern Header */}
+    <div className="text-center mb-16 relative">
+      {/* <div className="inline-block mb-6">
+        <div className="relative">
+          <div className="absolute -inset-4 bg-gradient-to-r from-orange-400/20 to-green-400/20 blur-2xl rounded-full"></div>
+          <div className="relative inline-flex items-center gap-3 bg-white/80 backdrop-blur-sm border border-gray-200/50 px-6 py-3 rounded-full shadow-sm">
+            <div className="w-3 h-3 bg-gradient-to-r from-green-500 to-orange-500 rounded-full animate-pulse"></div>
+            <span className="text-sm font-medium text-gray-700">Premium Farm Experience</span>
+          </div>
+        </div>
       </div> */}
-      <h2 className="text-4xl md:text-6xl font-bold mb-6 text-gray-900">
-        Why <span className="relative inline-block">
-          <span className="relative z-10 text-orange-600">Lando</span>
-          <span className="absolute bottom-0 left-0 w-full h-3 bg-orange-200/60 -rotate-1 -z-0"></span>
-        </span> Stands Out
+      
+      <h2 className="text-4xl md:text-6xl font-bold mb-6">
+        <span className="bg-gradient-to-r from-orange-600 to-green-600 bg-clip-text text-transparent">
+          Why Lando Hypermarket
+        </span>
       </h2>
-      <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-        Famous and renowned throughout the land for our exceptional quality and service
+      
+      <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+        Experience the difference with farm-fresh produce delivered with care, quality, and convenience
       </p>
     </div>
-    
-    {/* Features Grid */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-      {[
-        {
-          icon: <Leaf className="text-green-600" size={48} />,
-          title: '100% Organic',
-          description: 'Purely natural, chemical-free produce from trusted local farms',
-          stats: '100% Natural',
-          gradient: 'from-green-500 to-emerald-600',
-          bgColor: 'bg-gradient-to-br from-green-50 to-emerald-50',
-          borderColor: 'border-green-200',
-          shadowColor: 'shadow-green-100'
-        },
-        {
-          icon: <Truck className="text-orange-600" size={48} />,
-          title: 'Same-Day Delivery',
-          description: 'Harvested & delivered fresh within hours, never frozen',
-          stats: 'Within 24 Hours',
-          gradient: 'from-orange-500 to-amber-600',
-          bgColor: 'bg-gradient-to-br from-orange-50 to-amber-50',
-          borderColor: 'border-orange-200',
-          shadowColor: 'shadow-orange-100'
-        },
-        {
-          icon: <Award className="text-purple-600" size={48} />,
-          title: 'Award Winning',
-          description: 'Recognized for excellence in quality and sustainability',
-          stats: '5+ Awards',
-          gradient: 'from-purple-500 to-violet-600',
-          bgColor: 'bg-gradient-to-br from-purple-50 to-violet-50',
-          borderColor: 'border-purple-200',
-          shadowColor: 'shadow-purple-100'
-        },
-        {
-          icon: <Heart className="text-pink-600" size={48} />,
-          title: 'Farm Fresh',
-          description: 'Harvested at peak ripeness for maximum flavor & nutrition',
-          stats: 'Peak Freshness',
-          gradient: 'from-pink-500 to-rose-600',
-          bgColor: 'bg-gradient-to-br from-pink-50 to-rose-50',
-          borderColor: 'border-pink-200',
-          shadowColor: 'shadow-pink-100'
-        }
-      ].map((feature, index) => (
-        <div 
-          key={index} 
-          className="group relative"
-        >
-          {/* Animated Border */}
-          <div className={`absolute -inset-0.5 bg-gradient-to-r ${feature.gradient} rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-500 group-hover:duration-200`}></div>
-          
-          {/* Main Card */}
-          <div className={`relative ${feature.bgColor} p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 group-hover:-translate-y-2 border ${feature.borderColor} overflow-hidden`}>
+
+    {/* Modern Grid Layout */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      {/* Left Column - Image with Modern Frame */}
+      <div className="relative group">
+        {/* Background Glow */}
+        <div className="absolute -inset-6 bg-gradient-to-r from-orange-400/20 via-green-400/20 to-orange-400/20 blur-2xl rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+        
+        {/* Main Image Container */}
+        <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+          {/* Image */}
+          <div className="relative aspect-[4/3] overflow-hidden">
+            <img 
+              src="/lando.png" 
+              alt="Lando Ranch - Premium Organic Farming" 
+              className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-1000"
+            />
             
-            {/* Floating Icon Container */}
-            <div className="relative mb-8">
-              <div className={`absolute inset-0 bg-gradient-to-r ${feature.gradient} opacity-10 rounded-2xl`}></div>
-              <div className={`relative w-24 h-24 rounded-2xl bg-white shadow-lg flex items-center justify-center mx-auto`}>
-                {feature.icon}
-                
-                {/* Icon Glow Effect */}
-                <div className={`absolute inset-0 bg-gradient-to-r ${feature.gradient} opacity-20 blur-xl rounded-full`}></div>
-              </div>
-              
-              {/* Stats Badge */}
-              <div className={`absolute -bottom-2 right-4 bg-gradient-to-r ${feature.gradient} text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg`}>
-                {feature.stats}
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+            
+            {/* Floating Elements */}
+            <div className="absolute top-6 right-6">
+              <div className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
+                <div className="flex items-center gap-2">
+                  <Award size={16} className="text-orange-500" />
+                  <span className="text-sm font-bold text-gray-800">Est. 2015</span>
+                </div>
               </div>
             </div>
             
-            {/* Content */}
-            <div className="relative">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
-                {feature.title}
-              </h3>
-              <p className="text-gray-600 text-center leading-relaxed mb-6">
-                {feature.description}
-              </p>
-              
-              {/* Feature Highlights */}
-              <div className="space-y-3">
-                {feature.title === '100% Organic' && (
-                  <>
-                    <div className="flex items-center gap-2 text-sm text-green-700">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>No pesticides or chemicals</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-green-700">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>Locally sourced from trusted farms</span>
-                    </div>
-                  </>
-                )}
-                {feature.title === 'Same-Day Delivery' && (
-                  <>
-                    <div className="flex items-center gap-2 text-sm text-orange-700">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      <span>Harvested fresh daily</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-orange-700">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      <span>Direct farm-to-table delivery</span>
-                    </div>
-                  </>
-                )}
-                {feature.title === 'Award Winning' && (
-                  <>
-                    <div className="flex items-center gap-2 text-sm text-purple-700">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <span>Quality excellence awards</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-purple-700">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <span>Sustainability recognition</span>
-                    </div>
-                  </>
-                )}
-                {feature.title === 'Farm Fresh' && (
-                  <>
-                    <div className="flex items-center gap-2 text-sm text-pink-700">
-                      <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-                      <span>Harvested at peak ripeness</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-pink-700">
-                      <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-                      <span>Maximum flavor & nutrition</span>
-                    </div>
-                  </>
-                )}
+            <div className="absolute bottom-6 left-6">
+              <div className="bg-black/40 backdrop-blur-sm px-4 py-3 rounded-2xl">
+                <div className="text-white">
+                  <div className="text-sm font-medium opacity-90 mb-1">PREMIUM ORGANIC</div>
+                  <div className="text-3xl font-bold tracking-tight">Lando Hypermarket</div>
+                </div>
               </div>
             </div>
-            
-            {/* Hover Indicator */}
-            <div className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r ${feature.gradient} rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-          </div>
-          
-          {/* Card Number */}
-          <div className={`absolute -top-3 -left-3 w-10 h-10 bg-gradient-to-r ${feature.gradient} text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10`}>
-            {index + 1}
           </div>
         </div>
-      ))}
-    </div>
-    
-    {/* Bottom CTA */}
-    <div className="mt-20 text-center">
-      <div className="inline-flex items-center gap-4 bg-white rounded-2xl shadow-lg px-8 py-4 mb-8">
-        <div className="flex items-center gap-2">
-          <Users className="text-orange-600" size={24} />
-          <span className="text-lg font-bold text-gray-900">10,000+</span>
-          <span className="text-gray-600">Happy Families</span>
-        </div>
-        <div className="h-8 w-px bg-gray-200"></div>
-        <div className="flex items-center gap-2">
-          <ThumbsUp className="text-green-600" size={24} />
-          <span className="text-lg font-bold text-gray-900">98%</span>
-          <span className="text-gray-600">Satisfaction Rate</span>
-        </div>
-        <div className="h-8 w-px bg-gray-200"></div>
-        <div className="flex items-center gap-2">
-          <TrendingUp className="text-blue-600" size={24} />
-          <span className="text-lg font-bold text-gray-900">50+</span>
-          <span className="text-gray-600">Local Farms</span>
+        
+        {/* Stats Overlay */}
+        <div className="absolute -bottom-4 -right-4 bg-white rounded-2xl shadow-xl p-6 border border-gray-200/50 backdrop-blur-sm">
+          <div className="text-center">
+            <div className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-green-600 bg-clip-text text-transparent">10K+</div>
+            <div className="text-sm text-gray-600 font-medium">Happy Families</div>
+          </div>
         </div>
       </div>
+
+      {/* Right Column - Modern Features */}
+      <div className="space-y-6">
+        {[
+          {
+            icon: <Leaf size={24} className="text-green-600" />,
+            title: 'Certified Organic',
+            description: '100% natural produce without chemicals or pesticides',
+            gradient: 'from-green-500 to-emerald-600',
+            stats: '100% Natural',
+            index: '01'
+          },
+          {
+            icon: <Truck size={24} className="text-orange-600" />,
+            title: 'Same-Day Fresh',
+            description: 'Harvested in morning, delivered fresh by evening',
+            gradient: 'from-orange-500 to-amber-600',
+            stats: '24h Delivery',
+            index: '02'
+          },
+          {
+            icon: <Shield size={24} className="text-blue-600" />,
+            title: 'Quality Guaranteed',
+            description: 'Every product inspected for premium quality',
+            gradient: 'from-blue-500 to-cyan-600',
+            stats: 'Premium Quality',
+            index: '03'
+          },
+          {
+            icon: <Heart size={24} className="text-rose-600" />,
+            title: 'Farm to Family',
+            description: 'Supporting local farmers, feeding local families',
+            gradient: 'from-rose-500 to-pink-600',
+            stats: 'Local Community',
+            index: '04'
+          }
+        ].map((feature, index) => (
+          <div 
+            key={index} 
+            className="group relative bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-2xl p-6 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 hover:border-transparent"
+          >
+            {/* Hover Glow */}
+            <div className={`absolute inset-0 bg-gradient-to-r ${feature.gradient} opacity-0 group-hover:opacity-5 rounded-2xl transition-opacity duration-500`}></div>
+            
+            <div className="relative flex items-start gap-4">
+              {/* Icon Container */}
+              <div className={`relative flex-shrink-0`}>
+                <div className={`absolute inset-0 bg-gradient-to-r ${feature.gradient} opacity-20 rounded-xl blur-md group-hover:blur-lg transition-all duration-500`}></div>
+                <div className="relative w-14 h-14 rounded-xl bg-white shadow-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                  {feature.icon}
+                </div>
+                
+                {/* Feature Number */}
+                <div className="absolute -top-2 -left-2 w-8 h-8 rounded-full bg-gradient-to-r from-gray-800 to-gray-900 text-white text-xs font-bold flex items-center justify-center">
+                  {feature.index}
+                </div>
+              </div>
+              
+              {/* Content */}
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xl font-bold text-gray-900 group-hover:text-gray-950 transition-colors">
+                    {feature.title}
+                  </h3>
+                  <span className={`text-xs font-bold bg-gradient-to-r ${feature.gradient} bg-clip-text text-transparent`}>
+                    {feature.stats}
+                  </span>
+                </div>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+            </div>
+            
+            {/* Bottom Line */}
+            <div className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 group-hover:w-3/4 h-0.5 bg-gradient-to-r ${feature.gradient} rounded-full transition-all duration-500`}></div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Modern Stats Bar */}
+    <div className="mt-16 relative">
+      <div className="absolute inset-0 bg-gradient-to-r from-orange-400/5 via-green-400/5 to-orange-400/5 rounded-3xl blur-xl"></div>
       
+      <div className="relative bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-2xl p-8 shadow-lg">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {[
+            { value: '10,000+', label: 'Happy Families', color: 'text-orange-600' },
+            { value: '98%', label: 'Satisfaction Rate', color: 'text-green-600' },
+            { value: '50+', label: 'Local Farms', color: 'text-blue-600' },
+            { value: '24h', label: 'Fresh Delivery', color: 'text-purple-600' }
+          ].map((stat, index) => (
+            <div key={index} className="text-center group">
+              <div className={`text-4xl md:text-5xl font-bold ${stat.color} mb-2 group-hover:scale-110 transition-transform duration-300`}>
+                {stat.value}
+              </div>
+              <div className="text-gray-600 font-medium text-sm">
+                {stat.label}
+              </div>
+              <div className="mt-2">
+                <div className={`w-8 h-1 mx-auto bg-gradient-to-r ${stat.color.includes('orange') ? 'from-orange-500 to-orange-600' : 
+                  stat.color.includes('green') ? 'from-green-500 to-green-600' :
+                  stat.color.includes('blue') ? 'from-blue-500 to-blue-600' :
+                  'from-purple-500 to-purple-600'} rounded-full group-hover:w-12 transition-all duration-300`}></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {/* Modern CTA */}
+    <div className="mt-12 text-center">
       <a
-        href="/about"
-        className="group inline-flex items-center gap-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-10 py-5 rounded-2xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all duration-300 text-lg shadow-xl hover:shadow-2xl"
+        href="/products"
+        className="group relative inline-flex items-center gap-4 bg-gradient-to-r from-orange-500 to-green-500 text-white px-10 py-4 rounded-2xl font-bold hover:shadow-2xl transition-all duration-500 hover:scale-105 shadow-lg overflow-hidden"
       >
-        <span>Discover Our Story</span>
-        <ArrowRight className="group-hover:translate-x-2 transition-transform duration-300" size={24} />
+        {/* Shine Effect */}
+        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+        
+        <span className="relative">Shop Fresh Now</span>
+        <ArrowRight className="relative group-hover:translate-x-2 transition-transform duration-300" size={22} />
       </a>
+      
+      <p className="mt-4 text-sm text-gray-500">
+        Free delivery on orders over Ksh 3,000 • Quality guaranteed
+      </p>
     </div>
   </div>
 </section>
