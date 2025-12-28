@@ -429,52 +429,90 @@ const ProductsPage: React.FC = () => {
               </div>
             ) : products.length > 0 ? (
               <>
-                {/* Products Grid/List */}
+                {/* Products Grid/List - UPDATED FOR BETTER SPACING */}
                 {viewMode === 'grid' ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                     {products.map((product) => (
-                      <ProductCard key={product.id} product={product} />
+                      <div key={product.id} className="h-full">
+                        <ProductCard 
+                          product={product} 
+                          className="h-full flex flex-col"
+                        />
+                      </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {products.map((product) => (
-                      <div key={product.id} className="bg-white rounded-lg shadow-sm p-4 flex">
-                        <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                      <div key={product.id} className="bg-white rounded-lg shadow-sm p-6 flex flex-col sm:flex-row gap-6 hover:shadow-md transition-shadow duration-300">
+                        {/* Product Image - Larger in list view */}
+                        <div className="w-full sm:w-48 h-48 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                           <img
                             src={product.thumbnail || (product as any).images?.[0] || '/placeholder-product.jpg'}
                             alt={product.name}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                             onError={(e) => {
                               e.currentTarget.src = '/placeholder-product.jpg';
                             }}
                           />
                         </div>
-                        <div className="ml-4 flex-1">
-                          <h3 className="font-medium text-gray-900">{product.name}</h3>
-                          <p className="text-sm text-gray-500 mt-1 line-clamp-2">
-                            {product.description}
-                          </p>
-                          <div className="flex items-center justify-between mt-2">
-                            <div>
-                              <span className="text-lg font-bold text-gray-900">
-                                ${(product.discounted_price || product.price).toFixed(2)}
-                              </span>
-                              {product.discounted_price && product.discounted_price < product.price && (
-                                <span className="ml-2 text-sm text-gray-500 line-through">
-                                  ${product.price.toFixed(2)}
+                        
+                        {/* Product Info */}
+                        <div className="flex-1 flex flex-col">
+                          <div>
+                            <h3 className="text-xl font-semibold text-gray-900 hover:text-primary-600 transition-colors duration-300">
+                              {product.name}
+                            </h3>
+                            <p className="text-sm text-gray-500 mt-2">
+                              Category: {product.category?.name || 'Uncategorized'}
+                            </p>
+                            <p className="text-gray-600 mt-3 line-clamp-3">
+                              {product.description}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-center justify-between mt-auto pt-6">
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <span className="text-2xl font-bold text-gray-900">
+                                  ${(product.discounted_price || product.price).toFixed(2)}
+                                </span>
+                                {product.discounted_price && product.discounted_price < product.price && (
+                                  <span className="text-sm text-gray-500 line-through">
+                                    ${product.price.toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                              {product.stock_quantity > 0 ? (
+                                <span className="text-sm text-green-600 mt-1">
+                                  In Stock ({product.stock_quantity} available)
+                                </span>
+                              ) : (
+                                <span className="text-sm text-red-600 mt-1">
+                                  Out of Stock
                                 </span>
                               )}
                             </div>
-                            <button 
-                              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                              onClick={() => {
-                                // Add to cart logic here
-                                console.log('Add to cart:', product.id);
-                              }}
-                            >
-                              Add to Cart
-                            </button>
+                            
+                            <div className="flex items-center gap-3">
+                              <button 
+                                className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors duration-300 font-medium"
+                                onClick={() => {
+                                  console.log('Add to cart:', product.id);
+                                }}
+                              >
+                                Add to Cart
+                              </button>
+                              <button 
+                                className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-300"
+                                onClick={() => {
+                                  console.log('Add to wishlist:', product.id);
+                                }}
+                              >
+                                <span className="sr-only">Add to wishlist</span>
+                                ❤️
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -484,7 +522,7 @@ const ProductsPage: React.FC = () => {
 
                 {/* Pagination */}
                 {pagination.last_page > 1 && (
-                  <div className="mt-8">
+                  <div className="mt-12">
                     <Pagination
                       currentPage={pagination.current_page}
                       totalPages={pagination.last_page}
