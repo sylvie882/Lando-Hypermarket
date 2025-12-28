@@ -5,16 +5,21 @@ import Link from 'next/link';
 import { Product } from '@/types';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { ShoppingCart, Heart, Eye, Star, Truck, CheckCircle, Tag } from 'lucide-react';
+import { ShoppingCart, Heart, Eye, Star, Truck, CheckCircle, Tag, Percent, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReviewModal from '../ReviewModal';
 
 interface ProductCardProps {
   product: Product;
   showActions?: boolean;
+  showPersonalizedPrice?: boolean; // Add this line
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ 
+  product, 
+  showActions = true,
+  showPersonalizedPrice = false // Add this line
+}) => {
   const { isAuthenticated, user } = useAuth();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isAddingToWishlist, setIsAddingToWishlist] = useState(false);
@@ -23,13 +28,28 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
   const [canReview, setCanReview] = useState(false);
   const [userReview, setUserReview] = useState<any>(null);
 
-  // Use Laravel's computed attributes
-  const finalPrice = product.final_price || product.discounted_price || product.price;
+  // Personalized Price Logic
+  const personalizedPrice = product.personalized_price;
+  const hasPersonalizedOffer = showPersonalizedPrice && 
+    personalizedPrice?.is_personalized_offer === true &&
+    personalizedPrice.final_price < product.price;
+  
+  // Use personalized price if available, otherwise use regular pricing
+  const finalPrice = hasPersonalizedOffer 
+    ? personalizedPrice.final_price 
+    : (product.final_price || product.discounted_price || product.price);
+  
   const price = typeof product.price === 'number' ? product.price : parseFloat(String(product.price || 0));
   const finalPriceNum = typeof finalPrice === 'number' ? finalPrice : parseFloat(String(finalPrice || 0));
   
-  const discountPercentage = product.discounted_price && price > 0
+  // Calculate discount percentage based on original price vs final price
+  const discountPercentage = price > 0 && finalPriceNum < price
     ? Math.round(((price - finalPriceNum) / price) * 100)
+    : 0;
+
+  // Personalized offer discount percentage (if different from regular discount)
+  const personalizedDiscountPercentage = hasPersonalizedOffer && personalizedPrice?.original_price
+    ? Math.round(((personalizedPrice.original_price - personalizedPrice.final_price) / personalizedPrice.original_price) * 100)
     : 0;
 
   const stockQuantity = typeof product.stock_quantity === 'number' 
@@ -110,15 +130,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
     }).format(amount);
   };
 
-  // Get image URL - FIXED VERSION
+  // Get image URL
   const getImageUrl = () => {
     // First, check if main_image exists (from API response)
     if (product.main_image) {
-      // If it's already a full URL (like "https://hypermarket.co.ke/images/default-product.jpg")
       if (product.main_image.startsWith('http')) {
         return product.main_image;
       }
-      // If it's a relative path from storage
       return api.getImageUrl(product.main_image);
     }
     
@@ -187,7 +205,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
 
     setIsAddingToWishlist(true);
     try {
-      // First check if it's in wishlist
       const checkResponse = await api.wishlist.check(product.id);
       const isInWishlist = checkResponse.data?.in_wishlist || false;
       
@@ -250,7 +267,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
     
     for (let i = 1; i <= 5; i++) {
       if (i <= fullStars) {
-        // Full star
         stars.push(
           <Star
             key={i}
@@ -259,7 +275,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
           />
         );
       } else if (i === fullStars + 1 && hasHalfStar) {
-        // Half star (simulated)
         stars.push(
           <div key={i} className="relative">
             <Star
@@ -275,7 +290,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
           </div>
         );
       } else {
-        // Empty star
         stars.push(
           <Star
             key={i}
@@ -291,7 +305,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
 
   return (
     <div className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-200 overflow-hidden h-full flex flex-col transform hover:-translate-y-1 w-full">
-      {/* WIDER Product Image Section */}
+      {/* Product Image Section */}
       <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
         <Link href={`/products/${product.id}`} className="block">
           <div className="relative w-full" style={{ paddingBottom: '75%' }}>
@@ -304,8 +318,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
               }}
             />
             
-            {/* Discount Badge */}
-            {discountPercentage > 0 && (
+            {/* Personalized Offer Badge - Only show when showPersonalizedPrice is true */}
+            {hasPersonalizedOffer && personalizedDiscountPercentage > 0 && (
+              <div className="absolute top-3 left-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-xl z-10 flex items-center gap-1">
+                <Sparkles size={12} />
+                -{personalizedDiscountPercentage}%
+              </div>
+            )}
+            
+            {/* Regular Discount Badge - Only show if not showing personalized offer */}
+            {!hasPersonalizedOffer && discountPercentage > 0 && (
               <div className="absolute top-3 left-3 bg-gradient-to-r from-red-500 to-orange-500 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-xl z-10">
                 -{discountPercentage}% OFF
               </div>
@@ -327,14 +349,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
           </div>
         </Link>
 
-        {/* ALWAYS VISIBLE Floating Action Button at bottom of image */}
+        {/* Floating Action Button */}
         {showActions && (
           <div className="absolute bottom-0 left-0 right-0">
             <div className="relative">
-              {/* Gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent h-24"></div>
               
-              {/* Floating button container */}
               <div className="relative px-4 pb-4 pt-10">
                 <div className="flex justify-center space-x-2">
                   <button
@@ -362,7 +382,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
                     )}
                   </button>
                   
-                  {/* Quick action buttons */}
                   <div className="flex space-x-2">
                     <button
                       onClick={handleAddToWishlist}
@@ -471,14 +490,38 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
         {/* Price Section */}
         <div className="mt-auto pt-3 border-t border-gray-100">
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-baseline">
-              <span className="text-xl font-bold text-gray-900">
-                {formatKSH(finalPriceNum)}
-              </span>
-              {product.discounted_price && (
-                <span className="text-sm text-gray-500 line-through ml-2">
-                  {formatKSH(price)}
-                </span>
+            <div className="flex flex-col">
+              {/* Personalized Price Display */}
+              {hasPersonalizedOffer ? (
+                <>
+                  <div className="flex items-baseline">
+                    <span className="text-xl font-bold text-purple-600">
+                      {formatKSH(personalizedPrice!.final_price)}
+                    </span>
+                    <span className="text-sm text-gray-500 line-through ml-2">
+                      {formatKSH(personalizedPrice!.original_price)}
+                    </span>
+                  </div>
+                  <div className="text-xs text-purple-600 font-medium mt-1 flex items-center gap-1">
+                    <Sparkles size={10} />
+                    Personalized Price
+                    {personalizedPrice?.offer_name && (
+                      <span className="text-xs text-gray-600 ml-1">({personalizedPrice.offer_name})</span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                /* Regular Price Display */
+                <div className="flex items-baseline">
+                  <span className="text-xl font-bold text-gray-900">
+                    {formatKSH(finalPriceNum)}
+                  </span>
+                  {product.discounted_price && (
+                    <span className="text-sm text-gray-500 line-through ml-2">
+                      {formatKSH(price)}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
             
@@ -509,9 +552,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
                 <span>Featured</span>
               </div>
             )}
+            {hasPersonalizedOffer && (
+              <div className="flex items-center text-purple-600 bg-purple-50 px-2 py-1 rounded text-xs">
+                <Percent size={12} className="mr-1" />
+                <span>Exclusive Offer</span>
+              </div>
+            )}
           </div>
           
-          {/* Bottom "Add to Cart" Button (still visible for mobile/touch) */}
+          {/* Bottom "Add to Cart" Button for mobile */}
           {showActions && (
             <button
               onClick={handleAddToCart}
@@ -542,7 +591,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true }
         isOpen={showReviewModal}
         onClose={() => {
           setShowReviewModal(false);
-          // Refresh review status after modal closes
           if (isAuthenticated) {
             checkUserReviewStatus();
           }

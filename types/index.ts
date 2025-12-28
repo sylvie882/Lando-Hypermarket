@@ -16,6 +16,7 @@ export interface User {
   updated_at: string;
 }
 // types/index.ts
+// types/index.ts - Update the Product interface
 export interface Product {
   id: number;
   name: string;
@@ -38,19 +39,40 @@ export interface Product {
   vendor?: User;
   created_at: string;
   updated_at: string;  
-  final_price?: number | string; // Add this
+  final_price?: number | string;
 
-   images?: string[]; // Array of image URLs
+  images?: string[]; // Array of image URLs
   attributes?: Record<string, any>; // For specifications tab
   is_free_shipping?: boolean;
 
-  
   // Computed attributes from Laravel accessors
   is_in_stock?: boolean;
   main_image?: string; // Full URL from getMainImageAttribute()
   gallery_urls?: string[]; // Full URLs from getGalleryUrlsAttribute()
+  
+  // Personalized recommendation properties (added)
+  relevance_score?: number; // Add this line
+  recommendation_type?: string; // Add this line
+  personalized_price?: { // Add this line
+    original_price: number;
+    final_price: number;
+    discount_type?: 'percentage' | 'fixed';
+    discount_value?: number;
+    offer_name?: string;
+    valid_until?: string;
+    is_personalized_offer: boolean;
+    discount_rules_applied?: any;
+  };
+  availability_status?: 'in_stock' | 'out_of_stock'; // Add this line
+  
+  // You might also want to add these common fields
+  thumbnail_url?: string; // Full URL
+  views?: number;
+  weight?: number | null;
+  unit?: string | null;
+  barcode?: string | null;
+  min_stock_threshold?: number;
 }
-
 // types/index.ts
 export interface Category {
   id: number;
