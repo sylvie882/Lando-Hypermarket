@@ -429,15 +429,12 @@ const ProductsPage: React.FC = () => {
               </div>
             ) : products.length > 0 ? (
               <>
-                {/* Products Grid/List - UPDATED FOR BETTER SPACING */}
+                {/* Products Grid/List - FIXED: Remove className prop */}
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                     {products.map((product) => (
                       <div key={product.id} className="h-full">
-                        <ProductCard 
-                          product={product} 
-                          className="h-full flex flex-col"
-                        />
+                        <ProductCard product={product} />
                       </div>
                     ))}
                   </div>
