@@ -1,4 +1,3 @@
-// app/admin/categories/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -107,12 +106,10 @@ export default function CategoriesPage() {
   };
 
   const handleRemoveImage = () => {
-    console.log('Removing image');
+    console.log('Removing image - setting removeImage to true');
     setImageFile(null);
     setImagePreview(null);
-    if (editingCategory?.image_url) {
-      setRemoveImage(true);
-    }
+    setRemoveImage(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,13 +130,11 @@ export default function CategoriesPage() {
     });
     
     try {
-      // ALWAYS use FormData for image uploads
       const formDataToSend = new FormData();
       
       // Append all text fields
       formDataToSend.append('name', formData.name);
       
-      // Handle slug - only append if provided
       if (formData.slug) {
         formDataToSend.append('slug', formData.slug);
       }
@@ -148,27 +143,34 @@ export default function CategoriesPage() {
         formDataToSend.append('description', formData.description);
       }
       
-      // Handle parent_id - send empty string for null
       formDataToSend.append('parent_id', formData.parent_id || '');
-      
       formDataToSend.append('order', formData.order);
       formDataToSend.append('is_active', formData.is_active ? '1' : '0');
       
-      // ========== CRITICAL FIX ==========
-      // Handle image - ONLY append if there's an actual image file
+      // ========== FIXED IMAGE HANDLING ==========
+      console.log('Image handling state:', {
+        hasImageFile: !!imageFile,
+        removeImage,
+        isEditing: !!editingCategory
+      });
+      
       if (imageFile && imageFile.size > 0) {
-        console.log('Adding image file to FormData:', {
+        // Scenario 1: Upload new image
+        console.log('Adding new image file to FormData:', {
           name: imageFile.name,
           size: imageFile.size,
           type: imageFile.type
         });
         formDataToSend.append('image', imageFile);
-      } else if (removeImage && editingCategory?.image_url) {
-        console.log('Setting remove_image flag for update');
+        // Clear removeImage flag when uploading new image
+        setRemoveImage(false);
+      } else if (removeImage) {
+        // Scenario 2: Remove existing image
+        console.log('Setting remove_image flag to 1');
         formDataToSend.append('remove_image', '1');
       }
-      // If no image file and not removing, DO NOT append anything
-      // ========== END CRITICAL FIX ==========
+      // Scenario 3: No image change - don't send anything
+      // ========== END FIX ==========
       
       // Log FormData contents for debugging
       console.log('FormData contents:');
@@ -185,13 +187,20 @@ export default function CategoriesPage() {
       let response;
       if (editingCategory) {
         console.log('Updating category:', editingCategory.id);
-        // For PUT requests with FormData, use the post method with _method parameter
-        formDataToSend.append('_method', 'PUT'); // Important for Laravel
-        response = await api.post(`/admin/categories/${editingCategory.id}`, formDataToSend);
+        formDataToSend.append('_method', 'PUT');
+        response = await api.post(`/admin/categories/${editingCategory.id}`, formDataToSend, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
         alert('Category updated successfully');
       } else {
         console.log('Creating new category');
-        response = await api.post('/admin/categories', formDataToSend);
+        response = await api.post('/admin/categories', formDataToSend, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
         alert('Category created successfully');
       }
       
@@ -200,7 +209,7 @@ export default function CategoriesPage() {
       fetchCategories();
     } catch (error: any) {
       console.error('Full error:', error);
-      console.error('Error response:', error.response);
+      console.error('Error response:', error.response?.data);
       
       if (error.response?.data?.errors) {
         console.error('Validation errors:', error.response.data.errors);
@@ -307,7 +316,7 @@ export default function CategoriesPage() {
                   is_active: category.is_active,
                 });
                 setImagePreview(category.image_url);
-                setImageFile(null); // Reset file when editing
+                setImageFile(null);
                 setRemoveImage(false);
                 setShowForm(true);
               }}
@@ -437,11 +446,7 @@ export default function CategoriesPage() {
                               </label>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  console.log('Setting remove image flag');
-                                  setRemoveImage(true);
-                                  setImagePreview(null);
-                                }}
+                                onClick={handleRemoveImage}
                                 className="p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700"
                               >
                                 <X size={14} />
