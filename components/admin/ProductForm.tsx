@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { X, Upload, Image as ImageIcon, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Upload, Image as ImageIcon, Loader2, AlertCircle, Camera, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/api';
 
 interface ProductFormProps {
@@ -38,6 +38,8 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
   const [galleryToDelete, setGalleryToDelete] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   
   const API_BASE_URL = 'https://api.hypermarket.co.ke';
   const STORAGE_BASE_URL = 'https://api.hypermarket.co.ke/storage';
@@ -77,7 +79,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
 
       // Set gallery if it exists
       if (product.gallery && Array.isArray(product.gallery)) {
-        const galleryItems = product.gallery;
+        const galleryItems = product.gallery.filter((item: any) => item && item !== '');
         setGallery(galleryItems);
         
         // Generate previews for gallery
@@ -91,7 +93,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
 
   // Helper function to generate image URL
   const generateImageUrl = (imagePath: string): string => {
-    if (!imagePath || imagePath === 'NULL') return '';
+    if (!imagePath || imagePath === 'NULL' || imagePath === 'null') return '';
     
     if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
       return imagePath;
@@ -101,7 +103,8 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
       return `${API_BASE_URL}${imagePath}`;
     } else {
       // Handle relative paths
-      return `${STORAGE_BASE_URL}/${imagePath.replace(/^storage\//, '')}`;
+      const cleanPath = imagePath.replace(/^storage\//, '');
+      return `${STORAGE_BASE_URL}/${cleanPath}`;
     }
   };
 
@@ -145,12 +148,15 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setThumbnail(file);
+      console.log('New thumbnail selected:', file.name, file.type, file.size);
+      setThumbnail(file); // This is a File object
       const reader = new FileReader();
       reader.onloadend = () => {
         setThumbnailPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    } else {
+      console.log('No file selected for thumbnail');
     }
     
     // Clear thumbnail error
@@ -160,6 +166,17 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         delete newErrors.thumbnail;
         return newErrors;
       });
+    }
+    
+    // Reset the input so same file can be selected again
+    if (thumbnailInputRef.current) {
+      thumbnailInputRef.current.value = '';
+    }
+  };
+
+  const triggerThumbnailUpload = () => {
+    if (thumbnailInputRef.current) {
+      thumbnailInputRef.current.click();
     }
   };
 
@@ -179,16 +196,45 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         reader.readAsDataURL(file);
       });
     }
+    
+    // Reset the input so same files can be selected again
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = '';
+    }
+  };
+
+  const triggerGalleryUpload = () => {
+    if (galleryInputRef.current) {
+      galleryInputRef.current.click();
+    }
   };
 
   const removeThumbnail = () => {
-    if (typeof thumbnail === 'string' && product) {
-      // For existing thumbnails, keep the path but set preview to default
-      setThumbnail(product.thumbnail || '');
-    } else {
+    console.log('Removing thumbnail, current thumbnail:', thumbnail);
+    
+    if (thumbnail instanceof File) {
+      // If it's a new file that hasn't been uploaded yet, just remove it
       setThumbnail(null);
+      setThumbnailPreview('/images/default-product.png');
+    } else if (typeof thumbnail === 'string' && product) {
+      // For existing thumbnails, we need to handle deletion
+      // Set thumbnail to null and the backend will handle it
+      setThumbnail(null);
+      setThumbnailPreview('/images/default-product.png');
+    } else {
+      // No thumbnail exists
+      setThumbnail(null);
+      setThumbnailPreview('/images/default-product.png');
     }
-    setThumbnailPreview('/images/default-product.png');
+    
+    // Clear thumbnail error
+    if (errors.thumbnail) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.thumbnail;
+        return newErrors;
+      });
+    }
   };
 
   const removeGalleryImage = (index: number) => {
@@ -203,7 +249,8 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         path = path.replace(API_BASE_URL + '/storage/', '');
       }
       
-      if (path) {
+      if (path && path !== '') {
+        console.log('Adding gallery image to delete list:', path);
         setGalleryToDelete(prev => [...prev, path]);
       }
     }
@@ -266,22 +313,38 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         weight: formData.weight ? parseFloat(formData.weight) : null,
       };
       
+      console.log('Thumbnail state:', {
+        thumbnail,
+        isFile: thumbnail instanceof File,
+        isString: typeof thumbnail === 'string',
+        thumbnailPreview
+      });
+      
       // Handle thumbnail
       if (thumbnail instanceof File) {
+        // New thumbnail file to upload
         submitData.thumbnail = thumbnail;
-      } else if (product && thumbnail) {
+        console.log('Sending new thumbnail file:', thumbnail.name);
+      } else if (thumbnail === null && product) {
+        // Thumbnail was removed - send empty string to clear it
+        submitData.thumbnail = '';
+        console.log('Thumbnail removed, sending empty string');
+      } else if (typeof thumbnail === 'string' && product) {
         // Keep existing thumbnail path for updates
         submitData.thumbnail = thumbnail;
+        console.log('Keeping existing thumbnail path:', thumbnail);
       }
       
       // Handle gallery
       if (gallery.length > 0) {
         submitData.gallery = gallery;
+        console.log('Sending gallery items:', gallery.length);
       }
       
       // Handle gallery deletions
       if (galleryToDelete.length > 0) {
         submitData.delete_gallery_images = galleryToDelete;
+        console.log('Sending gallery deletions:', galleryToDelete.length);
       }
       
       // Handle attributes - ensure it's valid JSON
@@ -295,11 +358,13 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         submitData.attributes = formData.attributes;
       }
       
-      console.log('Submitting data:', {
+      console.log('Submitting product data:', {
         ...submitData,
         thumbnail: thumbnail instanceof File ? `File: ${thumbnail.name}` : thumbnail,
-        gallery: gallery.map(item => item instanceof File ? `File: ${item.name}` : item),
-        galleryToDelete
+        gallery: gallery.map(item => item instanceof File ? `File: ${item.name}` : `Path: ${item}`),
+        galleryToDelete,
+        hasThumbnail: !!thumbnail,
+        thumbnailType: thumbnail instanceof File ? 'File' : typeof thumbnail
       });
       
       onSubmit(submitData);
@@ -309,6 +374,17 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, type: 'thumbnail' | 'gallery') => {
+    e.currentTarget.src = '/images/default-product.png';
+    if (type === 'thumbnail') {
+      setThumbnailPreview('/images/default-product.png');
+    }
+  };
+
+  const replaceThumbnail = () => {
+    triggerThumbnailUpload();
   };
 
   return (
@@ -538,22 +614,44 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                       Main Image (Thumbnail) {!product && '*'}
                     </label>
                     <div className="mt-1">
-                      <div className="flex items-center justify-center w-full px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
+                      <div 
+                        className="relative flex items-center justify-center w-full px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                        onClick={triggerThumbnailUpload}
+                      >
+                        {/* Hidden file input */}
+                        <input
+                          ref={thumbnailInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleThumbnailChange}
+                          className="sr-only"
+                          required={!product}
+                        />
+                        
                         <div className="space-y-1 text-center">
                           {thumbnailPreview ? (
                             <div className="relative">
-                              <img
-                                src={thumbnailPreview}
-                                alt="Thumbnail preview"
-                                className="mx-auto h-32 w-32 object-cover rounded-lg"
-                                onError={(e) => {
-                                  e.currentTarget.src = '/images/default-product.png';
-                                }}
-                              />
+                              <div className="relative group">
+                                <img
+                                  src={thumbnailPreview}
+                                  alt="Thumbnail preview"
+                                  className="mx-auto h-32 w-32 object-cover rounded-lg"
+                                  onError={(e) => handleImageError(e, 'thumbnail')}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity rounded-lg flex items-center justify-center">
+                                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center space-y-2">
+                                    <Camera className="w-6 h-6 text-white" />
+                                    <span className="text-xs text-white font-medium">Replace Image</span>
+                                  </div>
+                                </div>
+                              </div>
                               <button
                                 type="button"
-                                onClick={removeThumbnail}
-                                className="absolute top-0 right-0 p-1 text-white bg-red-500 rounded-full -translate-y-1/2 translate-x-1/2 hover:bg-red-600"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeThumbnail();
+                                }}
+                                className="absolute top-0 right-0 p-1 text-white bg-red-500 rounded-full -translate-y-1/2 translate-x-1/2 hover:bg-red-600 z-10"
                               >
                                 <X size={16} />
                               </button>
@@ -561,18 +659,9 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                           ) : (
                             <>
                               <ImageIcon className="w-12 h-12 mx-auto text-gray-400" />
-                              <div className="flex text-sm text-gray-600">
-                                <label className="relative font-medium text-blue-600 rounded-md cursor-pointer hover:text-blue-500">
-                                  <span>Upload thumbnail</span>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleThumbnailChange}
-                                    className="sr-only"
-                                    required={!product}
-                                  />
-                                </label>
-                                <p className="pl-1">or drag and drop</p>
+                              <div className="flex flex-col items-center text-sm text-gray-600">
+                                <span className="font-medium text-blue-600">Click to upload thumbnail</span>
+                                <p className="mt-1">or drag and drop</p>
                               </div>
                               <p className="text-xs text-gray-500">
                                 PNG, JPG, GIF, WebP up to 10MB
@@ -581,6 +670,11 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                           )}
                         </div>
                       </div>
+                      {thumbnailPreview && (
+                        <div className="mt-2 text-xs text-gray-500">
+                          Click on the image to replace it
+                        </div>
+                      )}
                       {errors.thumbnail && (
                         <p className="mt-1 text-sm text-red-600">{errors.thumbnail}</p>
                       )}
@@ -593,20 +687,26 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                       Gallery Images (Optional) - Max 10
                     </label>
                     <div className="mt-1">
-                      <div className="flex items-center justify-center w-full px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
+                      <div 
+                        className="flex items-center justify-center w-full px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                        onClick={triggerGalleryUpload}
+                      >
+                        {/* Hidden file input */}
+                        <input
+                          ref={galleryInputRef}
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={handleGalleryChange}
+                          className="sr-only"
+                          disabled={gallery.length >= 10}
+                        />
+                        
                         <div className="space-y-1 text-center">
                           <Upload className="w-12 h-12 mx-auto text-gray-400" />
                           <div className="flex text-sm text-gray-600">
                             <label className="relative font-medium text-blue-600 rounded-md cursor-pointer hover:text-blue-500">
                               <span>Upload gallery images</span>
-                              <input
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                onChange={handleGalleryChange}
-                                className="sr-only"
-                                disabled={gallery.length >= 10}
-                              />
                             </label>
                             <p className="pl-1">or drag and drop</p>
                           </div>
@@ -616,6 +716,11 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                           <p className="text-xs text-gray-500">
                             {gallery.length}/10 images selected
                           </p>
+                          {gallery.length >= 10 && (
+                            <p className="text-xs text-red-500">
+                              Maximum 10 images reached
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -631,14 +736,15 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                                 src={preview}
                                 alt={`Gallery ${index + 1}`}
                                 className="object-cover w-20 h-20 rounded"
-                                onError={(e) => {
-                                  e.currentTarget.src = '/images/default-product.png';
-                                }}
+                                onError={(e) => handleImageError(e, 'gallery')}
                               />
                               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity rounded flex items-center justify-center">
                                 <button
                                   type="button"
-                                  onClick={() => removeGalleryImage(index)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeGalleryImage(index);
+                                  }}
                                   className="opacity-0 group-hover:opacity-100 p-1 text-white bg-red-500 rounded-full hover:bg-red-600 transition-opacity"
                                 >
                                   <X size={12} />
