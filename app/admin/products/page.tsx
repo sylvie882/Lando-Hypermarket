@@ -495,17 +495,27 @@ const handleFormSubmit = async (formData: FormData) => {
     const sku = formData.get('sku');
     const attributes = formData.get('attributes');
     
+    // Type-safe check for string values
+    const isString = (value: FormDataEntryValue | null): value is string => {
+      return typeof value === 'string';
+    };
+    
     console.log('Required fields check:', {
-      name: name ? `"${name}" (${typeof name})` : 'MISSING',
-      category_id: categoryId ? `"${categoryId}" (${typeof categoryId})` : 'MISSING',
-      description: description ? `"${description.substring(0, 30)}..."` : 'MISSING',
-      sku: sku ? `"${sku}"` : 'MISSING',
-      attributes: attributes ? `"${attributes}"` : 'MISSING'
+      name: name ? `"${isString(name) ? name : 'NOT A STRING'}" (${typeof name})` : 'MISSING',
+      category_id: categoryId ? `"${isString(categoryId) ? categoryId : 'NOT A STRING'}" (${typeof categoryId})` : 'MISSING',
+      description: description ? `"${isString(description) ? description.substring(0, 30) : 'NOT A STRING'}..."` : 'MISSING',
+      sku: sku ? `"${isString(sku) ? sku : 'NOT A STRING'}"` : 'MISSING',
+      attributes: attributes ? `"${isString(attributes) ? attributes : 'NOT A STRING'}"` : 'MISSING'
     });
     
     // If we're missing required data, the FormData wasn't passed correctly
     if (!name || !categoryId || !description || !sku || !attributes) {
       throw new Error('FormData is missing required fields. Check ProductForm component.');
+    }
+    
+    // Also check that they are strings
+    if (!isString(name) || !isString(categoryId) || !isString(description) || !isString(sku) || !isString(attributes)) {
+      throw new Error('FormData contains non-string values for required fields.');
     }
     
     // For update, ensure _method=PUT is present
