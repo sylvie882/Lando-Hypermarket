@@ -46,17 +46,38 @@ export default function ProductTable({ products, onEdit, onDelete }: ProductTabl
     }
   };
 
-  // Helper function to safely get image URL
+  // FIXED: Helper function to safely get image URL
   const getImageUrl = (image: string | null | undefined): string => {
-    if (!image) return '';
+    if (!image) return '/images/placeholder-product.jpg';
     
-    if (image.startsWith('http')) {
+    // If it's already a full URL, return it
+    if (image.startsWith('http://') || image.startsWith('https://')) {
       return image;
     }
     
-    // Clean path and construct URL
-    const cleanPath = image.replace(/^\//, '');
-    return `https://api.hypermarket.co.ke/storage/${cleanPath}`;
+    // If it's a data URL (base64), return it
+    if (image.startsWith('data:')) {
+      return image;
+    }
+    
+    // If it starts with /storage/, remove the slash
+    if (image.startsWith('/storage/')) {
+      const cleanPath = image.substring(1); // Remove leading slash
+      return `https://api.hypermarket.co.ke${cleanPath}`;
+    }
+    
+    // If it starts with storage/, add the full URL
+    if (image.startsWith('storage/')) {
+      return `https://api.hypermarket.co.ke/${image}`;
+    }
+    
+    // If it's a relative path without storage/, assume it's in storage
+    if (image.startsWith('/')) {
+      return `https://api.hypermarket.co.ke/storage${image}`;
+    }
+    
+    // Default: assume it's a relative path in storage
+    return `https://api.hypermarket.co.ke/storage/${image}`;
   };
 
   return (
@@ -99,20 +120,17 @@ export default function ProductTable({ products, onEdit, onDelete }: ProductTabl
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="h-10 w-10 flex-shrink-0">
-                      {product.thumbnail ? (
-                        <img 
-                          src={getImageUrl(product.thumbnail)}
-                          alt={product.name}
-                          className="h-10 w-10 rounded object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = '/images/placeholder-product.jpg';
-                          }}
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded bg-gray-200 flex items-center justify-center">
-                          <span className="text-gray-500 text-sm">IMG</span>
-                        </div>
-                      )}
+                      {/* FIXED: Always show img tag with proper URL */}
+                      <img 
+                        src={getImageUrl(product.thumbnail)}
+                        alt={product.name}
+                        className="h-10 w-10 rounded object-cover border border-gray-200"
+                        onError={(e) => {
+                          // Fallback to placeholder if image fails to load
+                          e.currentTarget.src = '/images/placeholder-product.jpg';
+                          e.currentTarget.classList.add('bg-gray-100');
+                        }}
+                      />
                     </div>
                     <div className="ml-4">
                       <div className="text-sm font-medium text-gray-900">{product.name}</div>
