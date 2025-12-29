@@ -39,8 +39,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [canReview, setCanReview] = useState(false);
   const [userReview, setUserReview] = useState<any>(null);
 
-  // Personalized Price Logic - FIXED TYPE SAFE VERSION
-  const personalizedPrice: PersonalizedPrice | null = product.personalized_pricing || null;
+  // Personalized Price Logic - FIXED: Use the correct property name from your Product type
+  const personalizedPrice: PersonalizedPrice | null = product.personalized_price || null;
   
   // Safely extract values with fallbacks
   const hasPersonalizedOffer = showPersonalizedPrice && 
