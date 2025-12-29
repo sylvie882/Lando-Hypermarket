@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import axios from 'axios';
 // Import the shared Product type from your types
 import type { Product } from '@/types';
 import ProductTable from '@/components/admin/ProductTable';
@@ -354,7 +353,7 @@ export default function ProductsPage() {
     }
   };
 
- const handleFormSubmit = async (formData: any) => {
+const handleFormSubmit = async (formData: any) => {
   if (isSubmitting) return;
   
   setIsSubmitting(true);
@@ -413,17 +412,16 @@ export default function ProductsPage() {
       return true;
     };
     
+    // Required fields
     appendField('name', formData.name);
     appendField('description', formData.description);
     appendField('price', price);
     appendField('stock_quantity', parseInt(formData.stock_quantity) || 0);
     appendField('category_id', parseInt(formData.category_id));
     
+    // Optional fields
     if (hasValue(formData.sku)) {
       appendField('sku', formData.sku);
-    } else {
-      const uniqueSku = `PROD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      appendField('sku', uniqueSku);
     }
     
     if (hasValue(formData.discounted_price)) {
@@ -433,9 +431,11 @@ export default function ProductsPage() {
       }
     }
     
+    // Boolean fields
     appendField('is_featured', formData.is_featured !== undefined ? formData.is_featured : false);
     appendField('is_active', formData.is_active !== undefined ? formData.is_active : true);
     
+    // Optional fields with validation
     if (hasValue(formData.min_stock_threshold)) {
       appendField('min_stock_threshold', parseInt(formData.min_stock_threshold));
     }
@@ -470,29 +470,13 @@ export default function ProductsPage() {
       appendField('vendor_id', parseInt(formData.vendor_id));
     }
     
-    let hasThumbnail = false;
+    // Handle thumbnail (main image) - FIXED for UPDATE
+    console.log('Processing thumbnail:', formData.thumbnail);
+    
     if (formData.thumbnail) {
-      console.log('Processing thumbnail:', formData.thumbnail);
-      
-      let thumbnailFile: File | null = null;
-      
       if (formData.thumbnail instanceof File) {
-        thumbnailFile = formData.thumbnail;
-      } else if (typeof formData.thumbnail === 'string' && formData.thumbnail.startsWith('blob:')) {
-        try {
-          const response = await fetch(formData.thumbnail);
-          const blob = await response.blob();
-          const fileName = `thumbnail-${Date.now()}.jpg`;
-          thumbnailFile = new File([blob], fileName, { type: 'image/jpeg' });
-        } catch (error) {
-          console.error('Failed to process thumbnail:', error);
-          alert('Failed to process main image. Please try uploading again.');
-          setIsSubmitting(false);
-          return;
-        }
-      }
-      
-      if (thumbnailFile) {
+        // New thumbnail file uploaded
+        const thumbnailFile = formData.thumbnail;
         const validation = validateImage(thumbnailFile);
         if (!validation.valid) {
           alert(validation.message);
@@ -504,182 +488,159 @@ export default function ProductsPage() {
           console.log('Compressing thumbnail...');
           const compressedThumbnail = await compressImage(thumbnailFile, 800, 2000);
           data.append('thumbnail', compressedThumbnail);
-          hasThumbnail = true;
           setUploadProgress(20);
           console.log('Thumbnail appended:', compressedThumbnail.name);
         } catch (error) {
           console.error('Failed to compress thumbnail:', error);
           data.append('thumbnail', thumbnailFile);
-          hasThumbnail = true;
           setUploadProgress(20);
           console.log('Original thumbnail appended:', thumbnailFile.name);
         }
+      } else if (typeof formData.thumbnail === 'string' && formData.thumbnail.startsWith('blob:')) {
+        // Blob URL from new image selection
+        try {
+          const response = await fetch(formData.thumbnail);
+          const blob = await response.blob();
+          const fileName = `thumbnail-${Date.now()}.jpg`;
+          const thumbnailFile = new File([blob], fileName, { type: 'image/jpeg' });
+          
+          const validation = validateImage(thumbnailFile);
+          if (!validation.valid) {
+            alert(validation.message);
+            setIsSubmitting(false);
+            return;
+          }
+          
+          const compressedThumbnail = await compressImage(thumbnailFile, 800, 2000);
+          data.append('thumbnail', compressedThumbnail);
+          setUploadProgress(20);
+        } catch (error) {
+          console.error('Failed to process thumbnail from blob:', error);
+          alert('Failed to process main image. Please try uploading again.');
+          setIsSubmitting(false);
+          return;
+        }
       } else if (typeof formData.thumbnail === 'string' && !selectedProduct) {
-        console.log('Using existing thumbnail URL');
-        hasThumbnail = true;
+        // For CREATE: thumbnail is a string URL from ProductForm
+        console.log('Using thumbnail URL for create:', formData.thumbnail);
       }
     } else if (selectedProduct) {
-      // For updates, keep existing thumbnail if not provided
-      data.append('thumbnail', selectedProduct.thumbnail || '');
+      // For UPDATE: if no new thumbnail is provided, send the existing thumbnail path
+      // This is the key fix - we need to tell backend to keep the existing thumbnail
+      console.log('No new thumbnail for update, keeping existing:', selectedProduct.thumbnail);
+      
+      if (selectedProduct.thumbnail) {
+        // Send the existing thumbnail path
+        appendField('thumbnail', selectedProduct.thumbnail);
+        console.log('Appended existing thumbnail path:', selectedProduct.thumbnail);
+      } else {
+        console.log('No existing thumbnail to preserve');
+      }
     }
     
-    // Handle gallery images - FIXED FOR BOTH CREATE AND UPDATE
-    const galleryFilesToUpload: File[] = [];
-    const galleryPathsToDelete: string[] = [];
+    // Handle gallery images - SIMPLIFIED
+    console.log('Processing gallery:', formData.gallery);
     
-    if (selectedProduct && formData.gallery) {
-      // For UPDATES: Separate new files from existing paths
+    if (formData.gallery && Array.isArray(formData.gallery)) {
+      for (let i = 0; i < formData.gallery.length; i++) {
+        const galleryItem = formData.gallery[i];
+        
+        if (galleryItem instanceof File) {
+          // New file to upload
+          const validation = validateImage(galleryItem);
+          if (!validation.valid) {
+            console.warn(`Gallery image ${i} validation failed:`, validation.message);
+            continue;
+          }
+          
+          try {
+            console.log(`Compressing gallery image ${i}...`);
+            const compressedGallery = await compressImage(galleryItem, 1200, 2000);
+            data.append('gallery[]', compressedGallery);
+            console.log(`Gallery image ${i} appended:`, compressedGallery.name);
+          } catch (error) {
+            console.error(`Failed to compress gallery image ${i}:`, error);
+            data.append('gallery[]', galleryItem);
+            console.log(`Original gallery image ${i} appended:`, galleryItem.name);
+          }
+          
+          const progress = 20 + ((i + 1) / formData.gallery.length) * 50;
+          setUploadProgress(progress);
+        } else if (typeof galleryItem === 'string' && galleryItem.startsWith('blob:')) {
+          // Blob URL from new image selection
+          try {
+            const response = await fetch(galleryItem);
+            const blob = await response.blob();
+            const fileName = `gallery-${i}-${Date.now()}.jpg`;
+            const galleryFile = new File([blob], fileName, { type: 'image/jpeg' });
+            
+            const validation = validateImage(galleryFile);
+            if (!validation.valid) {
+              console.warn(`Gallery image ${i} validation failed:`, validation.message);
+              continue;
+            }
+            
+            const compressedGallery = await compressImage(galleryFile, 1200, 2000);
+            data.append('gallery[]', compressedGallery);
+            console.log(`Gallery image ${i} appended from blob:`, fileName);
+          } catch (error) {
+            console.error(`Failed to process gallery image ${i} from blob:`, error);
+            continue;
+          }
+        } else if (typeof galleryItem === 'string' && selectedProduct) {
+          // For UPDATE: existing gallery path
+          console.log(`Gallery image ${i} is existing path:`, galleryItem);
+          // Don't append existing paths as files, backend will handle them
+        }
+      }
+    }
+    
+    // Handle gallery deletions for updates - FIXED
+    if (selectedProduct && formData.gallery && Array.isArray(formData.gallery)) {
       const existingGallery = Array.isArray(selectedProduct.gallery) ? selectedProduct.gallery : [];
       const galleryPathsToKeep: string[] = [];
+      const galleryPathsToDelete: string[] = [];
       
-      console.log('Processing gallery for update:', {
-        formDataGallery: formData.gallery,
-        existingGallery
+      // Collect existing paths to keep
+      formData.gallery.forEach((galleryItem: any) => {
+        if (typeof galleryItem === 'string' && 
+            (galleryItem.includes('products/gallery/') || galleryItem.includes('storage/'))) {
+          galleryPathsToKeep.push(galleryItem);
+        }
       });
       
-      // Process each gallery item
-      if (Array.isArray(formData.gallery)) {
-        for (const galleryItem of formData.gallery) {
-          if (galleryItem instanceof File || (typeof galleryItem === 'string' && galleryItem.startsWith('blob:'))) {
-            // New file to upload
-            let galleryFile: File | null = null;
-            
-            if (galleryItem instanceof File) {
-              galleryFile = galleryItem;
-            } else if (typeof galleryItem === 'string' && galleryItem.startsWith('blob:')) {
-              try {
-                const response = await fetch(galleryItem);
-                const blob = await response.blob();
-                const fileName = `gallery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.jpg`;
-                galleryFile = new File([blob], fileName, { type: 'image/jpeg' });
-              } catch (error) {
-                console.error('Failed to process gallery image:', error);
-                continue;
-              }
-            }
-            
-            if (galleryFile) {
-              galleryFilesToUpload.push(galleryFile);
-            }
-          } else if (typeof galleryItem === 'string' && galleryItem.includes('products/gallery/')) {
-            // Existing gallery path to keep
-            galleryPathsToKeep.push(galleryItem);
-          } else if (typeof galleryItem === 'string' && galleryItem.includes('storage/')) {
-            // Convert storage URL to path
-            const path = galleryItem.split('/storage/')[1];
-            if (path) {
-              galleryPathsToKeep.push(path);
-            }
-          }
+      // Determine which to delete
+      existingGallery.forEach((path: string) => {
+        if (!galleryPathsToKeep.includes(path)) {
+          galleryPathsToDelete.push(path);
         }
-      }
-      
-      // Determine which existing images to delete
-      if (existingGallery.length > 0) {
-        galleryPathsToDelete.push(...existingGallery.filter(
-          path => !galleryPathsToKeep.includes(path)
-        ));
-      }
-      
-      console.log('Gallery update analysis:', {
-        existingGallery,
-        galleryPathsToKeep,
-        galleryPathsToDelete,
-        newFiles: galleryFilesToUpload.length
       });
       
-    } else if (formData.gallery && formData.gallery.length > 0) {
-      // For CREATE: Just process all as new files
-      console.log('Processing gallery for create:', formData.gallery.length);
+      console.log('Gallery deletions:', galleryPathsToDelete);
       
-      if (Array.isArray(formData.gallery)) {
-        for (let i = 0; i < Math.min(formData.gallery.length, 5); i++) {
-          const galleryImage = formData.gallery[i];
-          
-          if (galleryImage instanceof File || (typeof galleryImage === 'string' && galleryImage.startsWith('blob:'))) {
-            let galleryFile: File | null = null;
-            
-            if (galleryImage instanceof File) {
-              galleryFile = galleryImage;
-            } else if (typeof galleryImage === 'string' && galleryImage.startsWith('blob:')) {
-              try {
-                const response = await fetch(galleryImage);
-                const blob = await response.blob();
-                const fileName = `gallery-${i}-${Date.now()}.jpg`;
-                galleryFile = new File([blob], fileName, { type: 'image/jpeg' });
-              } catch (error) {
-                console.error(`Failed to process gallery image ${i}:`, error);
-                continue;
-              }
-            }
-            
-            if (galleryFile) {
-              galleryFilesToUpload.push(galleryFile);
-            }
-          }
-        }
-      }
-    }
-    
-    // Process gallery files to upload
-    if (galleryFilesToUpload.length > 0) {
-      console.log(`Processing ${galleryFilesToUpload.length} gallery files for upload`);
-      
-      for (let i = 0; i < galleryFilesToUpload.length; i++) {
-        const galleryFile = galleryFilesToUpload[i];
-        
-        const validation = validateImage(galleryFile);
-        if (!validation.valid) {
-          console.warn(`Gallery image ${i} validation failed:`, validation.message);
-          continue;
-        }
-        
-        try {
-          console.log(`Compressing gallery image ${i}...`);
-          const compressedGallery = await compressImage(galleryFile, 1200, 2000);
-          data.append(`gallery[]`, compressedGallery);
-          console.log(`Gallery image ${i} appended:`, compressedGallery.name);
-        } catch (error) {
-          console.error(`Failed to compress gallery image ${i}:`, error);
-          data.append(`gallery[]`, galleryFile);
-          console.log(`Original gallery image ${i} appended:`, galleryFile.name);
-        }
-        
-        const progress = 20 + ((i + 1) / galleryFilesToUpload.length) * 50;
-        setUploadProgress(progress);
-      }
-    } else if (selectedProduct) {
-      // No new gallery files for update
-      console.log('No new gallery files to upload');
-    }
-    
-    // Append gallery deletions for updates
-    if (galleryPathsToDelete.length > 0) {
-      console.log('Appending gallery deletions:', galleryPathsToDelete);
-      galleryPathsToDelete.forEach((path, index) => {
-        data.append(`delete_gallery_images[${index}]`, path);
+      // Append deletions
+      galleryPathsToDelete.forEach((path) => {
+        data.append('delete_gallery_images[]', path);
       });
     }
     
-    if (!selectedProduct && !hasThumbnail) {
+    // For CREATE, thumbnail is required
+    if (!selectedProduct && !formData.thumbnail) {
       alert('Please upload a main product image (thumbnail).');
       setIsSubmitting(false);
       return;
     }
     
     console.log('FormData entries summary:');
-    let totalSize = 0;
     for (let [key, value] of (data as any).entries()) {
       if (value instanceof File) {
         console.log(`${key}: File - ${value.name} (${(value.size / 1024).toFixed(2)}KB)`);
-        totalSize += value.size;
       } else if (typeof value === 'string' && value.length > 100) {
         console.log(`${key}: [String length ${value.length}]`);
       } else {
         console.log(`${key}:`, value);
       }
     }
-    console.log(`Total FormData size: ${(totalSize / 1024 / 1024).toFixed(2)}MB`);
     
     setUploadProgress(80);
     
@@ -690,28 +651,18 @@ export default function ProductsPage() {
     };
     
     if (selectedProduct) {
-      // For updates, we need to use POST with _method=PUT
-      const updateData = new FormData();
-      updateData.append('_method', 'PUT');
+      // For updates - use PUT directly
+      console.log('Sending update request for product:', selectedProduct.id);
       
-      // Copy all data to updateData
-      for (let [key, value] of (data as any).entries()) {
-        updateData.append(key, value);
-      }
-      
-      console.log('Sending update request with data:');
-      for (let [key, value] of (updateData as any).entries()) {
-        console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
-      }
-      
-      response = await api.post(`/admin/products/${selectedProduct.id}`, updateData, {
+      // IMPORTANT: The backend expects PUT method, not POST with _method=PUT
+      response = await api.put(`/admin/products/${selectedProduct.id}`, data, {
         headers,
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
           setUploadProgress(80 + (percentCompleted * 0.2));
         }
       }).catch(error => {
-        console.log('Full update error:', error);
+        console.log('Update error:', error);
         console.log('Update error response:', error.response?.data);
         throw error;
       });
@@ -720,10 +671,7 @@ export default function ProductsPage() {
       alert('Product updated successfully');
     } else {
       // For creates
-      console.log('Sending create request with data:');
-      for (let [key, value] of (data as any).entries()) {
-        console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
-      }
+      console.log('Sending create request');
       
       response = await api.post('/admin/products', data, {
         headers,
@@ -732,7 +680,7 @@ export default function ProductsPage() {
           setUploadProgress(80 + (percentCompleted * 0.2));
         }
       }).catch(error => {
-        console.log('Full create error:', error);
+        console.log('Create error:', error);
         console.log('Create error response:', error.response?.data);
         throw error;
       });
@@ -789,6 +737,7 @@ export default function ProductsPage() {
     setTimeout(() => setUploadProgress(0), 1000);
   }
 };
+
 
   const handleBulkUpload = async (file: File) => {
     try {
@@ -1265,33 +1214,32 @@ export default function ProductsPage() {
         </div>
       )}
 
-      // In your ProductsPage component, update the BulkUpload usage:
-{showBulkUpload && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-    <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Bulk Upload Products</h2>
-          <button
-            onClick={() => setShowBulkUpload(false)}
-            className="p-2 hover:bg-gray-100 rounded-lg"
-          >
-            <span className="text-2xl">×</span>
-          </button>
+      {showBulkUpload && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-gray-900">Bulk Upload Products</h2>
+                <button
+                  onClick={() => setShowBulkUpload(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <span className="text-2xl">×</span>
+                </button>
+              </div>
+              <BulkUpload
+                onSuccess={() => {
+                  setShowBulkUpload(false);
+                  fetchProducts(pagination.currentPage, showAll);
+                }}
+                onError={(error) => {
+                  alert(`Upload failed: ${error}`);
+                }}
+              />
+            </div>
+          </div>
         </div>
-        <BulkUpload
-          onSuccess={() => {
-            setShowBulkUpload(false);
-            fetchProducts(pagination.currentPage, showAll);
-          }}
-          onError={(error) => {
-            alert(`Upload failed: ${error}`);
-          }}
-        />
-      </div>
-    </div>
-  </div>
-)}
+      )}
     </div>
   );
 }
