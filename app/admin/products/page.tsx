@@ -474,93 +474,112 @@ const handleFormSubmit = async (formData: any) => {
   setUploadProgress(0);
   
   try {
-    console.log('=== Form Submission Started ===');
-    console.log('Form data type:', typeof formData);
-    console.log('Is FormData instance?', formData instanceof FormData);
+    console.log('=== Starting Product Update ===');
     
-    // If it's already a FormData object, use it directly
-    let data = formData;
+    // Create FormData
+    const data = new FormData();
     
-    // If it's not FormData, create one
-    if (!(formData instanceof FormData)) {
-      console.log('Creating new FormData from object');
-      data = new FormData();
-      
-      // Convert object to FormData
-      const appendToFormData = (key: string, value: any) => {
-        if (value === undefined || value === null) return;
-        
-        if (typeof value === 'boolean') {
-          data.append(key, value ? '1' : '0');
-        } else if (typeof value === 'number') {
-          data.append(key, value.toString());
-        } else if (typeof value === 'object' && !(value instanceof File)) {
-          if (value instanceof Blob) {
-            data.append(key, value);
-          } else {
-            data.append(key, JSON.stringify(value));
-          }
-        } else {
-          data.append(key, value);
-        }
-      };
-      
-      // Append all fields
-      Object.entries(formData).forEach(([key, value]) => {
-        appendToFormData(key, value);
-      });
-      
-      // For Laravel file uploads with PUT, add _method parameter
-      if (selectedProduct) {
-        data.append('_method', 'PUT');
+    // Append basic fields
+    data.append('name', formData.name || '');
+    data.append('description', formData.description || '');
+    data.append('price', (parseFloat(formData.price) || 0).toString());
+    data.append('stock_quantity', (parseInt(formData.stock_quantity) || 0).toString());
+    data.append('min_stock_threshold', (parseInt(formData.min_stock_threshold) || 10).toString());
+    data.append('category_id', (parseInt(formData.category_id) || 0).toString());
+    data.append('vendor_id', (parseInt(formData.vendor_id) || 1).toString());
+    data.append('sku', formData.sku || '');
+    data.append('barcode', formData.barcode || '');
+    data.append('weight', (parseFloat(formData.weight) || 0).toString());
+    data.append('unit', formData.unit || 'piece');
+    data.append('is_featured', formData.is_featured ? '1' : '0');
+    data.append('is_active', formData.is_active ? '1' : '1'); // Default to active
+    
+    // Handle attributes
+    if (formData.attributes) {
+      try {
+        const attributes = typeof formData.attributes === 'string' 
+          ? JSON.parse(formData.attributes)
+          : formData.attributes;
+        data.append('attributes', JSON.stringify(attributes));
+      } catch (e) {
+        console.warn('Invalid attributes, using empty object');
+        data.append('attributes', '{}');
       }
-    } else if (selectedProduct) {
-      // If it's already FormData and we're updating, add _method
-      formData.append('_method', 'PUT');
+    } else {
+      data.append('attributes', '{}');
     }
     
-    // Debug: Log all FormData entries
-    console.log('=== FormData Entries ===');
+    // Handle discounted price
+    if (formData.discounted_price) {
+      const discounted = parseFloat(formData.discounted_price);
+      if (!isNaN(discounted) && discounted > 0) {
+        data.append('discounted_price', discounted.toString());
+      }
+    }
+    
+    // Handle thumbnail
+    if (formData.thumbnail && formData.thumbnail instanceof File) {
+      console.log('Adding thumbnail file:', formData.thumbnail.name);
+      data.append('thumbnail', formData.thumbnail);
+    } else if (typeof formData.thumbnail === 'string' && selectedProduct) {
+      // Keep existing thumbnail path
+      data.append('thumbnail', formData.thumbnail);
+    }
+    
+    // Handle gallery
+    if (formData.gallery && Array.isArray(formData.gallery)) {
+      formData.gallery.forEach((item: any, index: number) => {
+        if (item instanceof File) {
+          console.log(`Adding gallery file ${index}:`, item.name);
+          data.append(`gallery[${index}]`, item);
+        } else if (typeof item === 'string') {
+          // Existing gallery image
+          data.append(`existing_gallery[${index}]`, item);
+        }
+      });
+    }
+    
+    // For update, add _method=PUT
+    if (selectedProduct) {
+      data.append('_method', 'PUT');
+    }
+    
+    // Debug log
+    console.log('=== FormData Contents ===');
     for (let [key, value] of (data as any).entries()) {
       if (value instanceof File) {
-        console.log(`${key}: File - ${value.name} (${value.size} bytes, ${value.type})`);
-      } else if (typeof value === 'string' && value.length > 100) {
-        console.log(`${key}: ${value.substring(0, 50)}... [${value.length} chars]`);
+        console.log(`${key}: File (${value.name}, ${value.size} bytes)`);
+      } else if (typeof value === 'string' && value.length > 50) {
+        console.log(`${key}: ${value.substring(0, 50)}...`);
       } else {
-        console.log(`${key}:`, value);
+        console.log(`${key}: ${value}`);
       }
     }
-    console.log('=== End FormData Entries ===');
     
-    setUploadProgress(20);
+    setUploadProgress(30);
     
-    let response;
+    // Send request
     const endpoint = selectedProduct 
       ? `/admin/products/${selectedProduct.id}`
       : '/admin/products';
     
-    console.log(`Sending request to: ${endpoint}`);
-    console.log('Request method:', selectedProduct ? 'POST (with _method=PUT)' : 'POST');
+    console.log(`Sending to: ${endpoint}`);
     
-    // Always use POST for FormData (with _method=PUT for updates)
-    response = await api.post(endpoint, data, {
+    const response = await api.post(endpoint, data, {
       onUploadProgress: (progressEvent) => {
         const total = progressEvent.total || 1;
         const loaded = progressEvent.loaded;
-        const percentCompleted = Math.round((loaded * 100) / total);
-        setUploadProgress(20 + (percentCompleted * 0.8));
+        const percent = Math.round((loaded * 100) / total);
+        setUploadProgress(30 + (percent * 0.7));
       }
-    }).catch(error => {
-      console.error('API Error:', error);
-      console.error('Error response:', error.response?.data);
-      throw error;
     });
     
-    console.log('Response received:', response.data);
+    console.log('Success! Response:', response.data);
     setUploadProgress(100);
     
-    alert(selectedProduct ? 'Product updated successfully' : 'Product created successfully');
+    alert(selectedProduct ? 'Product updated successfully!' : 'Product created successfully!');
     
+    // Close form and refresh
     setTimeout(() => {
       setShowForm(false);
       setSelectedProduct(null);
@@ -568,51 +587,49 @@ const handleFormSubmit = async (formData: any) => {
     }, 500);
     
   } catch (error: any) {
-    console.error('=== Form Submission Error ===', error);
+    console.error('=== ERROR DETAILS ===');
     
-    // Detailed error logging
     if (error.response) {
       console.error('Status:', error.response.status);
-      console.error('Headers:', error.response.headers);
-      console.error('Data:', error.response.data);
+      console.error('Response data:', error.response.data);
       
-      if (error.response.status === 413) {
-        const errorMessage = 'The data you are trying to upload is too large. Please reduce image sizes or upload fewer images.';
-        alert(errorMessage);
-        setError(errorMessage);
-      } else if (error.response.status === 422) {
-        const validationErrors = error.response.data.errors;
-        let errorMessage = 'Please fix the following errors:\n\n';
+      if (error.response.status === 422) {
+        // Get validation errors
+        const errors = error.response.data.errors;
         
-        if (validationErrors) {
-          Object.entries(validationErrors).forEach(([field, messages]) => {
+        if (errors) {
+          console.error('Validation errors:', errors);
+          
+          // Build error message
+          let errorMessage = 'Please fix the following errors:\n\n';
+          
+          Object.entries(errors).forEach(([field, messages]: [string, any]) => {
             if (Array.isArray(messages)) {
-              messages.forEach((msg: string) => {
+              messages.forEach(msg => {
                 errorMessage += `• ${field}: ${msg}\n`;
               });
             } else {
               errorMessage += `• ${field}: ${messages}\n`;
             }
           });
+          
+          alert(errorMessage);
+          setError(errorMessage);
         } else {
-          errorMessage = error.response.data.message || 'Validation failed';
+          alert('Validation failed. Please check all fields.');
+          setError('Validation failed');
         }
-        
-        alert(errorMessage);
-        setError(errorMessage);
-      } else if (error.response.data?.message) {
-        alert(error.response.data.message);
-        setError(error.response.data.message);
       } else {
-        alert(`Server error: ${error.response.status}`);
-        setError(`Server error: ${error.response.status}`);
+        const message = error.response.data?.message || `Error ${error.response.status}`;
+        alert(message);
+        setError(message);
       }
     } else if (error.request) {
-      console.error('No response received:', error.request);
-      alert('No response from server. Please check your internet connection.');
-      setError('No response from server');
+      console.error('No response:', error.request);
+      alert('No response from server. Please check your connection.');
+      setError('No server response');
     } else {
-      console.error('Error setting up request:', error.message);
+      console.error('Request setup error:', error.message);
       alert(`Error: ${error.message}`);
       setError(error.message);
     }
