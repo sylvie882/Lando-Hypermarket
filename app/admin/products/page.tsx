@@ -158,17 +158,14 @@ export default function ProductsPage() {
     to: 0
   });
   
-  const [showAll, setShowAll] = useState(false); // Changed default to false for better performance
+  const [showAll, setShowAll] = useState(true);
 
   const fetchProducts = useCallback(async (page = 1, showAllProducts = showAll) => {
     try {
       setLoading(true);
       setError(null);
       
-      const params: any = {
-        page: page,
-        per_page: showAllProducts ? 1000 : pagination.perPage,
-      };
+      const params: any = {};
       
       if (searchQuery.trim()) params.search = searchQuery.trim();
       if (filters.category) params.category_id = filters.category;
@@ -191,6 +188,13 @@ export default function ProductsPage() {
       
       params.sort = filters.sort;
       params.order = filters.order;
+      
+      if (showAllProducts) {
+        params.per_page = 1000;
+      } else {
+        params.page = page;
+        params.per_page = pagination.perPage;
+      }
 
       console.log('Fetching products with params:', params);
       
@@ -201,16 +205,28 @@ export default function ProductsPage() {
       
       let productsArray: Product[] = [];
       let totalProducts = 0;
-      let currentPage = page;
-      let lastPage = 1;
       
-      if (data && data.data) {
+      if (data && data.products && data.products.data) {
+        productsArray = data.products.data;
+        const paginationData = data.products;
+        
+        totalProducts = paginationData.total;
+        setPagination(prev => ({
+          ...prev,
+          currentPage: paginationData.current_page,
+          perPage: paginationData.per_page,
+          total: paginationData.total,
+          lastPage: paginationData.last_page,
+          from: paginationData.from || 0,
+          to: paginationData.to || 0
+        }));
+        
+        console.log(`Fetched ${productsArray.length} products, Total: ${totalProducts}, Page: ${paginationData.current_page}/${paginationData.last_page}`);
+      } else if (data && data.data) {
         productsArray = data.data;
         
         if (data.meta) {
           totalProducts = data.meta.total;
-          currentPage = data.meta.current_page;
-          lastPage = data.meta.last_page;
           setPagination(prev => ({
             ...prev,
             currentPage: data.meta.current_page,
@@ -220,25 +236,16 @@ export default function ProductsPage() {
             from: data.meta.from || 0,
             to: data.meta.to || 0
           }));
-        } else if (data.current_page) {
-          // Handle Laravel pagination format
-          productsArray = data.data;
+        } else if (data.total !== undefined) {
           totalProducts = data.total;
-          currentPage = data.current_page;
-          lastPage = data.last_page;
           setPagination(prev => ({
             ...prev,
-            currentPage: data.current_page,
-            perPage: data.per_page,
+            currentPage: page,
             total: data.total,
-            lastPage: data.last_page,
-            from: data.from || (data.current_page - 1) * data.per_page + 1,
-            to: data.to || Math.min(data.current_page * data.per_page, data.total)
+            lastPage: Math.ceil(data.total / params.per_page),
+            from: (page - 1) * params.per_page + 1,
+            to: Math.min(page * params.per_page, data.total)
           }));
-        } else {
-          // Non-paginated response
-          productsArray = data;
-          totalProducts = data.length;
         }
       } else if (Array.isArray(data)) {
         productsArray = data;
@@ -288,34 +295,21 @@ export default function ProductsPage() {
     }
   }, [searchQuery, filters, pagination.perPage, showAll]);
 
-  // Initial fetch
   useEffect(() => {
-    fetchProducts(1, false);
-  }, []);
+    fetchProducts(1, true);
+  }, [fetchProducts]);
 
-  // Fetch on filter changes with debounce
   useEffect(() => {
-    const debouncedFetch = debounce(() => {
-      fetchProducts(1, showAll);
+    const timeoutId = setTimeout(() => {
+      fetchProducts(pagination.currentPage, showAll);
     }, 300);
     
-    debouncedFetch();
-    
-    return () => {
-      debouncedFetch.cancel();
-    };
-  }, [searchQuery, filters, showAll, fetchProducts]);
-
-  // Page change handler
-  useEffect(() => {
-    if (!showAll) {
-      fetchProducts(pagination.currentPage, false);
-    }
-  }, [pagination.currentPage, showAll, fetchProducts]);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, filters, showAll, pagination.currentPage, fetchProducts]);
 
   const goToPage = (page: number) => {
     if (page < 1 || page > pagination.lastPage) return;
-    setPagination(prev => ({ ...prev, currentPage: page }));
+    fetchProducts(page, false);
   };
 
   const handleShowAll = () => {
@@ -327,6 +321,19 @@ export default function ProductsPage() {
     setShowAll(false);
     fetchProducts(1, false);
   };
+
+  const debouncedSearch = useCallback(
+    debounce((value: string) => {
+      fetchProducts(1, showAll);
+    }, 500),
+    [fetchProducts, showAll]
+  );
+
+  useEffect(() => {
+    if (searchQuery !== '') {
+      debouncedSearch(searchQuery);
+    }
+  }, [searchQuery, debouncedSearch]);
 
   const handleEdit = (product: Product) => {
     setSelectedProduct(product);
@@ -347,441 +354,441 @@ export default function ProductsPage() {
     }
   };
 
-  const handleFormSubmit = async (formData: any) => {
-    if (isSubmitting) return;
+ const handleFormSubmit = async (formData: any) => {
+  if (isSubmitting) return;
+  
+  setIsSubmitting(true);
+  setError(null);
+  setUploadProgress(0);
+  
+  try {
+    console.log('Form data received:', formData);
     
-    setIsSubmitting(true);
-    setError(null);
-    setUploadProgress(0);
+    const price = parseFloat(formData.price) || 0;
+    const discountedPrice = parseFloat(formData.discounted_price);
     
-    try {
-      console.log('Form data received:', formData);
-      
-      const price = parseFloat(formData.price) || 0;
-      const discountedPrice = parseFloat(formData.discounted_price);
-      
-      if (!isNaN(discountedPrice) && discountedPrice >= price) {
-        alert('Discounted price must be less than regular price');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      const data = new FormData();
-      
-      const appendField = (key: string, value: any) => {
-        if (value !== undefined && value !== null && value !== '') {
-          if (typeof value === 'boolean') {
-            data.append(key, value ? '1' : '0');
-          } else if (typeof value === 'number') {
-            data.append(key, value.toString());
-          } else if (typeof value === 'object' && !(value instanceof File)) {
-            if (key === 'attributes') {
-              try {
-                if (typeof value === 'string') {
-                  const parsed = JSON.parse(value);
-                  if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-                    data.append(key, JSON.stringify(parsed));
-                  }
-                } else if (value && typeof value === 'object' && Object.keys(value).length > 0) {
-                  data.append(key, JSON.stringify(value));
-                }
-              } catch (e) {
-                console.warn('Invalid attributes format:', value);
-              }
-            } else {
-              data.append(key, JSON.stringify(value));
-            }
-          } else if (typeof value === 'string') {
-            data.append(key, value.trim());
-          } else {
-            data.append(key, value);
-          }
-        }
-      };
-      
-      const hasValue = (value: any): boolean => {
-        if (value === undefined || value === null) return false;
-        if (typeof value === 'string') return value.trim() !== '';
-        if (typeof value === 'number') return !isNaN(value);
-        return true;
-      };
-      
-      appendField('name', formData.name);
-      appendField('description', formData.description);
-      appendField('price', price);
-      appendField('stock_quantity', parseInt(formData.stock_quantity) || 0);
-      appendField('category_id', parseInt(formData.category_id));
-      
-      if (hasValue(formData.sku)) {
-        appendField('sku', formData.sku);
-      } else {
-        const uniqueSku = `PROD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        appendField('sku', uniqueSku);
-      }
-      
-      if (hasValue(formData.discounted_price)) {
-        const discounted = parseFloat(formData.discounted_price);
-        if (!isNaN(discounted) && discounted > 0 && discounted < price) {
-          appendField('discounted_price', discounted);
-        }
-      }
-      
-      appendField('is_featured', formData.is_featured !== undefined ? formData.is_featured : false);
-      appendField('is_active', formData.is_active !== undefined ? formData.is_active : true);
-      
-      if (hasValue(formData.min_stock_threshold)) {
-        appendField('min_stock_threshold', parseInt(formData.min_stock_threshold));
-      }
-      
-      if (hasValue(formData.barcode)) {
-        appendField('barcode', formData.barcode);
-      }
-      
-      if (hasValue(formData.weight)) {
-        appendField('weight', parseFloat(formData.weight));
-      }
-      
-      if (hasValue(formData.unit)) {
-        appendField('unit', formData.unit);
-      }
-      
-      if (formData.attributes && formData.attributes !== '{}') {
-        try {
-          const attributes = typeof formData.attributes === 'string' 
-            ? JSON.parse(formData.attributes) 
-            : formData.attributes;
-          
-          if (attributes && typeof attributes === 'object' && Object.keys(attributes).length > 0) {
-            appendField('attributes', attributes);
-          }
-        } catch (e) {
-          console.warn('Invalid attributes format:', formData.attributes);
-        }
-      }
-      
-      if (hasValue(formData.vendor_id)) {
-        appendField('vendor_id', parseInt(formData.vendor_id));
-      }
-      
-      let hasThumbnail = false;
-      if (formData.thumbnail) {
-        console.log('Processing thumbnail:', formData.thumbnail);
-        
-        let thumbnailFile: File | null = null;
-        
-        if (formData.thumbnail instanceof File) {
-          thumbnailFile = formData.thumbnail;
-        } else if (typeof formData.thumbnail === 'string' && formData.thumbnail.startsWith('blob:')) {
-          try {
-            const response = await fetch(formData.thumbnail);
-            const blob = await response.blob();
-            const fileName = `thumbnail-${Date.now()}.jpg`;
-            thumbnailFile = new File([blob], fileName, { type: 'image/jpeg' });
-          } catch (error) {
-            console.error('Failed to process thumbnail:', error);
-            alert('Failed to process main image. Please try uploading again.');
-            setIsSubmitting(false);
-            return;
-          }
-        }
-        
-        if (thumbnailFile) {
-          const validation = validateImage(thumbnailFile);
-          if (!validation.valid) {
-            alert(validation.message);
-            setIsSubmitting(false);
-            return;
-          }
-          
-          try {
-            console.log('Compressing thumbnail...');
-            const compressedThumbnail = await compressImage(thumbnailFile, 800, 2000);
-            data.append('thumbnail', compressedThumbnail);
-            hasThumbnail = true;
-            setUploadProgress(20);
-            console.log('Thumbnail appended:', compressedThumbnail.name);
-          } catch (error) {
-            console.error('Failed to compress thumbnail:', error);
-            data.append('thumbnail', thumbnailFile);
-            hasThumbnail = true;
-            setUploadProgress(20);
-            console.log('Original thumbnail appended:', thumbnailFile.name);
-          }
-        } else if (typeof formData.thumbnail === 'string' && !selectedProduct) {
-          console.log('Using existing thumbnail URL');
-          hasThumbnail = true;
-        }
-      } else if (selectedProduct) {
-        // For updates, keep existing thumbnail if not provided
-        data.append('thumbnail', selectedProduct.thumbnail || '');
-      }
-      
-      // Handle gallery images
-      const galleryFilesToUpload: File[] = [];
-      const galleryPathsToDelete: string[] = [];
-      
-      if (selectedProduct && formData.gallery) {
-        // For UPDATES: Separate new files from existing paths
-        const existingGallery = Array.isArray(selectedProduct.gallery) ? selectedProduct.gallery : [];
-        const galleryPathsToKeep: string[] = [];
-        
-        console.log('Processing gallery for update:', {
-          formDataGallery: formData.gallery,
-          existingGallery
-        });
-        
-        // Process each gallery item
-        if (Array.isArray(formData.gallery)) {
-          for (const galleryItem of formData.gallery) {
-            if (galleryItem instanceof File || (typeof galleryItem === 'string' && galleryItem.startsWith('blob:'))) {
-              // New file to upload
-              let galleryFile: File | null = null;
-              
-              if (galleryItem instanceof File) {
-                galleryFile = galleryItem;
-              } else if (typeof galleryItem === 'string' && galleryItem.startsWith('blob:')) {
-                try {
-                  const response = await fetch(galleryItem);
-                  const blob = await response.blob();
-                  const fileName = `gallery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.jpg`;
-                  galleryFile = new File([blob], fileName, { type: 'image/jpeg' });
-                } catch (error) {
-                  console.error('Failed to process gallery image:', error);
-                  continue;
-                }
-              }
-              
-              if (galleryFile) {
-                galleryFilesToUpload.push(galleryFile);
-              }
-            } else if (typeof galleryItem === 'string' && galleryItem.includes('products/gallery/')) {
-              // Existing gallery path to keep
-              galleryPathsToKeep.push(galleryItem);
-            } else if (typeof galleryItem === 'string' && galleryItem.includes('storage/')) {
-              // Convert storage URL to path
-              const path = galleryItem.split('/storage/')[1];
-              if (path) {
-                galleryPathsToKeep.push(path);
-              }
-            }
-          }
-        }
-        
-        // Determine which existing images to delete
-        if (existingGallery.length > 0) {
-          galleryPathsToDelete.push(...existingGallery.filter(
-            path => !galleryPathsToKeep.includes(path)
-          ));
-        }
-        
-        console.log('Gallery update analysis:', {
-          existingGallery,
-          galleryPathsToKeep,
-          galleryPathsToDelete,
-          newFiles: galleryFilesToUpload.length
-        });
-        
-      } else if (formData.gallery && formData.gallery.length > 0) {
-        // For CREATE: Just process all as new files
-        console.log('Processing gallery for create:', formData.gallery.length);
-        
-        if (Array.isArray(formData.gallery)) {
-          for (let i = 0; i < Math.min(formData.gallery.length, 5); i++) {
-            const galleryImage = formData.gallery[i];
-            
-            if (galleryImage instanceof File || (typeof galleryImage === 'string' && galleryImage.startsWith('blob:'))) {
-              let galleryFile: File | null = null;
-              
-              if (galleryImage instanceof File) {
-                galleryFile = galleryImage;
-              } else if (typeof galleryImage === 'string' && galleryImage.startsWith('blob:')) {
-                try {
-                  const response = await fetch(galleryImage);
-                  const blob = await response.blob();
-                  const fileName = `gallery-${i}-${Date.now()}.jpg`;
-                  galleryFile = new File([blob], fileName, { type: 'image/jpeg' });
-                } catch (error) {
-                  console.error(`Failed to process gallery image ${i}:`, error);
-                  continue;
-                }
-              }
-              
-              if (galleryFile) {
-                galleryFilesToUpload.push(galleryFile);
-              }
-            }
-          }
-        }
-      }
-      
-      // Process gallery files to upload
-      if (galleryFilesToUpload.length > 0) {
-        console.log(`Processing ${galleryFilesToUpload.length} gallery files for upload`);
-        
-        for (let i = 0; i < galleryFilesToUpload.length; i++) {
-          const galleryFile = galleryFilesToUpload[i];
-          
-          const validation = validateImage(galleryFile);
-          if (!validation.valid) {
-            console.warn(`Gallery image ${i} validation failed:`, validation.message);
-            continue;
-          }
-          
-          try {
-            console.log(`Compressing gallery image ${i}...`);
-            const compressedGallery = await compressImage(galleryFile, 1200, 2000);
-            data.append(`gallery[]`, compressedGallery);
-            console.log(`Gallery image ${i} appended:`, compressedGallery.name);
-          } catch (error) {
-            console.error(`Failed to compress gallery image ${i}:`, error);
-            data.append(`gallery[]`, galleryFile);
-            console.log(`Original gallery image ${i} appended:`, galleryFile.name);
-          }
-          
-          const progress = 20 + ((i + 1) / galleryFilesToUpload.length) * 50;
-          setUploadProgress(progress);
-        }
-      } else if (selectedProduct) {
-        // No new gallery files for update
-        console.log('No new gallery files to upload');
-      }
-      
-      // Append gallery deletions for updates
-      if (galleryPathsToDelete.length > 0) {
-        console.log('Appending gallery deletions:', galleryPathsToDelete);
-        galleryPathsToDelete.forEach((path, index) => {
-          data.append(`delete_gallery_images[${index}]`, path);
-        });
-      }
-      
-      if (!selectedProduct && !hasThumbnail) {
-        alert('Please upload a main product image (thumbnail).');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      console.log('FormData entries summary:');
-      let totalSize = 0;
-      for (let [key, value] of (data as any).entries()) {
-        if (value instanceof File) {
-          console.log(`${key}: File - ${value.name} (${(value.size / 1024).toFixed(2)}KB)`);
-          totalSize += value.size;
-        } else if (typeof value === 'string' && value.length > 100) {
-          console.log(`${key}: [String length ${value.length}]`);
-        } else {
-          console.log(`${key}:`, value);
-        }
-      }
-      console.log(`Total FormData size: ${(totalSize / 1024 / 1024).toFixed(2)}MB`);
-      
-      setUploadProgress(80);
-      
-      let response;
-      const headers = { 
-        'Content-Type': 'multipart/form-data',
-        'Accept': 'application/json'
-      };
-      
-      if (selectedProduct) {
-        // For updates, we need to use POST with _method=PUT
-        const updateData = new FormData();
-        updateData.append('_method', 'PUT');
-        
-        // Copy all data to updateData
-        for (let [key, value] of (data as any).entries()) {
-          updateData.append(key, value);
-        }
-        
-        console.log('Sending update request with data:');
-        for (let [key, value] of (updateData as any).entries()) {
-          console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
-        }
-        
-        response = await api.post(`/admin/products/${selectedProduct.id}`, updateData, {
-          headers,
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-            setUploadProgress(80 + (percentCompleted * 0.2));
-          }
-        }).catch(error => {
-          console.log('Full update error:', error);
-          console.log('Update error response:', error.response?.data);
-          throw error;
-        });
-        
-        console.log('Update response:', response.data);
-        alert('Product updated successfully');
-      } else {
-        // For creates
-        console.log('Sending create request with data:');
-        for (let [key, value] of (data as any).entries()) {
-          console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
-        }
-        
-        response = await api.post('/admin/products', data, {
-          headers,
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-            setUploadProgress(80 + (percentCompleted * 0.2));
-          }
-        }).catch(error => {
-          console.log('Full create error:', error);
-          console.log('Create error response:', error.response?.data);
-          throw error;
-        });
-        
-        console.log('Create response:', response.data);
-        alert('Product created successfully');
-      }
-      
-      setUploadProgress(100);
-      setTimeout(() => {
-        setShowForm(false);
-        setSelectedProduct(null);
-        fetchProducts(pagination.currentPage, showAll);
-      }, 500);
-      
-    } catch (error: any) {
-      console.error('Form submission error:', error);
-      console.error('Error response data:', error.response?.data);
-      
-      if (error.response?.status === 413) {
-        const errorMessage = 'The data you are trying to upload is too large. Please reduce image sizes or upload fewer images.';
-        alert(errorMessage);
-        setError(errorMessage);
-      } else if (error.response?.status === 422) {
-        const validationErrors = error.response.data.errors;
-        console.log('Full validation errors:', validationErrors);
-        
-        let errorMessage = 'Please fix the following errors:\n\n';
-        
-        if (validationErrors) {
-          Object.keys(validationErrors).forEach(field => {
-            if (Array.isArray(validationErrors[field])) {
-              errorMessage += `• ${field}: ${validationErrors[field].join(', ')}\n`;
-            }
-          });
-        } else {
-          errorMessage = error.response.data.message || 'Validation failed';
-        }
-        
-        alert(errorMessage);
-        setError(errorMessage);
-      } else if (error.response?.data?.message) {
-        alert(error.response.data.message);
-        setError(error.response.data.message);
-      } else if (error.message) {
-        alert(error.message);
-        setError(error.message);
-      } else {
-        alert('Failed to save product');
-        setError('Failed to save product');
-      }
-    } finally {
+    if (!isNaN(discountedPrice) && discountedPrice >= price) {
+      alert('Discounted price must be less than regular price');
       setIsSubmitting(false);
-      setTimeout(() => setUploadProgress(0), 1000);
+      return;
     }
-  };
+    
+    const data = new FormData();
+    
+    const appendField = (key: string, value: any) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (typeof value === 'boolean') {
+          data.append(key, value ? '1' : '0');
+        } else if (typeof value === 'number') {
+          data.append(key, value.toString());
+        } else if (typeof value === 'object' && !(value instanceof File)) {
+          if (key === 'attributes') {
+            try {
+              if (typeof value === 'string') {
+                const parsed = JSON.parse(value);
+                if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+                  data.append(key, JSON.stringify(parsed));
+                }
+              } else if (value && typeof value === 'object' && Object.keys(value).length > 0) {
+                data.append(key, JSON.stringify(value));
+              }
+            } catch (e) {
+              console.warn('Invalid attributes format:', value);
+            }
+          } else {
+            data.append(key, JSON.stringify(value));
+          }
+        } else if (typeof value === 'string') {
+          data.append(key, value.trim());
+        } else {
+          data.append(key, value);
+        }
+      }
+    };
+    
+    const hasValue = (value: any): boolean => {
+      if (value === undefined || value === null) return false;
+      if (typeof value === 'string') return value.trim() !== '';
+      if (typeof value === 'number') return !isNaN(value);
+      return true;
+    };
+    
+    appendField('name', formData.name);
+    appendField('description', formData.description);
+    appendField('price', price);
+    appendField('stock_quantity', parseInt(formData.stock_quantity) || 0);
+    appendField('category_id', parseInt(formData.category_id));
+    
+    if (hasValue(formData.sku)) {
+      appendField('sku', formData.sku);
+    } else {
+      const uniqueSku = `PROD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      appendField('sku', uniqueSku);
+    }
+    
+    if (hasValue(formData.discounted_price)) {
+      const discounted = parseFloat(formData.discounted_price);
+      if (!isNaN(discounted) && discounted > 0 && discounted < price) {
+        appendField('discounted_price', discounted);
+      }
+    }
+    
+    appendField('is_featured', formData.is_featured !== undefined ? formData.is_featured : false);
+    appendField('is_active', formData.is_active !== undefined ? formData.is_active : true);
+    
+    if (hasValue(formData.min_stock_threshold)) {
+      appendField('min_stock_threshold', parseInt(formData.min_stock_threshold));
+    }
+    
+    if (hasValue(formData.barcode)) {
+      appendField('barcode', formData.barcode);
+    }
+    
+    if (hasValue(formData.weight)) {
+      appendField('weight', parseFloat(formData.weight));
+    }
+    
+    if (hasValue(formData.unit)) {
+      appendField('unit', formData.unit);
+    }
+    
+    if (formData.attributes && formData.attributes !== '{}') {
+      try {
+        const attributes = typeof formData.attributes === 'string' 
+          ? JSON.parse(formData.attributes) 
+          : formData.attributes;
+        
+        if (attributes && typeof attributes === 'object' && Object.keys(attributes).length > 0) {
+          appendField('attributes', attributes);
+        }
+      } catch (e) {
+        console.warn('Invalid attributes format:', formData.attributes);
+      }
+    }
+    
+    if (hasValue(formData.vendor_id)) {
+      appendField('vendor_id', parseInt(formData.vendor_id));
+    }
+    
+    let hasThumbnail = false;
+    if (formData.thumbnail) {
+      console.log('Processing thumbnail:', formData.thumbnail);
+      
+      let thumbnailFile: File | null = null;
+      
+      if (formData.thumbnail instanceof File) {
+        thumbnailFile = formData.thumbnail;
+      } else if (typeof formData.thumbnail === 'string' && formData.thumbnail.startsWith('blob:')) {
+        try {
+          const response = await fetch(formData.thumbnail);
+          const blob = await response.blob();
+          const fileName = `thumbnail-${Date.now()}.jpg`;
+          thumbnailFile = new File([blob], fileName, { type: 'image/jpeg' });
+        } catch (error) {
+          console.error('Failed to process thumbnail:', error);
+          alert('Failed to process main image. Please try uploading again.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      if (thumbnailFile) {
+        const validation = validateImage(thumbnailFile);
+        if (!validation.valid) {
+          alert(validation.message);
+          setIsSubmitting(false);
+          return;
+        }
+        
+        try {
+          console.log('Compressing thumbnail...');
+          const compressedThumbnail = await compressImage(thumbnailFile, 800, 2000);
+          data.append('thumbnail', compressedThumbnail);
+          hasThumbnail = true;
+          setUploadProgress(20);
+          console.log('Thumbnail appended:', compressedThumbnail.name);
+        } catch (error) {
+          console.error('Failed to compress thumbnail:', error);
+          data.append('thumbnail', thumbnailFile);
+          hasThumbnail = true;
+          setUploadProgress(20);
+          console.log('Original thumbnail appended:', thumbnailFile.name);
+        }
+      } else if (typeof formData.thumbnail === 'string' && !selectedProduct) {
+        console.log('Using existing thumbnail URL');
+        hasThumbnail = true;
+      }
+    } else if (selectedProduct) {
+      // For updates, keep existing thumbnail if not provided
+      data.append('thumbnail', selectedProduct.thumbnail || '');
+    }
+    
+    // Handle gallery images - FIXED FOR BOTH CREATE AND UPDATE
+    const galleryFilesToUpload: File[] = [];
+    const galleryPathsToDelete: string[] = [];
+    
+    if (selectedProduct && formData.gallery) {
+      // For UPDATES: Separate new files from existing paths
+      const existingGallery = Array.isArray(selectedProduct.gallery) ? selectedProduct.gallery : [];
+      const galleryPathsToKeep: string[] = [];
+      
+      console.log('Processing gallery for update:', {
+        formDataGallery: formData.gallery,
+        existingGallery
+      });
+      
+      // Process each gallery item
+      if (Array.isArray(formData.gallery)) {
+        for (const galleryItem of formData.gallery) {
+          if (galleryItem instanceof File || (typeof galleryItem === 'string' && galleryItem.startsWith('blob:'))) {
+            // New file to upload
+            let galleryFile: File | null = null;
+            
+            if (galleryItem instanceof File) {
+              galleryFile = galleryItem;
+            } else if (typeof galleryItem === 'string' && galleryItem.startsWith('blob:')) {
+              try {
+                const response = await fetch(galleryItem);
+                const blob = await response.blob();
+                const fileName = `gallery-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.jpg`;
+                galleryFile = new File([blob], fileName, { type: 'image/jpeg' });
+              } catch (error) {
+                console.error('Failed to process gallery image:', error);
+                continue;
+              }
+            }
+            
+            if (galleryFile) {
+              galleryFilesToUpload.push(galleryFile);
+            }
+          } else if (typeof galleryItem === 'string' && galleryItem.includes('products/gallery/')) {
+            // Existing gallery path to keep
+            galleryPathsToKeep.push(galleryItem);
+          } else if (typeof galleryItem === 'string' && galleryItem.includes('storage/')) {
+            // Convert storage URL to path
+            const path = galleryItem.split('/storage/')[1];
+            if (path) {
+              galleryPathsToKeep.push(path);
+            }
+          }
+        }
+      }
+      
+      // Determine which existing images to delete
+      if (existingGallery.length > 0) {
+        galleryPathsToDelete.push(...existingGallery.filter(
+          path => !galleryPathsToKeep.includes(path)
+        ));
+      }
+      
+      console.log('Gallery update analysis:', {
+        existingGallery,
+        galleryPathsToKeep,
+        galleryPathsToDelete,
+        newFiles: galleryFilesToUpload.length
+      });
+      
+    } else if (formData.gallery && formData.gallery.length > 0) {
+      // For CREATE: Just process all as new files
+      console.log('Processing gallery for create:', formData.gallery.length);
+      
+      if (Array.isArray(formData.gallery)) {
+        for (let i = 0; i < Math.min(formData.gallery.length, 5); i++) {
+          const galleryImage = formData.gallery[i];
+          
+          if (galleryImage instanceof File || (typeof galleryImage === 'string' && galleryImage.startsWith('blob:'))) {
+            let galleryFile: File | null = null;
+            
+            if (galleryImage instanceof File) {
+              galleryFile = galleryImage;
+            } else if (typeof galleryImage === 'string' && galleryImage.startsWith('blob:')) {
+              try {
+                const response = await fetch(galleryImage);
+                const blob = await response.blob();
+                const fileName = `gallery-${i}-${Date.now()}.jpg`;
+                galleryFile = new File([blob], fileName, { type: 'image/jpeg' });
+              } catch (error) {
+                console.error(`Failed to process gallery image ${i}:`, error);
+                continue;
+              }
+            }
+            
+            if (galleryFile) {
+              galleryFilesToUpload.push(galleryFile);
+            }
+          }
+        }
+      }
+    }
+    
+    // Process gallery files to upload
+    if (galleryFilesToUpload.length > 0) {
+      console.log(`Processing ${galleryFilesToUpload.length} gallery files for upload`);
+      
+      for (let i = 0; i < galleryFilesToUpload.length; i++) {
+        const galleryFile = galleryFilesToUpload[i];
+        
+        const validation = validateImage(galleryFile);
+        if (!validation.valid) {
+          console.warn(`Gallery image ${i} validation failed:`, validation.message);
+          continue;
+        }
+        
+        try {
+          console.log(`Compressing gallery image ${i}...`);
+          const compressedGallery = await compressImage(galleryFile, 1200, 2000);
+          data.append(`gallery[]`, compressedGallery);
+          console.log(`Gallery image ${i} appended:`, compressedGallery.name);
+        } catch (error) {
+          console.error(`Failed to compress gallery image ${i}:`, error);
+          data.append(`gallery[]`, galleryFile);
+          console.log(`Original gallery image ${i} appended:`, galleryFile.name);
+        }
+        
+        const progress = 20 + ((i + 1) / galleryFilesToUpload.length) * 50;
+        setUploadProgress(progress);
+      }
+    } else if (selectedProduct) {
+      // No new gallery files for update
+      console.log('No new gallery files to upload');
+    }
+    
+    // Append gallery deletions for updates
+    if (galleryPathsToDelete.length > 0) {
+      console.log('Appending gallery deletions:', galleryPathsToDelete);
+      galleryPathsToDelete.forEach((path, index) => {
+        data.append(`delete_gallery_images[${index}]`, path);
+      });
+    }
+    
+    if (!selectedProduct && !hasThumbnail) {
+      alert('Please upload a main product image (thumbnail).');
+      setIsSubmitting(false);
+      return;
+    }
+    
+    console.log('FormData entries summary:');
+    let totalSize = 0;
+    for (let [key, value] of (data as any).entries()) {
+      if (value instanceof File) {
+        console.log(`${key}: File - ${value.name} (${(value.size / 1024).toFixed(2)}KB)`);
+        totalSize += value.size;
+      } else if (typeof value === 'string' && value.length > 100) {
+        console.log(`${key}: [String length ${value.length}]`);
+      } else {
+        console.log(`${key}:`, value);
+      }
+    }
+    console.log(`Total FormData size: ${(totalSize / 1024 / 1024).toFixed(2)}MB`);
+    
+    setUploadProgress(80);
+    
+    let response;
+    const headers = { 
+      'Content-Type': 'multipart/form-data',
+      'Accept': 'application/json'
+    };
+    
+    if (selectedProduct) {
+      // For updates, we need to use POST with _method=PUT
+      const updateData = new FormData();
+      updateData.append('_method', 'PUT');
+      
+      // Copy all data to updateData
+      for (let [key, value] of (data as any).entries()) {
+        updateData.append(key, value);
+      }
+      
+      console.log('Sending update request with data:');
+      for (let [key, value] of (updateData as any).entries()) {
+        console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
+      }
+      
+      response = await api.post(`/admin/products/${selectedProduct.id}`, updateData, {
+        headers,
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+          setUploadProgress(80 + (percentCompleted * 0.2));
+        }
+      }).catch(error => {
+        console.log('Full update error:', error);
+        console.log('Update error response:', error.response?.data);
+        throw error;
+      });
+      
+      console.log('Update response:', response.data);
+      alert('Product updated successfully');
+    } else {
+      // For creates
+      console.log('Sending create request with data:');
+      for (let [key, value] of (data as any).entries()) {
+        console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
+      }
+      
+      response = await api.post('/admin/products', data, {
+        headers,
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+          setUploadProgress(80 + (percentCompleted * 0.2));
+        }
+      }).catch(error => {
+        console.log('Full create error:', error);
+        console.log('Create error response:', error.response?.data);
+        throw error;
+      });
+      
+      console.log('Create response:', response.data);
+      alert('Product created successfully');
+    }
+    
+    setUploadProgress(100);
+    setTimeout(() => {
+      setShowForm(false);
+      setSelectedProduct(null);
+      fetchProducts(pagination.currentPage, showAll);
+    }, 500);
+    
+  } catch (error: any) {
+    console.error('Form submission error:', error);
+    console.error('Error response data:', error.response?.data);
+    
+    if (error.response?.status === 413) {
+      const errorMessage = 'The data you are trying to upload is too large. Please reduce image sizes or upload fewer images.';
+      alert(errorMessage);
+      setError(errorMessage);
+    } else if (error.response?.status === 422) {
+      const validationErrors = error.response.data.errors;
+      console.log('Full validation errors:', validationErrors);
+      
+      let errorMessage = 'Please fix the following errors:\n\n';
+      
+      if (validationErrors) {
+        Object.keys(validationErrors).forEach(field => {
+          if (Array.isArray(validationErrors[field])) {
+            errorMessage += `• ${field}: ${validationErrors[field].join(', ')}\n`;
+          }
+        });
+      } else {
+        errorMessage = error.response.data.message || 'Validation failed';
+      }
+      
+      alert(errorMessage);
+      setError(errorMessage);
+    } else if (error.response?.data?.message) {
+      alert(error.response.data.message);
+      setError(error.response.data.message);
+    } else if (error.message) {
+      alert(error.message);
+      setError(error.message);
+    } else {
+      alert('Failed to save product');
+      setError('Failed to save product');
+    }
+  } finally {
+    setIsSubmitting(false);
+    setTimeout(() => setUploadProgress(0), 1000);
+  }
+};
 
   const handleBulkUpload = async (file: File) => {
     try {
@@ -1207,8 +1214,7 @@ export default function ProductsPage() {
                   <select 
                     value={pagination.perPage}
                     onChange={(e) => {
-                      const newPerPage = parseInt(e.target.value);
-                      setPagination(prev => ({...prev, perPage: newPerPage, currentPage: 1}));
+                      setPagination(prev => ({...prev, perPage: parseInt(e.target.value)}));
                       fetchProducts(1, false);
                     }}
                     className="ml-2 border border-gray-300 rounded px-2 py-1"
@@ -1259,32 +1265,33 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {showBulkUpload && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Bulk Upload Products</h2>
-                <button
-                  onClick={() => setShowBulkUpload(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <span className="text-2xl">×</span>
-                </button>
-              </div>
-              <BulkUpload
-                onSuccess={() => {
-                  setShowBulkUpload(false);
-                  fetchProducts(pagination.currentPage, showAll);
-                }}
-                onError={(error) => {
-                  alert(`Upload failed: ${error}`);
-                }}
-              />
-            </div>
-          </div>
+      // In your ProductsPage component, update the BulkUpload usage:
+{showBulkUpload && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Bulk Upload Products</h2>
+          <button
+            onClick={() => setShowBulkUpload(false)}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+          >
+            <span className="text-2xl">×</span>
+          </button>
         </div>
-      )}
+        <BulkUpload
+          onSuccess={() => {
+            setShowBulkUpload(false);
+            fetchProducts(pagination.currentPage, showAll);
+          }}
+          onError={(error) => {
+            alert(`Upload failed: ${error}`);
+          }}
+        />
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
