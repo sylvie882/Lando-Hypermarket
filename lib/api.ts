@@ -329,13 +329,15 @@ class ApiService {
         });
       }
     },
-    // In ApiService class - admin section:
+// In your api.ts file, update the updateProduct method:
 updateProduct: (id: number, data: any) => {
   if (data instanceof FormData) {
-    // For Laravel file uploads with PUT, we need to use POST with _method=PUT
-    const formData = data;
-    formData.append('_method', 'PUT');
-    return this.api.post(`/admin/products/${id}`, formData);
+    // For FormData, let browser set Content-Type with boundary
+    return this.api.post(`/admin/products/${id}`, data, {
+      headers: {
+        // Don't set Content-Type for FormData - browser will set it with boundary
+      }
+    });
   } else {
     return this.api.put(`/admin/products/${id}`, data, {
       headers: { 'Content-Type': 'application/json' }

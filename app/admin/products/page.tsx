@@ -474,322 +474,93 @@ const handleFormSubmit = async (formData: any) => {
   setUploadProgress(0);
   
   try {
-    console.log('Form data received:', formData);
+    console.log('=== Form Submission Started ===');
+    console.log('Form data type:', typeof formData);
+    console.log('Is FormData instance?', formData instanceof FormData);
     
-    const price = parseFloat(formData.price) || 0;
-    const discountedPrice = parseFloat(formData.discounted_price);
+    // If it's already a FormData object, use it directly
+    let data = formData;
     
-    if (!isNaN(discountedPrice) && discountedPrice >= price) {
-      alert('Discounted price must be less than regular price');
-      setIsSubmitting(false);
-      return;
-    }
-    
-    const data = new FormData();
-    
-    const appendField = (key: string, value: any) => {
-      if (value !== undefined && value !== null && value !== '') {
+    // If it's not FormData, create one
+    if (!(formData instanceof FormData)) {
+      console.log('Creating new FormData from object');
+      data = new FormData();
+      
+      // Convert object to FormData
+      const appendToFormData = (key: string, value: any) => {
+        if (value === undefined || value === null) return;
+        
         if (typeof value === 'boolean') {
           data.append(key, value ? '1' : '0');
         } else if (typeof value === 'number') {
           data.append(key, value.toString());
         } else if (typeof value === 'object' && !(value instanceof File)) {
-          // For attributes field, backend expects array, not JSON string
-          if (key === 'attributes') {
-            try {
-              let attributesValue = value;
-              
-              // If it's a string, try to parse it
-              if (typeof value === 'string') {
-                try {
-                  attributesValue = JSON.parse(value);
-                } catch (e) {
-                  console.warn('Invalid JSON string for attributes, sending as-is:', value);
-                  // If it's not valid JSON, send the string
-                  data.append(key, value);
-                  return;
-                }
-              }
-              
-              // If we have an array or object, convert to JSON for FormData
-              if (attributesValue && typeof attributesValue === 'object') {
-                // Check if it's empty
-                if (Object.keys(attributesValue).length === 0) {
-                  // Don't append empty attributes
-                  return;
-                }
-                // Convert to JSON string for FormData
-                data.append(key, JSON.stringify(attributesValue));
-              }
-            } catch (e) {
-              console.warn('Invalid attributes format:', value, e);
-            }
+          if (value instanceof Blob) {
+            data.append(key, value);
           } else {
-            // For other objects, stringify them
             data.append(key, JSON.stringify(value));
           }
-        } else if (typeof value === 'string') {
-          data.append(key, value.trim());
         } else {
           data.append(key, value);
         }
-      }
-    };
-    
-    const hasValue = (value: any): boolean => {
-      if (value === undefined || value === null) return false;
-      if (typeof value === 'string') return value.trim() !== '';
-      if (typeof value === 'number') return !isNaN(value);
-      if (typeof value === 'object') {
-        // For objects/arrays, check if they're not empty
-        return Object.keys(value).length > 0;
-      }
-      return true;
-    };
-    
-    // Required fields
-    appendField('name', formData.name);
-    appendField('description', formData.description);
-    appendField('price', price);
-    appendField('stock_quantity', parseInt(formData.stock_quantity) || 0);
-    appendField('category_id', parseInt(formData.category_id));
-    
-    // Optional fields
-    if (hasValue(formData.sku)) {
-      appendField('sku', formData.sku);
-    }
-    
-    if (hasValue(formData.discounted_price)) {
-      const discounted = parseFloat(formData.discounted_price);
-      if (!isNaN(discounted) && discounted > 0 && discounted < price) {
-        appendField('discounted_price', discounted);
-      }
-    }
-    
-    // Boolean fields
-    appendField('is_featured', formData.is_featured !== undefined ? formData.is_featured : false);
-    appendField('is_active', formData.is_active !== undefined ? formData.is_active : true);
-    
-    // Optional fields with validation
-    if (hasValue(formData.min_stock_threshold)) {
-      appendField('min_stock_threshold', parseInt(formData.min_stock_threshold));
-    }
-    
-    if (hasValue(formData.barcode)) {
-      appendField('barcode', formData.barcode);
-    }
-    
-    if (hasValue(formData.weight)) {
-      appendField('weight', parseFloat(formData.weight));
-    }
-    
-    if (hasValue(formData.unit)) {
-      appendField('unit', formData.unit);
-    }
-    
-    // Handle attributes - only if it has value
-    if (formData.attributes) {
-      // Check if attributes is not empty
-      const attributes = formData.attributes;
-      if (typeof attributes === 'string') {
-        if (attributes.trim() !== '' && attributes !== '{}' && attributes !== '[]') {
-          appendField('attributes', attributes);
-        }
-      } else if (typeof attributes === 'object') {
-        if (Object.keys(attributes).length > 0) {
-          appendField('attributes', attributes);
-        }
-      }
-    }
-    
-    if (hasValue(formData.vendor_id)) {
-      appendField('vendor_id', parseInt(formData.vendor_id));
-    }
-    
-    // Handle thumbnail (main image)
-    console.log('Processing thumbnail:', formData.thumbnail);
-    
-    if (formData.thumbnail) {
-      if (formData.thumbnail instanceof File) {
-        // New thumbnail file uploaded
-        const thumbnailFile = formData.thumbnail;
-        const validation = validateImage(thumbnailFile);
-        if (!validation.valid) {
-          alert(validation.message);
-          setIsSubmitting(false);
-          return;
-        }
-        
-        try {
-          console.log('Compressing thumbnail...');
-          const compressedThumbnail = await compressImageFinal(thumbnailFile, 800, 2000);
-          data.append('thumbnail', compressedThumbnail);
-          setUploadProgress(20);
-          console.log('Thumbnail appended:', compressedThumbnail.name);
-        } catch (error) {
-          console.error('Failed to compress thumbnail:', error);
-          data.append('thumbnail', thumbnailFile);
-          setUploadProgress(20);
-          console.log('Original thumbnail appended:', thumbnailFile.name);
-        }
-      } else if (typeof formData.thumbnail === 'string' && formData.thumbnail.startsWith('blob:')) {
-        // Blob URL from new image selection
-        try {
-          const response = await fetch(formData.thumbnail);
-          const blob = await response.blob();
-          const fileName = `thumbnail-${Date.now()}.jpg`;
-          const thumbnailFile = new File([blob], fileName, { type: 'image/jpeg' });
-          
-          const validation = validateImage(thumbnailFile);
-          if (!validation.valid) {
-            alert(validation.message);
-            setIsSubmitting(false);
-            return;
-          }
-          
-          const compressedThumbnail = await compressImageFinal(thumbnailFile, 800, 2000);
-          data.append('thumbnail', compressedThumbnail);
-          setUploadProgress(20);
-        } catch (error) {
-          console.error('Failed to process thumbnail from blob:', error);
-          alert('Failed to process main image. Please try uploading again.');
-          setIsSubmitting(false);
-          return;
-        }
-      } else if (typeof formData.thumbnail === 'string' && selectedProduct) {
-        // For UPDATE: Check if it's the same as existing
-        const existingThumbnail = selectedProduct.thumbnail || '';
-        const newThumbnail = formData.thumbnail;
-        
-        // Only update if it's a new thumbnail (contains http or blob)
-        if (newThumbnail.includes('http') || newThumbnail.includes('blob:')) {
-          console.log('New thumbnail URL detected for update:', newThumbnail);
-        } else {
-          console.log('Using existing thumbnail path for update');
-          data.append('thumbnail', newThumbnail);
-        }
-      }
-    } else if (selectedProduct && selectedProduct.thumbnail) {
-      // Keep existing thumbnail for updates
-      data.append('thumbnail', selectedProduct.thumbnail);
-    }
-    
-    // Handle gallery images
-    console.log('Processing gallery:', formData.gallery);
-    
-    if (formData.gallery && Array.isArray(formData.gallery)) {
-      // Separate existing paths from new files
-      const existingPaths: string[] = [];
-      const newFiles: File[] = [];
+      };
       
-      formData.gallery.forEach((item: any) => {
-        if (item instanceof File) {
-          newFiles.push(item);
-        } else if (typeof item === 'string' && item.startsWith('blob:')) {
-          // Handle blob URLs (convert to File)
-          console.warn('Blob URL in gallery array, should be converted to File in ProductForm');
-        } else if (typeof item === 'string' && item.includes('products/gallery/')) {
-          existingPaths.push(item);
-        }
+      // Append all fields
+      Object.entries(formData).forEach(([key, value]) => {
+        appendToFormData(key, value);
       });
       
-      // Append existing paths as keep_gallery_images
-      existingPaths.forEach((path, index) => {
-        data.append(`keep_gallery_images[${index}]`, path);
-      });
-      
-      // Append new gallery files
-      for (let i = 0; i < newFiles.length; i++) {
-        const galleryFile = newFiles[i];
-        const validation = validateImage(galleryFile);
-        if (!validation.valid) {
-          console.warn(`Gallery image ${i} validation failed:`, validation.message);
-          continue;
-        }
-        
-        try {
-          const compressedGallery = await compressImageFinal(galleryFile, 1200, 2000);
-          data.append('gallery[]', compressedGallery);
-          console.log(`Gallery image ${i} appended:`, compressedGallery.name);
-        } catch (error) {
-          console.error(`Failed to compress gallery image ${i}:`, error);
-          data.append('gallery[]', galleryFile);
-          console.log(`Original gallery image ${i} appended:`, galleryFile.name);
-        }
-        
-        const progress = 20 + ((i + 1) / newFiles.length) * 50;
-        setUploadProgress(progress);
+      // For Laravel file uploads with PUT, add _method parameter
+      if (selectedProduct) {
+        data.append('_method', 'PUT');
       }
+    } else if (selectedProduct) {
+      // If it's already FormData and we're updating, add _method
+      formData.append('_method', 'PUT');
     }
     
-    // For CREATE, thumbnail is required
-    if (!selectedProduct && !formData.thumbnail) {
-      alert('Please upload a main product image (thumbnail).');
-      setIsSubmitting(false);
-      return;
-    }
-    
-    // Debug: Log FormData entries
-    console.log('FormData entries summary:');
+    // Debug: Log all FormData entries
+    console.log('=== FormData Entries ===');
     for (let [key, value] of (data as any).entries()) {
       if (value instanceof File) {
-        console.log(`${key}: File - ${value.name} (${(value.size / 1024).toFixed(2)}KB)`);
-      } else if (key === 'attributes' && typeof value === 'string') {
-        console.log(`${key}: JSON string - ${value.substring(0, 100)}...`);
+        console.log(`${key}: File - ${value.name} (${value.size} bytes, ${value.type})`);
       } else if (typeof value === 'string' && value.length > 100) {
-        console.log(`${key}: [String length ${value.length}]`);
+        console.log(`${key}: ${value.substring(0, 50)}... [${value.length} chars]`);
       } else {
         console.log(`${key}:`, value);
       }
     }
+    console.log('=== End FormData Entries ===');
     
-    setUploadProgress(80);
+    setUploadProgress(20);
     
     let response;
-    const headers = { 
-      'Content-Type': 'multipart/form-data',
-      'Accept': 'application/json'
-    };
+    const endpoint = selectedProduct 
+      ? `/admin/products/${selectedProduct.id}`
+      : '/admin/products';
     
-    if (selectedProduct) {
-      // Update existing product
-      console.log('Sending update request for product:', selectedProduct.id);
-      
-      response = await api.put(`/admin/products/${selectedProduct.id}`, data, {
-        headers,
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-          setUploadProgress(80 + (percentCompleted * 0.2));
-        }
-      }).catch(error => {
-        console.log('Update error:', error);
-        console.log('Update error response:', error.response?.data);
-        throw error;
-      });
-      
-      console.log('Update response:', response.data);
-      alert('Product updated successfully');
-    } else {
-      // Create new product
-      console.log('Sending create request');
-      
-      response = await api.post('/admin/products', data, {
-        headers,
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-          setUploadProgress(80 + (percentCompleted * 0.2));
-        }
-      }).catch(error => {
-        console.log('Create error:', error);
-        console.log('Create error response:', error.response?.data);
-        throw error;
-      });
-      
-      console.log('Create response:', response.data);
-      alert('Product created successfully');
-    }
+    console.log(`Sending request to: ${endpoint}`);
+    console.log('Request method:', selectedProduct ? 'POST (with _method=PUT)' : 'POST');
     
+    // Always use POST for FormData (with _method=PUT for updates)
+    response = await api.post(endpoint, data, {
+      onUploadProgress: (progressEvent) => {
+        const total = progressEvent.total || 1;
+        const loaded = progressEvent.loaded;
+        const percentCompleted = Math.round((loaded * 100) / total);
+        setUploadProgress(20 + (percentCompleted * 0.8));
+      }
+    }).catch(error => {
+      console.error('API Error:', error);
+      console.error('Error response:', error.response?.data);
+      throw error;
+    });
+    
+    console.log('Response received:', response.data);
     setUploadProgress(100);
+    
+    alert(selectedProduct ? 'Product updated successfully' : 'Product created successfully');
+    
     setTimeout(() => {
       setShowForm(false);
       setSelectedProduct(null);
@@ -797,40 +568,53 @@ const handleFormSubmit = async (formData: any) => {
     }, 500);
     
   } catch (error: any) {
-    console.error('Form submission error:', error);
-    console.error('Error response data:', error.response?.data);
+    console.error('=== Form Submission Error ===', error);
     
-    if (error.response?.status === 413) {
-      const errorMessage = 'The data you are trying to upload is too large. Please reduce image sizes or upload fewer images.';
-      alert(errorMessage);
-      setError(errorMessage);
-    } else if (error.response?.status === 422) {
-      const validationErrors = error.response.data.errors;
-      console.log('Full validation errors:', validationErrors);
+    // Detailed error logging
+    if (error.response) {
+      console.error('Status:', error.response.status);
+      console.error('Headers:', error.response.headers);
+      console.error('Data:', error.response.data);
       
-      let errorMessage = 'Please fix the following errors:\n\n';
-      
-      if (validationErrors) {
-        Object.keys(validationErrors).forEach(field => {
-          if (Array.isArray(validationErrors[field])) {
-            errorMessage += `• ${field}: ${validationErrors[field].join(', ')}\n`;
-          }
-        });
+      if (error.response.status === 413) {
+        const errorMessage = 'The data you are trying to upload is too large. Please reduce image sizes or upload fewer images.';
+        alert(errorMessage);
+        setError(errorMessage);
+      } else if (error.response.status === 422) {
+        const validationErrors = error.response.data.errors;
+        let errorMessage = 'Please fix the following errors:\n\n';
+        
+        if (validationErrors) {
+          Object.entries(validationErrors).forEach(([field, messages]) => {
+            if (Array.isArray(messages)) {
+              messages.forEach((msg: string) => {
+                errorMessage += `• ${field}: ${msg}\n`;
+              });
+            } else {
+              errorMessage += `• ${field}: ${messages}\n`;
+            }
+          });
+        } else {
+          errorMessage = error.response.data.message || 'Validation failed';
+        }
+        
+        alert(errorMessage);
+        setError(errorMessage);
+      } else if (error.response.data?.message) {
+        alert(error.response.data.message);
+        setError(error.response.data.message);
       } else {
-        errorMessage = error.response.data.message || 'Validation failed';
+        alert(`Server error: ${error.response.status}`);
+        setError(`Server error: ${error.response.status}`);
       }
-      
-      alert(errorMessage);
-      setError(errorMessage);
-    } else if (error.response?.data?.message) {
-      alert(error.response.data.message);
-      setError(error.response.data.message);
-    } else if (error.message) {
-      alert(error.message);
-      setError(error.message);
+    } else if (error.request) {
+      console.error('No response received:', error.request);
+      alert('No response from server. Please check your internet connection.');
+      setError('No response from server');
     } else {
-      alert('Failed to save product');
-      setError('Failed to save product');
+      console.error('Error setting up request:', error.message);
+      alert(`Error: ${error.message}`);
+      setError(error.message);
     }
   } finally {
     setIsSubmitting(false);
