@@ -31,6 +31,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
   });
 
   const [categories, setCategories] = useState<any[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
   const [thumbnail, setThumbnail] = useState<File | string | null>(null);
   const [gallery, setGallery] = useState<(File | string)[]>([]);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
@@ -118,10 +119,35 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
 
   const fetchCategories = async () => {
     try {
+      setLoadingCategories(true);
+      console.log('Fetching categories...');
+      
       const response = await api.categories.getAll();
-      setCategories(response.data);
+      console.log('Categories API response:', response);
+      
+      // Handle different response structures
+      let categoriesData = [];
+      
+      if (response.data && Array.isArray(response.data)) {
+        categoriesData = response.data;
+      } else if (Array.isArray(response)) {
+        categoriesData = response;
+      } else if (response && response.data && Array.isArray(response.data.data)) {
+        // Laravel paginated response
+        categoriesData = response.data.data;
+      } else if (response && response.data && Array.isArray(response.data.categories)) {
+        categoriesData = response.data.categories;
+      }
+      
+      console.log('Categories data to set:', categoriesData);
+      setCategories(categoriesData || []);
+      
     } catch (error) {
       console.error('Failed to fetch categories:', error);
+      // Set empty array to prevent crash
+      setCategories([]);
+    } finally {
+      setLoadingCategories(false);
     }
   };
 
@@ -508,25 +534,46 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                     <label className="block text-sm font-medium text-gray-700">
                       Category *
                     </label>
-                    <select
-                      name="category_id"
-                      value={formValues.category_id}
-                      onChange={handleInputChange}
-                      required
-                      className={`w-full px-3 py-2 mt-1 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        errors.category_id ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                    >
-                      <option value="">Select Category</option>
-                      {categories.map(category => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.category_id && (
+                    <div className="relative">
+                      <select
+                        name="category_id"
+                        value={formValues.category_id}
+                        onChange={handleInputChange}
+                        required
+                        disabled={loadingCategories}
+                        className={`w-full px-3 py-2 mt-1 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          errors.category_id ? 'border-red-300' : 'border-gray-300'
+                        } ${loadingCategories ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                      >
+                        <option value="">Select Category</option>
+                        {categories.length > 0 ? (
+                          categories.map(category => (
+                            <option key={category.id || category._id} value={category.id || category._id}>
+                              {category.name}
+                            </option>
+                          ))
+                        ) : (
+                          !loadingCategories && <option value="" disabled>No categories found</option>
+                        )}
+                      </select>
+                      {loadingCategories && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    {loadingCategories ? (
+                      <p className="mt-1 text-sm text-blue-600">Loading categories...</p>
+                    ) : errors.category_id ? (
                       <p className="mt-1 text-sm text-red-600">{errors.category_id}</p>
-                    )}
+                    ) : categories.length === 0 && !loadingCategories ? (
+                      <p className="mt-1 text-sm text-yellow-600">
+                        No categories found. Please add categories first or check your API.
+                      </p>
+                    ) : null}
+                    <div className="mt-1 text-xs text-gray-500">
+                      {categories.length > 0 ? `${categories.length} categories available` : ''}
+                    </div>
                   </div>
 
                   {/* Price */}
@@ -881,9 +928,9 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || loading}
+                  disabled={isSubmitting || loading || loadingCategories}
                   className={`px-4 py-2 text-sm font-medium text-white rounded-lg ${
-                    isSubmitting || loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                    isSubmitting || loading || loadingCategories ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
                   {isSubmitting || loading ? (
