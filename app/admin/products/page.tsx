@@ -398,6 +398,7 @@ const handleFormSubmit = async (formData: any) => {
             data.append(key, JSON.stringify(value));
           }
         } else if (typeof value === 'string') {
+          // Trim the value
           data.append(key, value.trim());
         } else {
           data.append(key, value);
@@ -470,7 +471,7 @@ const handleFormSubmit = async (formData: any) => {
       appendField('vendor_id', parseInt(formData.vendor_id));
     }
     
-    // Handle thumbnail (main image) - FIXED for UPDATE
+    // Handle thumbnail (main image) - FIXED: Extract path from URL for updates
     console.log('Processing thumbnail:', formData.thumbnail);
     
     if (formData.thumbnail) {
@@ -523,22 +524,51 @@ const handleFormSubmit = async (formData: any) => {
       } else if (typeof formData.thumbnail === 'string' && !selectedProduct) {
         // For CREATE: thumbnail is a string URL from ProductForm
         console.log('Using thumbnail URL for create:', formData.thumbnail);
+      } else if (typeof formData.thumbnail === 'string' && selectedProduct) {
+        // FIXED: For UPDATE with existing thumbnail (URL string)
+        // Extract the relative path from the URL
+        const thumbnailValue = formData.thumbnail;
+        
+        // Check if it's a full URL or just a path
+        if (thumbnailValue.includes('http') && thumbnailValue.includes('storage/')) {
+          // It's a full URL, extract the path after 'storage/'
+          const urlParts = thumbnailValue.split('storage/');
+          if (urlParts.length > 1) {
+            const path = urlParts[1];
+            // Append as a string field, not a file
+            data.append('thumbnail', path);
+            console.log('Extracted thumbnail path from URL:', path);
+          } else {
+            // Couldn't extract path, use the original thumbnail path
+            if (selectedProduct.thumbnail && !selectedProduct.thumbnail.includes('http')) {
+              data.append('thumbnail', selectedProduct.thumbnail);
+              console.log('Using original thumbnail path:', selectedProduct.thumbnail);
+            }
+          }
+        } else if (!thumbnailValue.includes('http')) {
+          // It's already a path, not a URL
+          data.append('thumbnail', thumbnailValue);
+          console.log('Thumbnail is already a path:', thumbnailValue);
+        }
       }
-    } else if (selectedProduct) {
-      // For UPDATE: if no new thumbnail is provided, send the existing thumbnail path
-      // This is the key fix - we need to tell backend to keep the existing thumbnail
-      console.log('No new thumbnail for update, keeping existing:', selectedProduct.thumbnail);
-      
-      if (selectedProduct.thumbnail) {
-        // Send the existing thumbnail path
-        appendField('thumbnail', selectedProduct.thumbnail);
-        console.log('Appended existing thumbnail path:', selectedProduct.thumbnail);
-      } else {
-        console.log('No existing thumbnail to preserve');
+    } else if (selectedProduct && selectedProduct.thumbnail) {
+      // FIXED: For UPDATE when no thumbnail is provided, send the existing path
+      // Check if it's a URL and extract path
+      if (selectedProduct.thumbnail.includes('http') && selectedProduct.thumbnail.includes('storage/')) {
+        const urlParts = selectedProduct.thumbnail.split('storage/');
+        if (urlParts.length > 1) {
+          const path = urlParts[1];
+          data.append('thumbnail', path);
+          console.log('Extracted existing thumbnail path from URL:', path);
+        }
+      } else if (!selectedProduct.thumbnail.includes('http')) {
+        // It's already a path
+        data.append('thumbnail', selectedProduct.thumbnail);
+        console.log('Using existing thumbnail path:', selectedProduct.thumbnail);
       }
     }
     
-    // Handle gallery images - SIMPLIFIED
+    // Handle gallery images - FIXED: Similar logic for gallery paths
     console.log('Processing gallery:', formData.gallery);
     
     if (formData.gallery && Array.isArray(formData.gallery)) {
@@ -587,30 +617,62 @@ const handleFormSubmit = async (formData: any) => {
             console.error(`Failed to process gallery image ${i} from blob:`, error);
             continue;
           }
-        } else if (typeof galleryItem === 'string' && selectedProduct) {
-          // For UPDATE: existing gallery path
-          console.log(`Gallery image ${i} is existing path:`, galleryItem);
-          // Don't append existing paths as files, backend will handle them
+        } else if (typeof galleryItem === 'string') {
+          // FIXED: For UPDATE with existing gallery paths
+          // Check if it's a URL and extract path
+          if (galleryItem.includes('http') && galleryItem.includes('storage/')) {
+            const urlParts = galleryItem.split('storage/');
+            if (urlParts.length > 1) {
+              const path = urlParts[1];
+              // Append as a string field
+              data.append('gallery[]', path);
+              console.log(`Gallery image ${i} extracted path from URL:`, path);
+            } else {
+              console.log(`Gallery image ${i} is URL but can't extract path:`, galleryItem);
+            }
+          } else if (!galleryItem.includes('http')) {
+            // It's already a path
+            data.append('gallery[]', galleryItem);
+            console.log(`Gallery image ${i} is existing path:`, galleryItem);
+          }
         }
       }
     }
     
-    // Handle gallery deletions for updates - FIXED
+    // Handle gallery deletions for updates
     if (selectedProduct && formData.gallery && Array.isArray(formData.gallery)) {
       const existingGallery = Array.isArray(selectedProduct.gallery) ? selectedProduct.gallery : [];
       const galleryPathsToKeep: string[] = [];
       const galleryPathsToDelete: string[] = [];
       
-      // Collect existing paths to keep
+      // Collect existing paths to keep (extract paths from URLs if needed)
       formData.gallery.forEach((galleryItem: any) => {
-        if (typeof galleryItem === 'string' && 
-            (galleryItem.includes('products/gallery/') || galleryItem.includes('storage/'))) {
-          galleryPathsToKeep.push(galleryItem);
+        if (typeof galleryItem === 'string') {
+          let path = galleryItem;
+          // If it's a URL, extract the path
+          if (galleryItem.includes('http') && galleryItem.includes('storage/')) {
+            const urlParts = galleryItem.split('storage/');
+            if (urlParts.length > 1) {
+              path = urlParts[1];
+            }
+          }
+          if (path.includes('products/gallery/')) {
+            galleryPathsToKeep.push(path);
+          }
         }
       });
       
-      // Determine which to delete
-      existingGallery.forEach((path: string) => {
+      // Determine which to delete (also handle URL extraction)
+      existingGallery.forEach((item: string) => {
+        let path = item;
+        // If it's a URL, extract the path
+        if (typeof item === 'string' && item.includes('http') && item.includes('storage/')) {
+          const urlParts = item.split('storage/');
+          if (urlParts.length > 1) {
+            path = urlParts[1];
+          }
+        }
+        
         if (!galleryPathsToKeep.includes(path)) {
           galleryPathsToDelete.push(path);
         }
@@ -740,6 +802,8 @@ const handleFormSubmit = async (formData: any) => {
     setTimeout(() => setUploadProgress(0), 1000);
   }
 };
+
+
   const handleBulkUpload = async (file: File) => {
     try {
       const formData = new FormData();
