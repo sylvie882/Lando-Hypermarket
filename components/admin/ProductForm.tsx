@@ -12,7 +12,7 @@ interface ProductFormProps {
 }
 
 export default function ProductForm({ product, onClose, onSubmit, isSubmitting }: ProductFormProps) {
-  const [formData, setFormData] = useState({
+  const [formValues, setFormValues] = useState({
     name: '',
     description: '',
     price: '',
@@ -50,7 +50,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     
     if (product) {
       console.log('Editing product:', product);
-      setFormData({
+      setFormValues({
         name: product.name || '',
         description: product.description || '',
         price: product.price?.toString() || '',
@@ -93,7 +93,9 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
 
   // Helper function to generate image URL
   const generateImageUrl = (imagePath: string): string => {
-    if (!imagePath || imagePath === 'NULL' || imagePath === 'null') return '';
+    if (!imagePath || imagePath === 'NULL' || imagePath === 'null' || imagePath === '') {
+      return '/images/default-product.png';
+    }
     
     if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
       return imagePath;
@@ -128,11 +130,11 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({ ...prev, [name]: checked }));
+      setFormValues(prev => ({ ...prev, [name]: checked }));
     } else if (type === 'number') {
-      setFormData(prev => ({ ...prev, [name]: value === '' ? '' : parseFloat(value) }));
+      setFormValues(prev => ({ ...prev, [name]: value === '' ? '' : parseFloat(value) }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setFormValues(prev => ({ ...prev, [name]: value }));
     }
     
     // Clear error for this field
@@ -271,16 +273,16 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     }
     
     // Required fields
-    if (!formData.name.trim()) newErrors.name = 'Product name is required';
-    if (!formData.sku.trim()) newErrors.sku = 'SKU is required';
-    if (!formData.category_id) newErrors.category_id = 'Category is required';
-    if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = 'Valid price is required';
-    if (!formData.stock_quantity || parseInt(formData.stock_quantity) < 0) newErrors.stock_quantity = 'Valid stock quantity is required';
+    if (!formValues.name.trim()) newErrors.name = 'Product name is required';
+    if (!formValues.sku.trim()) newErrors.sku = 'SKU is required';
+    if (!formValues.category_id) newErrors.category_id = 'Category is required';
+    if (!formValues.price || parseFloat(formValues.price) <= 0) newErrors.price = 'Valid price is required';
+    if (!formValues.stock_quantity || parseInt(formValues.stock_quantity) < 0) newErrors.stock_quantity = 'Valid stock quantity is required';
     
     // Validate discounted price
-    if (formData.discounted_price) {
-      const price = parseFloat(formData.price) || 0;
-      const discounted = parseFloat(formData.discounted_price);
+    if (formValues.discounted_price) {
+      const price = parseFloat(formValues.price) || 0;
+      const discounted = parseFloat(formValues.discounted_price);
       if (discounted >= price) {
         newErrors.discounted_price = 'Discounted price must be less than regular price';
       }
@@ -290,91 +292,139 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrors({});
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setErrors({});
 
-    if (!validateForm()) {
-      setLoading(false);
-      return;
-    }
+  if (!validateForm()) {
+    setLoading(false);
+    return;
+  }
 
-    try {
-      // Prepare data for submission
-      const submitData: any = {
-        ...formData,
-        price: parseFloat(formData.price) || 0,
-        discounted_price: formData.discounted_price ? parseFloat(formData.discounted_price) : null,
-        stock_quantity: parseInt(formData.stock_quantity) || 0,
-        min_stock_threshold: parseInt(formData.min_stock_threshold) || 10,
-        category_id: parseInt(formData.category_id) || null,
-        vendor_id: formData.vendor_id ? parseInt(formData.vendor_id) : null,
-        weight: formData.weight ? parseFloat(formData.weight) : null,
-      };
-      
-      console.log('Thumbnail state:', {
-        thumbnail,
-        isFile: thumbnail instanceof File,
-        isString: typeof thumbnail === 'string',
-        thumbnailPreview
-      });
-      
-      // Handle thumbnail
-      if (thumbnail instanceof File) {
-        // New thumbnail file to upload
-        submitData.thumbnail = thumbnail;
-        console.log('Sending new thumbnail file:', thumbnail.name);
-      } else if (thumbnail === null && product) {
-        // Thumbnail was removed - send empty string to clear it
-        submitData.thumbnail = '';
-        console.log('Thumbnail removed, sending empty string');
-      } else if (typeof thumbnail === 'string' && product) {
-        // Keep existing thumbnail path for updates
-        submitData.thumbnail = thumbnail;
-        console.log('Keeping existing thumbnail path:', thumbnail);
+  try {
+    // Create FormData for file uploads
+    const formData = new FormData();
+    
+    // Helper function to append values properly
+    const appendValue = (key: string, value: any) => {
+      if (value === null || value === undefined || value === '') {
+        return; // Skip empty values
       }
       
-      // Handle gallery
-      if (gallery.length > 0) {
-        submitData.gallery = gallery;
-        console.log('Sending gallery items:', gallery.length);
+      if (typeof value === 'boolean') {
+        formData.append(key, value ? '1' : '0');
+      } else if (typeof value === 'object') {
+        formData.append(key, JSON.stringify(value));
+      } else {
+        formData.append(key, value.toString());
       }
-      
-      // Handle gallery deletions
-      if (galleryToDelete.length > 0) {
-        submitData.delete_gallery_images = galleryToDelete;
-        console.log('Sending gallery deletions:', galleryToDelete.length);
-      }
-      
-      // Handle attributes - ensure it's valid JSON
-      try {
-        if (formData.attributes && formData.attributes.trim() !== '') {
-          const parsed = JSON.parse(formData.attributes);
-          submitData.attributes = parsed; // Send as object, not string
+    };
+
+    // Append all form values
+    Object.entries(formValues).forEach(([key, value]) => {
+      if (key === 'attributes') {
+        // Handle attributes as JSON
+        try {
+          const parsed = value && value.toString().trim() !== '' 
+            ? JSON.parse(value.toString()) 
+            : {};
+          appendValue(key, parsed);
+        } catch (e) {
+          console.warn('Invalid JSON for attributes, using empty object');
+          appendValue(key, {});
         }
-      } catch (e) {
-        console.warn('Invalid attributes JSON, sending as-is:', formData.attributes);
-        submitData.attributes = formData.attributes;
+      } else if (key === 'price' || key === 'discounted_price' || key === 'weight') {
+        // Convert string numbers to actual numbers
+        const strValue = value?.toString() || '';
+        const numValue = parseFloat(strValue);
+        if (!isNaN(numValue)) {
+          appendValue(key, numValue);
+        } else if (strValue !== '') {
+          // If it's not empty but not a valid number, send as string
+          appendValue(key, strValue);
+        }
+      } else if (key === 'stock_quantity' || key === 'min_stock_threshold' || 
+                 key === 'category_id' || key === 'vendor_id') {
+        // Convert string numbers to integers
+        const strValue = value?.toString() || '';
+        const intValue = parseInt(strValue);
+        if (!isNaN(intValue)) {
+          appendValue(key, intValue);
+        } else if (strValue !== '') {
+          // If it's not empty but not a valid number, send as string
+          appendValue(key, strValue);
+        }
+      } else {
+        // For all other fields
+        appendValue(key, value);
       }
-      
-      console.log('Submitting product data:', {
-        ...submitData,
-        thumbnail: thumbnail instanceof File ? `File: ${thumbnail.name}` : thumbnail,
-        gallery: gallery.map(item => item instanceof File ? `File: ${item.name}` : `Path: ${item}`),
-        galleryToDelete,
-        hasThumbnail: !!thumbnail,
-        thumbnailType: thumbnail instanceof File ? 'File' : typeof thumbnail
-      });
-      
-      onSubmit(submitData);
-    } catch (error) {
-      console.error('Form preparation error:', error);
-      setErrors({ form: 'Failed to prepare form data' });
-    } finally {
-      setLoading(false);
+    });
+
+    // Handle thumbnail
+    if (thumbnail instanceof File) {
+      console.log('Appending new thumbnail file:', thumbnail.name);
+      formData.append('thumbnail', thumbnail);
+    } else if (thumbnail === null) {
+      // Explicitly set thumbnail to empty string to clear it
+      formData.append('thumbnail', '');
+    } else if (typeof thumbnail === 'string') {
+      // For existing thumbnails, send the path
+      formData.append('thumbnail', thumbnail);
     }
-  };
+
+    // Handle gallery images - new files
+    gallery.forEach((item, index) => {
+      if (item instanceof File) {
+        formData.append(`gallery[${index}]`, item);
+      }
+    });
+
+    // Handle existing gallery images
+    gallery.forEach((item, index) => {
+      if (typeof item === 'string' && item) {
+        formData.append(`existing_gallery[${index}]`, item);
+      }
+    });
+
+    // Handle gallery deletions
+    if (galleryToDelete.length > 0) {
+      galleryToDelete.forEach((path, index) => {
+        formData.append(`delete_gallery[${index}]`, path);
+      });
+    }
+
+    // For Laravel PUT method with FormData
+    if (product) {
+      formData.append('_method', 'PUT');
+    }
+
+    console.log('FormData entries:');
+    for (let pair of formData.entries()) {
+      const value = pair[1];
+      const displayValue = value instanceof File 
+        ? `File: ${value.name} (${value.type}, ${value.size} bytes)` 
+        : value;
+      console.log(`${pair[0]}: ${displayValue}`);
+    }
+
+    console.log('Form submission data:', {
+      isUpdate: !!product,
+      productId: product?.id,
+      thumbnailType: thumbnail instanceof File ? 'File' : typeof thumbnail,
+      galleryCount: gallery.length,
+      galleryToDeleteCount: galleryToDelete.length,
+    });
+
+    // Call the onSubmit callback with FormData
+    onSubmit(formData);
+  } catch (error) {
+    console.error('Form preparation error:', error);
+    setErrors({ form: 'Failed to prepare form data' });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, type: 'thumbnail' | 'gallery') => {
     e.currentTarget.src = '/images/default-product.png';
@@ -429,7 +479,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                     <input
                       type="text"
                       name="name"
-                      value={formData.name}
+                      value={formValues.name}
                       onChange={handleInputChange}
                       required
                       className={`w-full px-3 py-2 mt-1 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
@@ -449,7 +499,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                     <input
                       type="text"
                       name="sku"
-                      value={formData.sku}
+                      value={formValues.sku}
                       onChange={handleInputChange}
                       required
                       className={`w-full px-3 py-2 mt-1 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
@@ -469,7 +519,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                     </label>
                     <select
                       name="category_id"
-                      value={formData.category_id}
+                      value={formValues.category_id}
                       onChange={handleInputChange}
                       required
                       className={`w-full px-3 py-2 mt-1 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
@@ -500,7 +550,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                       <input
                         type="number"
                         name="price"
-                        value={formData.price}
+                        value={formValues.price}
                         onChange={handleInputChange}
                         required
                         min="0"
@@ -527,7 +577,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                       <input
                         type="number"
                         name="discounted_price"
-                        value={formData.discounted_price}
+                        value={formValues.discounted_price}
                         onChange={handleInputChange}
                         min="0"
                         step="0.01"
@@ -549,7 +599,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                     <input
                       type="number"
                       name="stock_quantity"
-                      value={formData.stock_quantity}
+                      value={formValues.stock_quantity}
                       onChange={handleInputChange}
                       required
                       min="0"
@@ -570,7 +620,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                     <input
                       type="number"
                       name="min_stock_threshold"
-                      value={formData.min_stock_threshold}
+                      value={formValues.min_stock_threshold}
                       onChange={handleInputChange}
                       min="0"
                       className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -585,7 +635,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                     <input
                       type="text"
                       name="barcode"
-                      value={formData.barcode}
+                      value={formValues.barcode}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
@@ -601,7 +651,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                     </label>
                     <textarea
                       name="description"
-                      value={formData.description}
+                      value={formValues.description}
                       onChange={handleInputChange}
                       rows={4}
                       className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -771,7 +821,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                       <input
                         type="number"
                         name="weight"
-                        value={formData.weight}
+                        value={formValues.weight}
                         onChange={handleInputChange}
                         min="0"
                         step="0.01"
@@ -785,7 +835,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                       </label>
                       <select
                         name="unit"
-                        value={formData.unit}
+                        value={formValues.unit}
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
@@ -808,7 +858,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                   <input
                     type="checkbox"
                     name="is_featured"
-                    checked={formData.is_featured}
+                    checked={formValues.is_featured}
                     onChange={handleInputChange}
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
@@ -819,7 +869,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                   <input
                     type="checkbox"
                     name="is_active"
-                    checked={formData.is_active}
+                    checked={formValues.is_active}
                     onChange={handleInputChange}
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />

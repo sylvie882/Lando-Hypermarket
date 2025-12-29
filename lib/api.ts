@@ -329,15 +329,19 @@ class ApiService {
         });
       }
     },
-    updateProduct: (id: number, data: any) => {
-      if (data instanceof FormData) {
-        return this.api.put(`/admin/products/${id}`, data);
-      } else {
-        return this.api.put(`/admin/products/${id}`, data, {
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-    },
+    // In ApiService class - admin section:
+updateProduct: (id: number, data: any) => {
+  if (data instanceof FormData) {
+    // For Laravel file uploads with PUT, we need to use POST with _method=PUT
+    const formData = data;
+    formData.append('_method', 'PUT');
+    return this.api.post(`/admin/products/${id}`, formData);
+  } else {
+    return this.api.put(`/admin/products/${id}`, data, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+},
     deleteProduct: (id: number) => this.api.delete(`/admin/products/${id}`),
     uploadProductsBulk: (data: FormData) => 
       this.api.post('/admin/products/bulk-upload', data),
