@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-// Import the shared Product type from your types
 import type { Product } from '@/types';
 import ProductTable from '@/components/admin/ProductTable';
 import ProductForm from '@/components/admin/ProductForm';
@@ -16,11 +15,13 @@ import {
   RefreshCw,
   Loader2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Trash2,
+  Image
 } from 'lucide-react';
 import debounce from 'lodash/debounce';
 
-// Image compression utility
+// Image compression utility (same as before)
 const compressImage = async (file: File, maxWidth: number = 1200, maxSizeKB: number = 500): Promise<File> => {
   return new Promise((resolve, reject) => {
     if (file.size <= maxSizeKB * 1024) {
@@ -147,17 +148,34 @@ export default function ProductsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [deletingImage, setDeletingImage] = useState<{ productId: number, imageIndex: number } | null>(null);
   
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    perPage: 100,
+    perPage: 20,
     total: 0,
     lastPage: 1,
     from: 0,
     to: 0
   });
   
-  const [showAll, setShowAll] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+
+  // Helper function to extract path from URL
+  const extractPathFromUrl = (url: string): string => {
+    if (!url) return '';
+    if (!url.includes('http')) return url; // Already a path
+    
+    try {
+      const urlObj = new URL(url);
+      const path = urlObj.pathname;
+      // Remove leading /storage/ or / if present
+      return path.replace(/^\/storage\//, '').replace(/^\//, '');
+    } catch (e) {
+      console.error('Failed to parse URL:', url, e);
+      return url;
+    }
+  };
 
   const fetchProducts = useCallback(async (page = 1, showAllProducts = showAll) => {
     try {
@@ -197,7 +215,8 @@ export default function ProductsPage() {
 
       console.log('Fetching products with params:', params);
       
-      const response = await api.admin.getProducts(params);
+      // Use the admin endpoint
+      const response = await api.get('/admin/products', { params });
       
       const data = response.data;
       console.log('Admin products response:', data);
@@ -205,23 +224,8 @@ export default function ProductsPage() {
       let productsArray: Product[] = [];
       let totalProducts = 0;
       
-      if (data && data.products && data.products.data) {
-        productsArray = data.products.data;
-        const paginationData = data.products;
-        
-        totalProducts = paginationData.total;
-        setPagination(prev => ({
-          ...prev,
-          currentPage: paginationData.current_page,
-          perPage: paginationData.per_page,
-          total: paginationData.total,
-          lastPage: paginationData.last_page,
-          from: paginationData.from || 0,
-          to: paginationData.to || 0
-        }));
-        
-        console.log(`Fetched ${productsArray.length} products, Total: ${totalProducts}, Page: ${paginationData.current_page}/${paginationData.last_page}`);
-      } else if (data && data.data) {
+      if (data && data.data) {
+        // Laravel paginated response
         productsArray = data.data;
         
         if (data.meta) {
@@ -235,34 +239,40 @@ export default function ProductsPage() {
             from: data.meta.from || 0,
             to: data.meta.to || 0
           }));
-        } else if (data.total !== undefined) {
-          totalProducts = data.total;
-          setPagination(prev => ({
-            ...prev,
-            currentPage: page,
-            total: data.total,
-            lastPage: Math.ceil(data.total / params.per_page),
-            from: (page - 1) * params.per_page + 1,
-            to: Math.min(page * params.per_page, data.total)
-          }));
         }
       } else if (Array.isArray(data)) {
+        // Non-paginated response
         productsArray = data;
         totalProducts = data.length;
-        console.log(`Fetched ${data.length} products (non-paginated)`);
+        setPagination(prev => ({
+          ...prev,
+          total: data.length,
+          perPage: data.length,
+          currentPage: 1,
+          lastPage: 1,
+          from: 1,
+          to: data.length
+        }));
       } else {
         console.warn('Unexpected API response structure:', data);
         productsArray = [];
       }
       
-      // Ensure all products have proper gallery arrays and URLs
+      // Normalize products
       const normalizedProducts = productsArray.map(product => ({
         ...product,
         gallery: Array.isArray(product.gallery) ? product.gallery : [],
-        thumbnail: product.thumbnail || '/images/default-product.png',
-        // Ensure we have computed URLs
-        main_image: product.main_image || product.thumbnail || '/images/default-product.png',
-        gallery_urls: product.gallery_urls || product.gallery || []
+        thumbnail: product.thumbnail || '',
+        main_image: product.main_image || product.thumbnail || '',
+        gallery_urls: product.gallery_urls || product.gallery || [],
+        // Ensure is_active is boolean
+        is_active: Boolean(product.is_active),
+        // Ensure gallery is array of strings
+        gallery: (Array.isArray(product.gallery) ? product.gallery : []).map((item: any) => {
+          if (typeof item === 'string') return item;
+          if (item && typeof item === 'object' && item.url) return item.url;
+          return String(item);
+        })
       }));
       
       setProducts(normalizedProducts);
@@ -281,7 +291,6 @@ export default function ProductsPage() {
       
     } catch (error: any) {
       console.error('Failed to fetch products:', error);
-      console.error('Error response:', error.response);
       
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error || 
@@ -295,7 +304,7 @@ export default function ProductsPage() {
   }, [searchQuery, filters, pagination.perPage, showAll]);
 
   useEffect(() => {
-    fetchProducts(1, true);
+    fetchProducts(1, showAll);
   }, [fetchProducts]);
 
   useEffect(() => {
@@ -343,7 +352,7 @@ export default function ProductsPage() {
     if (!confirm('Are you sure you want to deactivate this product? It will no longer be visible to customers.')) return;
 
     try {
-      await api.admin.deleteProduct(id);
+      await api.delete(`/admin/products/${id}`);
       setProducts(products.map(p => 
         p.id === id ? { ...p, is_active: false } : p
       ));
@@ -353,158 +362,156 @@ export default function ProductsPage() {
     }
   };
 
-const handleFormSubmit = async (formData: any) => {
-  if (isSubmitting) return;
-  
-  setIsSubmitting(true);
-  setError(null);
-  setUploadProgress(0);
-  
-  try {
-    console.log('Form data received:', formData);
+  // New function to delete gallery image
+  const handleDeleteGalleryImage = async (productId: number, imageIndex: number) => {
+    if (!confirm('Are you sure you want to delete this gallery image?')) return;
     
-    const price = parseFloat(formData.price) || 0;
-    const discountedPrice = parseFloat(formData.discounted_price);
-    
-    if (!isNaN(discountedPrice) && discountedPrice >= price) {
-      alert('Discounted price must be less than regular price');
-      setIsSubmitting(false);
-      return;
+    try {
+      setDeletingImage({ productId, imageIndex });
+      await api.delete(`/products/${productId}/gallery/${imageIndex}`);
+      
+      // Update local state
+      setProducts(products.map(product => {
+        if (product.id === productId) {
+          const newGallery = [...(product.gallery || [])];
+          newGallery.splice(imageIndex, 1);
+          return { ...product, gallery: newGallery };
+        }
+        return product;
+      }));
+      
+      alert('Gallery image deleted successfully');
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to delete gallery image');
+    } finally {
+      setDeletingImage(null);
     }
+  };
+
+  const handleFormSubmit = async (formData: any) => {
+    if (isSubmitting) return;
     
-    const data = new FormData();
+    setIsSubmitting(true);
+    setError(null);
+    setUploadProgress(0);
     
-    const appendField = (key: string, value: any) => {
-      if (value !== undefined && value !== null && value !== '') {
-        if (typeof value === 'boolean') {
-          data.append(key, value ? '1' : '0');
-        } else if (typeof value === 'number') {
-          data.append(key, value.toString());
-        } else if (typeof value === 'object' && !(value instanceof File)) {
-          if (key === 'attributes') {
-            try {
-              if (typeof value === 'string') {
-                const parsed = JSON.parse(value);
-                if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-                  data.append(key, JSON.stringify(parsed));
+    try {
+      console.log('Form data received:', formData);
+      
+      const price = parseFloat(formData.price) || 0;
+      const discountedPrice = parseFloat(formData.discounted_price);
+      
+      if (!isNaN(discountedPrice) && discountedPrice >= price) {
+        alert('Discounted price must be less than regular price');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const data = new FormData();
+      
+      const appendField = (key: string, value: any) => {
+        if (value !== undefined && value !== null && value !== '') {
+          if (typeof value === 'boolean') {
+            data.append(key, value ? '1' : '0');
+          } else if (typeof value === 'number') {
+            data.append(key, value.toString());
+          } else if (typeof value === 'object' && !(value instanceof File)) {
+            if (key === 'attributes') {
+              try {
+                if (typeof value === 'string') {
+                  const parsed = JSON.parse(value);
+                  if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+                    data.append(key, JSON.stringify(parsed));
+                  }
+                } else if (value && typeof value === 'object' && Object.keys(value).length > 0) {
+                  data.append(key, JSON.stringify(value));
                 }
-              } else if (value && typeof value === 'object' && Object.keys(value).length > 0) {
-                data.append(key, JSON.stringify(value));
+              } catch (e) {
+                console.warn('Invalid attributes format:', value);
               }
-            } catch (e) {
-              console.warn('Invalid attributes format:', value);
+            } else {
+              data.append(key, JSON.stringify(value));
             }
+          } else if (typeof value === 'string') {
+            data.append(key, value.trim());
           } else {
-            data.append(key, JSON.stringify(value));
+            data.append(key, value);
           }
-        } else if (typeof value === 'string') {
-          // Trim the value
-          data.append(key, value.trim());
-        } else {
-          data.append(key, value);
+        }
+      };
+      
+      const hasValue = (value: any): boolean => {
+        if (value === undefined || value === null) return false;
+        if (typeof value === 'string') return value.trim() !== '';
+        if (typeof value === 'number') return !isNaN(value);
+        return true;
+      };
+      
+      // Required fields
+      appendField('name', formData.name);
+      appendField('description', formData.description);
+      appendField('price', price);
+      appendField('stock_quantity', parseInt(formData.stock_quantity) || 0);
+      appendField('category_id', parseInt(formData.category_id));
+      
+      // Optional fields
+      if (hasValue(formData.sku)) {
+        appendField('sku', formData.sku);
+      }
+      
+      if (hasValue(formData.discounted_price)) {
+        const discounted = parseFloat(formData.discounted_price);
+        if (!isNaN(discounted) && discounted > 0 && discounted < price) {
+          appendField('discounted_price', discounted);
         }
       }
-    };
-    
-    const hasValue = (value: any): boolean => {
-      if (value === undefined || value === null) return false;
-      if (typeof value === 'string') return value.trim() !== '';
-      if (typeof value === 'number') return !isNaN(value);
-      return true;
-    };
-    
-    // Required fields
-    appendField('name', formData.name);
-    appendField('description', formData.description);
-    appendField('price', price);
-    appendField('stock_quantity', parseInt(formData.stock_quantity) || 0);
-    appendField('category_id', parseInt(formData.category_id));
-    
-    // Optional fields
-    if (hasValue(formData.sku)) {
-      appendField('sku', formData.sku);
-    }
-    
-    if (hasValue(formData.discounted_price)) {
-      const discounted = parseFloat(formData.discounted_price);
-      if (!isNaN(discounted) && discounted > 0 && discounted < price) {
-        appendField('discounted_price', discounted);
+      
+      // Boolean fields
+      appendField('is_featured', formData.is_featured !== undefined ? formData.is_featured : false);
+      appendField('is_active', formData.is_active !== undefined ? formData.is_active : true);
+      
+      // Optional fields with validation
+      if (hasValue(formData.min_stock_threshold)) {
+        appendField('min_stock_threshold', parseInt(formData.min_stock_threshold));
       }
-    }
-    
-    // Boolean fields
-    appendField('is_featured', formData.is_featured !== undefined ? formData.is_featured : false);
-    appendField('is_active', formData.is_active !== undefined ? formData.is_active : true);
-    
-    // Optional fields with validation
-    if (hasValue(formData.min_stock_threshold)) {
-      appendField('min_stock_threshold', parseInt(formData.min_stock_threshold));
-    }
-    
-    if (hasValue(formData.barcode)) {
-      appendField('barcode', formData.barcode);
-    }
-    
-    if (hasValue(formData.weight)) {
-      appendField('weight', parseFloat(formData.weight));
-    }
-    
-    if (hasValue(formData.unit)) {
-      appendField('unit', formData.unit);
-    }
-    
-    if (formData.attributes && formData.attributes !== '{}') {
-      try {
-        const attributes = typeof formData.attributes === 'string' 
-          ? JSON.parse(formData.attributes) 
-          : formData.attributes;
-        
-        if (attributes && typeof attributes === 'object' && Object.keys(attributes).length > 0) {
-          appendField('attributes', attributes);
-        }
-      } catch (e) {
-        console.warn('Invalid attributes format:', formData.attributes);
+      
+      if (hasValue(formData.barcode)) {
+        appendField('barcode', formData.barcode);
       }
-    }
-    
-    if (hasValue(formData.vendor_id)) {
-      appendField('vendor_id', parseInt(formData.vendor_id));
-    }
-    
-    // Handle thumbnail (main image) - FIXED: Extract path from URL for updates
-    console.log('Processing thumbnail:', formData.thumbnail);
-    
-    if (formData.thumbnail) {
-      if (formData.thumbnail instanceof File) {
-        // New thumbnail file uploaded
-        const thumbnailFile = formData.thumbnail;
-        const validation = validateImage(thumbnailFile);
-        if (!validation.valid) {
-          alert(validation.message);
-          setIsSubmitting(false);
-          return;
-        }
-        
+      
+      if (hasValue(formData.weight)) {
+        appendField('weight', parseFloat(formData.weight));
+      }
+      
+      if (hasValue(formData.unit)) {
+        appendField('unit', formData.unit);
+      }
+      
+      if (formData.attributes && formData.attributes !== '{}') {
         try {
-          console.log('Compressing thumbnail...');
-          const compressedThumbnail = await compressImage(thumbnailFile, 800, 2000);
-          data.append('thumbnail', compressedThumbnail);
-          setUploadProgress(20);
-          console.log('Thumbnail appended:', compressedThumbnail.name);
-        } catch (error) {
-          console.error('Failed to compress thumbnail:', error);
-          data.append('thumbnail', thumbnailFile);
-          setUploadProgress(20);
-          console.log('Original thumbnail appended:', thumbnailFile.name);
-        }
-      } else if (typeof formData.thumbnail === 'string' && formData.thumbnail.startsWith('blob:')) {
-        // Blob URL from new image selection
-        try {
-          const response = await fetch(formData.thumbnail);
-          const blob = await response.blob();
-          const fileName = `thumbnail-${Date.now()}.jpg`;
-          const thumbnailFile = new File([blob], fileName, { type: 'image/jpeg' });
+          const attributes = typeof formData.attributes === 'string' 
+            ? JSON.parse(formData.attributes) 
+            : formData.attributes;
           
+          if (attributes && typeof attributes === 'object' && Object.keys(attributes).length > 0) {
+            appendField('attributes', attributes);
+          }
+        } catch (e) {
+          console.warn('Invalid attributes format:', formData.attributes);
+        }
+      }
+      
+      if (hasValue(formData.vendor_id)) {
+        appendField('vendor_id', parseInt(formData.vendor_id));
+      }
+      
+      // Handle thumbnail (main image)
+      console.log('Processing thumbnail:', formData.thumbnail);
+      
+      if (formData.thumbnail) {
+        if (formData.thumbnail instanceof File) {
+          // New thumbnail file uploaded
+          const thumbnailFile = formData.thumbnail;
           const validation = validateImage(thumbnailFile);
           if (!validation.valid) {
             alert(validation.message);
@@ -512,297 +519,221 @@ const handleFormSubmit = async (formData: any) => {
             return;
           }
           
-          const compressedThumbnail = await compressImage(thumbnailFile, 800, 2000);
-          data.append('thumbnail', compressedThumbnail);
-          setUploadProgress(20);
-        } catch (error) {
-          console.error('Failed to process thumbnail from blob:', error);
-          alert('Failed to process main image. Please try uploading again.');
-          setIsSubmitting(false);
-          return;
-        }
-      } else if (typeof formData.thumbnail === 'string' && !selectedProduct) {
-        // For CREATE: thumbnail is a string URL from ProductForm
-        console.log('Using thumbnail URL for create:', formData.thumbnail);
-      } else if (typeof formData.thumbnail === 'string' && selectedProduct) {
-        // FIXED: For UPDATE with existing thumbnail (URL string)
-        // Extract the relative path from the URL
-        const thumbnailValue = formData.thumbnail;
-        
-        // Check if it's a full URL or just a path
-        if (thumbnailValue.includes('http') && thumbnailValue.includes('storage/')) {
-          // It's a full URL, extract the path after 'storage/'
-          const urlParts = thumbnailValue.split('storage/');
-          if (urlParts.length > 1) {
-            const path = urlParts[1];
-            // Append as a string field, not a file
-            data.append('thumbnail', path);
-            console.log('Extracted thumbnail path from URL:', path);
-          } else {
-            // Couldn't extract path, use the original thumbnail path
-            if (selectedProduct.thumbnail && !selectedProduct.thumbnail.includes('http')) {
-              data.append('thumbnail', selectedProduct.thumbnail);
-              console.log('Using original thumbnail path:', selectedProduct.thumbnail);
-            }
+          try {
+            console.log('Compressing thumbnail...');
+            const compressedThumbnail = await compressImage(thumbnailFile, 800, 2000);
+            data.append('thumbnail', compressedThumbnail);
+            setUploadProgress(20);
+            console.log('Thumbnail appended:', compressedThumbnail.name);
+          } catch (error) {
+            console.error('Failed to compress thumbnail:', error);
+            data.append('thumbnail', thumbnailFile);
+            setUploadProgress(20);
+            console.log('Original thumbnail appended:', thumbnailFile.name);
           }
-        } else if (!thumbnailValue.includes('http')) {
-          // It's already a path, not a URL
-          data.append('thumbnail', thumbnailValue);
-          console.log('Thumbnail is already a path:', thumbnailValue);
+        } else if (typeof formData.thumbnail === 'string' && formData.thumbnail.startsWith('blob:')) {
+          // Blob URL from new image selection
+          try {
+            const response = await fetch(formData.thumbnail);
+            const blob = await response.blob();
+            const fileName = `thumbnail-${Date.now()}.jpg`;
+            const thumbnailFile = new File([blob], fileName, { type: 'image/jpeg' });
+            
+            const validation = validateImage(thumbnailFile);
+            if (!validation.valid) {
+              alert(validation.message);
+              setIsSubmitting(false);
+              return;
+            }
+            
+            const compressedThumbnail = await compressImage(thumbnailFile, 800, 2000);
+            data.append('thumbnail', compressedThumbnail);
+            setUploadProgress(20);
+          } catch (error) {
+            console.error('Failed to process thumbnail from blob:', error);
+            alert('Failed to process main image. Please try uploading again.');
+            setIsSubmitting(false);
+            return;
+          }
+        } else if (typeof formData.thumbnail === 'string' && selectedProduct) {
+          // For UPDATE: Check if it's the same as existing
+          const existingThumbnail = selectedProduct.thumbnail || '';
+          const newThumbnail = formData.thumbnail;
+          
+          // Only update if it's a new thumbnail (contains http or blob)
+          if (newThumbnail.includes('http') || newThumbnail.includes('blob:')) {
+            console.log('New thumbnail URL detected for update:', newThumbnail);
+          } else {
+            console.log('Using existing thumbnail path for update');
+            data.append('thumbnail', newThumbnail);
+          }
         }
-      }
-    } else if (selectedProduct && selectedProduct.thumbnail) {
-      // FIXED: For UPDATE when no thumbnail is provided, send the existing path
-      // Check if it's a URL and extract path
-      if (selectedProduct.thumbnail.includes('http') && selectedProduct.thumbnail.includes('storage/')) {
-        const urlParts = selectedProduct.thumbnail.split('storage/');
-        if (urlParts.length > 1) {
-          const path = urlParts[1];
-          data.append('thumbnail', path);
-          console.log('Extracted existing thumbnail path from URL:', path);
-        }
-      } else if (!selectedProduct.thumbnail.includes('http')) {
-        // It's already a path
+      } else if (selectedProduct && selectedProduct.thumbnail) {
+        // Keep existing thumbnail for updates
         data.append('thumbnail', selectedProduct.thumbnail);
-        console.log('Using existing thumbnail path:', selectedProduct.thumbnail);
       }
-    }
-    
-    // Handle gallery images - FIXED: Similar logic for gallery paths
-    console.log('Processing gallery:', formData.gallery);
-    
-    if (formData.gallery && Array.isArray(formData.gallery)) {
-      for (let i = 0; i < formData.gallery.length; i++) {
-        const galleryItem = formData.gallery[i];
+      
+      // Handle gallery images
+      console.log('Processing gallery:', formData.gallery);
+      
+      if (formData.gallery && Array.isArray(formData.gallery)) {
+        // Separate existing paths from new files
+        const existingPaths: string[] = [];
+        const newFiles: File[] = [];
         
-        if (galleryItem instanceof File) {
-          // New file to upload
-          const validation = validateImage(galleryItem);
+        formData.gallery.forEach((item: any) => {
+          if (item instanceof File) {
+            newFiles.push(item);
+          } else if (typeof item === 'string' && item.startsWith('blob:')) {
+            // Handle blob URLs (convert to File)
+            // This should be done in ProductForm before submission
+            console.warn('Blob URL in gallery array, should be converted to File in ProductForm');
+          } else if (typeof item === 'string' && item.includes('products/gallery/')) {
+            existingPaths.push(item);
+          }
+        });
+        
+        // Append existing paths as keep_gallery_images
+        existingPaths.forEach((path, index) => {
+          data.append(`keep_gallery_images[${index}]`, path);
+        });
+        
+        // Append new gallery files
+        for (let i = 0; i < newFiles.length; i++) {
+          const galleryFile = newFiles[i];
+          const validation = validateImage(galleryFile);
           if (!validation.valid) {
             console.warn(`Gallery image ${i} validation failed:`, validation.message);
             continue;
           }
           
           try {
-            console.log(`Compressing gallery image ${i}...`);
-            const compressedGallery = await compressImage(galleryItem, 1200, 2000);
+            const compressedGallery = await compressImage(galleryFile, 1200, 2000);
             data.append('gallery[]', compressedGallery);
             console.log(`Gallery image ${i} appended:`, compressedGallery.name);
           } catch (error) {
             console.error(`Failed to compress gallery image ${i}:`, error);
-            data.append('gallery[]', galleryItem);
-            console.log(`Original gallery image ${i} appended:`, galleryItem.name);
+            data.append('gallery[]', galleryFile);
+            console.log(`Original gallery image ${i} appended:`, galleryFile.name);
           }
           
-          const progress = 20 + ((i + 1) / formData.gallery.length) * 50;
+          const progress = 20 + ((i + 1) / newFiles.length) * 50;
           setUploadProgress(progress);
-        } else if (typeof galleryItem === 'string' && galleryItem.startsWith('blob:')) {
-          // Blob URL from new image selection
-          try {
-            const response = await fetch(galleryItem);
-            const blob = await response.blob();
-            const fileName = `gallery-${i}-${Date.now()}.jpg`;
-            const galleryFile = new File([blob], fileName, { type: 'image/jpeg' });
-            
-            const validation = validateImage(galleryFile);
-            if (!validation.valid) {
-              console.warn(`Gallery image ${i} validation failed:`, validation.message);
-              continue;
-            }
-            
-            const compressedGallery = await compressImage(galleryFile, 1200, 2000);
-            data.append('gallery[]', compressedGallery);
-            console.log(`Gallery image ${i} appended from blob:`, fileName);
-          } catch (error) {
-            console.error(`Failed to process gallery image ${i} from blob:`, error);
-            continue;
-          }
-        } else if (typeof galleryItem === 'string') {
-          // FIXED: For UPDATE with existing gallery paths
-          // Check if it's a URL and extract path
-          if (galleryItem.includes('http') && galleryItem.includes('storage/')) {
-            const urlParts = galleryItem.split('storage/');
-            if (urlParts.length > 1) {
-              const path = urlParts[1];
-              // Append as a string field
-              data.append('gallery[]', path);
-              console.log(`Gallery image ${i} extracted path from URL:`, path);
-            } else {
-              console.log(`Gallery image ${i} is URL but can't extract path:`, galleryItem);
-            }
-          } else if (!galleryItem.includes('http')) {
-            // It's already a path
-            data.append('gallery[]', galleryItem);
-            console.log(`Gallery image ${i} is existing path:`, galleryItem);
-          }
         }
       }
-    }
-    
-    // Handle gallery deletions for updates
-    if (selectedProduct && formData.gallery && Array.isArray(formData.gallery)) {
-      const existingGallery = Array.isArray(selectedProduct.gallery) ? selectedProduct.gallery : [];
-      const galleryPathsToKeep: string[] = [];
-      const galleryPathsToDelete: string[] = [];
       
-      // Collect existing paths to keep (extract paths from URLs if needed)
-      formData.gallery.forEach((galleryItem: any) => {
-        if (typeof galleryItem === 'string') {
-          let path = galleryItem;
-          // If it's a URL, extract the path
-          if (galleryItem.includes('http') && galleryItem.includes('storage/')) {
-            const urlParts = galleryItem.split('storage/');
-            if (urlParts.length > 1) {
-              path = urlParts[1];
-            }
-          }
-          if (path.includes('products/gallery/')) {
-            galleryPathsToKeep.push(path);
-          }
+      // For CREATE, thumbnail is required
+      if (!selectedProduct && !formData.thumbnail) {
+        alert('Please upload a main product image (thumbnail).');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      console.log('FormData entries summary:');
+      for (let [key, value] of (data as any).entries()) {
+        if (value instanceof File) {
+          console.log(`${key}: File - ${value.name} (${(value.size / 1024).toFixed(2)}KB)`);
+        } else if (typeof value === 'string' && value.length > 100) {
+          console.log(`${key}: [String length ${value.length}]`);
+        } else {
+          console.log(`${key}:`, value);
         }
-      });
+      }
       
-      // Determine which to delete (also handle URL extraction)
-      existingGallery.forEach((item: string) => {
-        let path = item;
-        // If it's a URL, extract the path
-        if (typeof item === 'string' && item.includes('http') && item.includes('storage/')) {
-          const urlParts = item.split('storage/');
-          if (urlParts.length > 1) {
-            path = urlParts[1];
+      setUploadProgress(80);
+      
+      let response;
+      const headers = { 
+        'Content-Type': 'multipart/form-data',
+        'Accept': 'application/json'
+      };
+      
+      if (selectedProduct) {
+        // Update existing product
+        console.log('Sending update request for product:', selectedProduct.id);
+        
+        response = await api.put(`/admin/products/${selectedProduct.id}`, data, {
+          headers,
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+            setUploadProgress(80 + (percentCompleted * 0.2));
           }
+        }).catch(error => {
+          console.log('Update error:', error);
+          console.log('Update error response:', error.response?.data);
+          throw error;
+        });
+        
+        console.log('Update response:', response.data);
+        alert('Product updated successfully');
+      } else {
+        // Create new product
+        console.log('Sending create request');
+        
+        response = await api.post('/admin/products', data, {
+          headers,
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+            setUploadProgress(80 + (percentCompleted * 0.2));
+          }
+        }).catch(error => {
+          console.log('Create error:', error);
+          console.log('Create error response:', error.response?.data);
+          throw error;
+        });
+        
+        console.log('Create response:', response.data);
+        alert('Product created successfully');
+      }
+      
+      setUploadProgress(100);
+      setTimeout(() => {
+        setShowForm(false);
+        setSelectedProduct(null);
+        fetchProducts(pagination.currentPage, showAll);
+      }, 500);
+      
+    } catch (error: any) {
+      console.error('Form submission error:', error);
+      console.error('Error response data:', error.response?.data);
+      
+      if (error.response?.status === 413) {
+        const errorMessage = 'The data you are trying to upload is too large. Please reduce image sizes or upload fewer images.';
+        alert(errorMessage);
+        setError(errorMessage);
+      } else if (error.response?.status === 422) {
+        const validationErrors = error.response.data.errors;
+        console.log('Full validation errors:', validationErrors);
+        
+        let errorMessage = 'Please fix the following errors:\n\n';
+        
+        if (validationErrors) {
+          Object.keys(validationErrors).forEach(field => {
+            if (Array.isArray(validationErrors[field])) {
+              errorMessage += `• ${field}: ${validationErrors[field].join(', ')}\n`;
+            }
+          });
+        } else {
+          errorMessage = error.response.data.message || 'Validation failed';
         }
         
-        if (!galleryPathsToKeep.includes(path)) {
-          galleryPathsToDelete.push(path);
-        }
-      });
-      
-      console.log('Gallery deletions:', galleryPathsToDelete);
-      
-      // Append deletions
-      galleryPathsToDelete.forEach((path) => {
-        data.append('delete_gallery_images[]', path);
-      });
-    }
-    
-    // For CREATE, thumbnail is required
-    if (!selectedProduct && !formData.thumbnail) {
-      alert('Please upload a main product image (thumbnail).');
+        alert(errorMessage);
+        setError(errorMessage);
+      } else if (error.response?.data?.message) {
+        alert(error.response.data.message);
+        setError(error.response.data.message);
+      } else if (error.message) {
+        alert(error.message);
+        setError(error.message);
+      } else {
+        alert('Failed to save product');
+        setError('Failed to save product');
+      }
+    } finally {
       setIsSubmitting(false);
-      return;
+      setTimeout(() => setUploadProgress(0), 1000);
     }
-    
-    console.log('FormData entries summary:');
-    for (let [key, value] of (data as any).entries()) {
-      if (value instanceof File) {
-        console.log(`${key}: File - ${value.name} (${(value.size / 1024).toFixed(2)}KB)`);
-      } else if (typeof value === 'string' && value.length > 100) {
-        console.log(`${key}: [String length ${value.length}]`);
-      } else {
-        console.log(`${key}:`, value);
-      }
-    }
-    
-    setUploadProgress(80);
-    
-    let response;
-    const headers = { 
-      'Content-Type': 'multipart/form-data',
-      'Accept': 'application/json'
-    };
-    
-    if (selectedProduct) {
-      // FIX: For updates, use POST with _method=PUT for file uploads
-      console.log('Sending update request for product:', selectedProduct.id);
-      
-      // Add _method=PUT to FormData
-      data.append('_method', 'PUT');
-      
-      // Use POST instead of PUT for file uploads
-      response = await api.post(`/admin/products/${selectedProduct.id}`, data, {
-        headers,
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-          setUploadProgress(80 + (percentCompleted * 0.2));
-        }
-      }).catch(error => {
-        console.log('Update error:', error);
-        console.log('Update error response:', error.response?.data);
-        throw error;
-      });
-      
-      console.log('Update response:', response.data);
-      alert('Product updated successfully');
-    } else {
-      // For creates - use POST
-      console.log('Sending create request');
-      
-      response = await api.post('/admin/products', data, {
-        headers,
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-          setUploadProgress(80 + (percentCompleted * 0.2));
-        }
-      }).catch(error => {
-        console.log('Create error:', error);
-        console.log('Create error response:', error.response?.data);
-        throw error;
-      });
-      
-      console.log('Create response:', response.data);
-      alert('Product created successfully');
-    }
-    
-    setUploadProgress(100);
-    setTimeout(() => {
-      setShowForm(false);
-      setSelectedProduct(null);
-      fetchProducts(pagination.currentPage, showAll);
-    }, 500);
-    
-  } catch (error: any) {
-    console.error('Form submission error:', error);
-    console.error('Error response data:', error.response?.data);
-    
-    if (error.response?.status === 413) {
-      const errorMessage = 'The data you are trying to upload is too large. Please reduce image sizes or upload fewer images.';
-      alert(errorMessage);
-      setError(errorMessage);
-    } else if (error.response?.status === 422) {
-      const validationErrors = error.response.data.errors;
-      console.log('Full validation errors:', validationErrors);
-      
-      let errorMessage = 'Please fix the following errors:\n\n';
-      
-      if (validationErrors) {
-        Object.keys(validationErrors).forEach(field => {
-          if (Array.isArray(validationErrors[field])) {
-            errorMessage += `• ${field}: ${validationErrors[field].join(', ')}\n`;
-          }
-        });
-      } else {
-        errorMessage = error.response.data.message || 'Validation failed';
-      }
-      
-      alert(errorMessage);
-      setError(errorMessage);
-    } else if (error.response?.data?.message) {
-      alert(error.response.data.message);
-      setError(error.response.data.message);
-    } else if (error.message) {
-      alert(error.message);
-      setError(error.message);
-    } else {
-      alert('Failed to save product');
-      setError('Failed to save product');
-    }
-  } finally {
-    setIsSubmitting(false);
-    setTimeout(() => setUploadProgress(0), 1000);
-  }
-};
-
+  };
 
   const handleBulkUpload = async (file: File) => {
     try {
@@ -842,14 +773,9 @@ const handleFormSubmit = async (formData: any) => {
 
   const exportProducts = async () => {
     try {
-      let response;
-      if (api.admin.exportProducts) {
-        response = await api.admin.exportProducts();
-      } else {
-        response = await api.get('/admin/products/export', {
-          responseType: 'blob'
-        });
-      }
+      const response = await api.get('/admin/products/export', {
+        responseType: 'blob'
+      });
       
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -875,6 +801,103 @@ const handleFormSubmit = async (formData: any) => {
       sort: 'created_at',
       order: 'desc',
     });
+  };
+
+  // Update ProductTable to include gallery management
+  const EnhancedProductTable = ({ products, onEdit, onDelete, onDeleteGalleryImage }: any) => {
+    return (
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gallery</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {products.map((product: Product) => (
+              <tr key={product.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.id}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <img 
+                    src={product.main_image || '/images/default-product.png'} 
+                    alt={product.name}
+                    className="h-12 w-12 object-cover rounded"
+                  />
+                </td>
+                <td className="px-6 py-4">
+                  <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                  <div className="text-sm text-gray-500 truncate max-w-xs">{product.description?.substring(0, 50)}...</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.sku}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  ${product.price}
+                  {product.discounted_price && (
+                    <span className="ml-2 text-red-600 line-through">${product.discounted_price}</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.stock_quantity}</td>
+                <td className="px-6 py-4">
+                  <div className="flex gap-1">
+                    {Array.isArray(product.gallery) && product.gallery.slice(0, 3).map((img: string, index: number) => (
+                      <div key={index} className="relative">
+                        <img 
+                          src={img.includes('http') ? img : `/storage/${img}`} 
+                          alt={`Gallery ${index + 1}`}
+                          className="h-10 w-10 object-cover rounded border"
+                        />
+                        <button
+                          onClick={() => onDeleteGalleryImage(product.id, index)}
+                          disabled={deletingImage?.productId === product.id && deletingImage?.imageIndex === index}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 disabled:opacity-50"
+                          style={{ width: '16px', height: '16px', fontSize: '10px' }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    {Array.isArray(product.gallery) && product.gallery.length > 3 && (
+                      <div className="h-10 w-10 bg-gray-100 rounded border flex items-center justify-center text-xs text-gray-500">
+                        +{product.gallery.length - 3}
+                      </div>
+                    )}
+                    {(!product.gallery || product.gallery.length === 0) && (
+                      <span className="text-xs text-gray-500">No gallery</span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${product.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {product.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <button
+                    onClick={() => onEdit(product)}
+                    className="text-blue-600 hover:text-blue-900 mr-3"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => onDelete(product.id)}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    {product.is_active ? 'Deactivate' : 'Activate'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   return (
@@ -1208,10 +1231,11 @@ const handleFormSubmit = async (formData: any) => {
             </button>
           </div>
         ) : (
-          <ProductTable
+          <EnhancedProductTable
             products={products}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onDeleteGalleryImage={handleDeleteGalleryImage}
           />
         )}
         
@@ -1233,10 +1257,10 @@ const handleFormSubmit = async (formData: any) => {
                     }}
                     className="ml-2 border border-gray-300 rounded px-2 py-1"
                   >
+                    <option value="10">10</option>
                     <option value="20">20</option>
                     <option value="50">50</option>
                     <option value="100">100</option>
-                    <option value="200">200</option>
                   </select>
                 </div>
               )}
@@ -1293,13 +1317,8 @@ const handleFormSubmit = async (formData: any) => {
                 </button>
               </div>
               <BulkUpload
-                onSuccess={() => {
-                  setShowBulkUpload(false);
-                  fetchProducts(pagination.currentPage, showAll);
-                }}
-                onError={(error) => {
-                  alert(`Upload failed: ${error}`);
-                }}
+                onUpload={handleBulkUpload}
+                onClose={() => setShowBulkUpload(false)}
               />
             </div>
           </div>
