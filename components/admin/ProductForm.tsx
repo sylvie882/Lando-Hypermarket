@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, Loader2, AlertCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 
 interface ProductFormProps {
@@ -35,11 +35,12 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
   const [gallery, setGallery] = useState<(File | string)[]>([]);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
-  const [galleryToDelete, setGalleryToDelete] = useState<string[]>([]); // Track gallery deletions
+  const [galleryToDelete, setGalleryToDelete] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
   
   const API_BASE_URL = 'https://api.hypermarket.co.ke';
-  const STORAGE_BASE_URL = 'https://api.hypermarket.co.ke/storage'; // Updated storage URL
+  const STORAGE_BASE_URL = 'https://api.hypermarket.co.ke/storage';
 
   // Initialize form with product data if editing
   useEffect(() => {
@@ -68,8 +69,10 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
       // Set thumbnail if it exists
       if (product.thumbnail) {
         setThumbnail(product.thumbnail);
-        // Generate preview for thumbnail
         generateThumbnailPreview(product.thumbnail);
+      } else {
+        // Set default image for NULL thumbnails
+        setThumbnailPreview('/images/default-product.png');
       }
 
       // Set gallery if it exists
@@ -80,7 +83,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         // Generate previews for gallery
         const previews = galleryItems.map((img: string) => {
           return generateImageUrl(img);
-        });
+        }).filter(Boolean); // Filter out empty/null images
         setGalleryPreviews(previews);
       }
     }
@@ -88,7 +91,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
 
   // Helper function to generate image URL
   const generateImageUrl = (imagePath: string): string => {
-    if (!imagePath) return '';
+    if (!imagePath || imagePath === 'NULL') return '';
     
     if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
       return imagePath;
@@ -105,7 +108,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
   // Helper function to generate thumbnail preview
   const generateThumbnailPreview = (imagePath: string) => {
     const url = generateImageUrl(imagePath);
-    setThumbnailPreview(url);
+    setThumbnailPreview(url || '/images/default-product.png');
   };
 
   const fetchCategories = async () => {
@@ -128,6 +131,15 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
+    
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -140,22 +152,28 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
       };
       reader.readAsDataURL(file);
     }
+    
+    // Clear thumbnail error
+    if (errors.thumbnail) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.thumbnail;
+        return newErrors;
+      });
+    }
   };
 
   const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     
     if (files.length > 0) {
-      const newFiles = files.slice(0, 10 - gallery.length); // Limit to 10 total
+      const newFiles = files.slice(0, 10 - gallery.length);
       
       newFiles.forEach(file => {
         const reader = new FileReader();
         reader.onloadend = () => {
-          // Add to gallery state
           const newGallery = [...gallery, file];
           setGallery(newGallery);
-          
-          // Add to previews
           setGalleryPreviews(prev => [...prev, reader.result as string]);
         };
         reader.readAsDataURL(file);
@@ -165,21 +183,19 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
 
   const removeThumbnail = () => {
     if (typeof thumbnail === 'string' && product) {
-      // For existing thumbnails, we need to handle deletion
-      // You might want to set thumbnail to null and send delete instruction
-      setThumbnail(null);
+      // For existing thumbnails, keep the path but set preview to default
+      setThumbnail(product.thumbnail || '');
     } else {
       setThumbnail(null);
     }
-    setThumbnailPreview(null);
+    setThumbnailPreview('/images/default-product.png');
   };
 
   const removeGalleryImage = (index: number) => {
     const itemToRemove = gallery[index];
     
     // If it's an existing image (string path), add to deletion list
-    if (typeof itemToRemove === 'string') {
-      // Extract the path - remove any storage/ prefix or full URLs
+    if (typeof itemToRemove === 'string' && itemToRemove) {
       let path = itemToRemove;
       if (path.startsWith(STORAGE_BASE_URL)) {
         path = path.replace(STORAGE_BASE_URL + '/', '');
@@ -187,26 +203,55 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         path = path.replace(API_BASE_URL + '/storage/', '');
       }
       
-      console.log('Adding gallery image to delete list:', path);
-      setGalleryToDelete(prev => [...prev, path]);
+      if (path) {
+        setGalleryToDelete(prev => [...prev, path]);
+      }
     }
     
-    // Remove from gallery and previews
     const newGallery = gallery.filter((_, i) => i !== index);
     const newPreviews = galleryPreviews.filter((_, i) => i !== index);
     
     setGallery(newGallery);
     setGalleryPreviews(newPreviews);
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: {[key: string]: string} = {};
     
-    console.log('Updated gallery state:', {
-      gallery: newGallery,
-      galleryToDelete
-    });
+    // For new products, thumbnail is required
+    if (!product && !thumbnail) {
+      newErrors.thumbnail = 'Main image is required for new products';
+    }
+    
+    // Required fields
+    if (!formData.name.trim()) newErrors.name = 'Product name is required';
+    if (!formData.sku.trim()) newErrors.sku = 'SKU is required';
+    if (!formData.category_id) newErrors.category_id = 'Category is required';
+    if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = 'Valid price is required';
+    if (!formData.stock_quantity || parseInt(formData.stock_quantity) < 0) newErrors.stock_quantity = 'Valid stock quantity is required';
+    
+    // Validate discounted price
+    if (formData.discounted_price) {
+      const price = parseFloat(formData.price) || 0;
+      const discounted = parseFloat(formData.discounted_price);
+      if (discounted >= price) {
+        newErrors.discounted_price = 'Discounted price must be less than regular price';
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrors({});
+
+    if (!validateForm()) {
+      setLoading(false);
+      return;
+    }
 
     try {
       // Prepare data for submission
@@ -221,29 +266,46 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         weight: formData.weight ? parseFloat(formData.weight) : null,
       };
       
-      // Add thumbnail if it exists (could be File or existing URL)
-      if (thumbnail) {
+      // Handle thumbnail
+      if (thumbnail instanceof File) {
         submitData.thumbnail = thumbnail;
-      } else if (product && product.thumbnail) {
-        // Keep existing thumbnail if not changing
-        submitData.thumbnail = product.thumbnail;
+      } else if (product && thumbnail) {
+        // Keep existing thumbnail path for updates
+        submitData.thumbnail = thumbnail;
       }
       
-      // Add gallery data
+      // Handle gallery
       if (gallery.length > 0) {
         submitData.gallery = gallery;
       }
       
-      // Add gallery deletions if any
+      // Handle gallery deletions
       if (galleryToDelete.length > 0) {
         submitData.delete_gallery_images = galleryToDelete;
-        console.log('Sending gallery deletions:', galleryToDelete);
       }
       
-      console.log('Submitting data:', submitData);
+      // Handle attributes - ensure it's valid JSON
+      try {
+        if (formData.attributes && formData.attributes.trim() !== '') {
+          const parsed = JSON.parse(formData.attributes);
+          submitData.attributes = parsed; // Send as object, not string
+        }
+      } catch (e) {
+        console.warn('Invalid attributes JSON, sending as-is:', formData.attributes);
+        submitData.attributes = formData.attributes;
+      }
+      
+      console.log('Submitting data:', {
+        ...submitData,
+        thumbnail: thumbnail instanceof File ? `File: ${thumbnail.name}` : thumbnail,
+        gallery: gallery.map(item => item instanceof File ? `File: ${item.name}` : item),
+        galleryToDelete
+      });
+      
       onSubmit(submitData);
     } catch (error) {
-      console.error('Form submission error:', error);
+      console.error('Form preparation error:', error);
+      setErrors({ form: 'Failed to prepare form data' });
     } finally {
       setLoading(false);
     }
@@ -262,11 +324,21 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
             <button 
               onClick={onClose} 
               className="text-gray-400 hover:text-gray-500"
-              disabled={isSubmitting}
+              disabled={isSubmitting || loading}
             >
               <X size={24} />
             </button>
           </div>
+
+          {/* Error Display */}
+          {errors.form && (
+            <div className="px-6 py-3 bg-red-50 border-b border-red-100">
+              <div className="flex items-center text-red-700">
+                <AlertCircle className="w-5 h-5 mr-2" />
+                <span className="text-sm">{errors.form}</span>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
@@ -284,8 +356,13 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 mt-1 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        errors.name ? 'border-red-300' : 'border-gray-300'
+                      }`}
                     />
+                    {errors.name && (
+                      <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                    )}
                   </div>
 
                   {/* SKU */}
@@ -299,9 +376,14 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                       value={formData.sku}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 mt-1 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        errors.sku ? 'border-red-300' : 'border-gray-300'
+                      }`}
                       placeholder="PROD-001"
                     />
+                    {errors.sku && (
+                      <p className="mt-1 text-sm text-red-600">{errors.sku}</p>
+                    )}
                   </div>
 
                   {/* Category */}
@@ -314,7 +396,9 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                       value={formData.category_id}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 mt-1 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        errors.category_id ? 'border-red-300' : 'border-gray-300'
+                      }`}
                     >
                       <option value="">Select Category</option>
                       {categories.map(category => (
@@ -323,6 +407,9 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                         </option>
                       ))}
                     </select>
+                    {errors.category_id && (
+                      <p className="mt-1 text-sm text-red-600">{errors.category_id}</p>
+                    )}
                   </div>
 
                   {/* Price */}
@@ -342,9 +429,14 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                         required
                         min="0"
                         step="0.01"
-                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full pl-7 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          errors.price ? 'border-red-300' : 'border-gray-300'
+                        }`}
                       />
                     </div>
+                    {errors.price && (
+                      <p className="mt-1 text-sm text-red-600">{errors.price}</p>
+                    )}
                   </div>
 
                   {/* Discounted Price */}
@@ -363,9 +455,14 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                         onChange={handleInputChange}
                         min="0"
                         step="0.01"
-                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full pl-7 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          errors.discounted_price ? 'border-red-300' : 'border-gray-300'
+                        }`}
                       />
                     </div>
+                    {errors.discounted_price && (
+                      <p className="mt-1 text-sm text-red-600">{errors.discounted_price}</p>
+                    )}
                   </div>
 
                   {/* Stock Quantity */}
@@ -380,8 +477,13 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                       onChange={handleInputChange}
                       required
                       min="0"
-                      className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 mt-1 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        errors.stock_quantity ? 'border-red-300' : 'border-gray-300'
+                      }`}
                     />
+                    {errors.stock_quantity && (
+                      <p className="mt-1 text-sm text-red-600">{errors.stock_quantity}</p>
+                    )}
                   </div>
 
                   {/* Min Stock Threshold */}
@@ -444,6 +546,9 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                                 src={thumbnailPreview}
                                 alt="Thumbnail preview"
                                 className="mx-auto h-32 w-32 object-cover rounded-lg"
+                                onError={(e) => {
+                                  e.currentTarget.src = '/images/default-product.png';
+                                }}
                               />
                               <button
                                 type="button"
@@ -476,8 +581,8 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                           )}
                         </div>
                       </div>
-                      {!thumbnailPreview && !product && (
-                        <p className="mt-1 text-sm text-red-600">Thumbnail is required for new products</p>
+                      {errors.thumbnail && (
+                        <p className="mt-1 text-sm text-red-600">{errors.thumbnail}</p>
                       )}
                     </div>
                   </div>
@@ -526,6 +631,9 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                                 src={preview}
                                 alt={`Gallery ${index + 1}`}
                                 className="object-cover w-20 h-20 rounded"
+                                onError={(e) => {
+                                  e.currentTarget.src = '/images/default-product.png';
+                                }}
                               />
                               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity rounded flex items-center justify-center">
                                 <button
