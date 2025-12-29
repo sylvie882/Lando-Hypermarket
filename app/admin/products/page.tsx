@@ -20,12 +20,6 @@ import {
 } from 'lucide-react';
 import debounce from 'lodash/debounce';
 
-interface Category {
-  id: number;
-  name: string;
-  slug?: string;
-}
-
 // Image compression utility
 const compressImage = async (file: File, maxWidth: number = 1200, maxSizeKB: number = 500): Promise<File> => {
   return new Promise((resolve, reject) => {
@@ -135,9 +129,7 @@ const validateImage = (file: File): { valid: boolean; message?: string } => {
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingCategories, setLoadingCategories] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -166,57 +158,6 @@ export default function ProductsPage() {
   });
   
   const [showAll, setShowAll] = useState(true);
-
-  const fetchCategories = useCallback(async () => {
-    try {
-      setLoadingCategories(true);
-      // Try to fetch categories from API
-      const response = await api.get('/categories');
-      
-      // Handle different response structures
-      if (response.data && Array.isArray(response.data)) {
-        setCategories(response.data);
-      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-        setCategories(response.data.data);
-      } else if (response.data && response.data.categories && Array.isArray(response.data.categories)) {
-        setCategories(response.data.categories);
-      } else {
-        // Fallback: Create a static list from known categories
-        setCategories([
-          { id: 45, name: 'Fruits' },
-          // Add more categories as needed based on your data
-        ]);
-      }
-    } catch (error) {
-      console.error('Failed to fetch categories:', error);
-      // Fallback static categories
-      setCategories([
-        { id: 45, name: 'Fruits' },
-        { id: 1, name: 'Category 1' },
-        { id: 2, name: 'Category 2' },
-        { id: 3, name: 'Category 3' },
-      ]);
-    } finally {
-      setLoadingCategories(false);
-    }
-  }, []);
-
-  const extractCategoriesFromProducts = useCallback((products: Product[]) => {
-    const categoryMap = new Map();
-    
-    products.forEach(product => {
-      if (product.category && product.category.id) {
-        if (!categoryMap.has(product.category.id)) {
-          categoryMap.set(product.category.id, {
-            id: product.category.id,
-            name: product.category.name || `Category ${product.category.id}`
-          });
-        }
-      }
-    });
-    
-    return Array.from(categoryMap.values());
-  }, []);
 
   const fetchProducts = useCallback(async (page = 1, showAllProducts = showAll) => {
     try {
@@ -326,14 +267,6 @@ export default function ProductsPage() {
       
       setProducts(normalizedProducts);
       
-      // Extract categories from products if we don't have them yet
-      if (categories.length === 0 && !loadingCategories) {
-        const extractedCategories = extractCategoriesFromProducts(normalizedProducts);
-        if (extractedCategories.length > 0) {
-          setCategories(extractedCategories);
-        }
-      }
-      
       if (showAllProducts) {
         setPagination(prev => ({
           ...prev,
@@ -359,12 +292,11 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, filters, pagination.perPage, showAll, categories.length, loadingCategories, extractCategoriesFromProducts]);
+  }, [searchQuery, filters, pagination.perPage, showAll]);
 
   useEffect(() => {
-    fetchCategories();
     fetchProducts(1, true);
-  }, [fetchCategories, fetchProducts]);
+  }, [fetchProducts]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -808,7 +740,6 @@ const handleFormSubmit = async (formData: any) => {
     setTimeout(() => setUploadProgress(0), 1000);
   }
 };
-
   const handleBulkUpload = async (file: File) => {
     try {
       const formData = new FormData();
@@ -1052,36 +983,15 @@ const handleFormSubmit = async (formData: any) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Category
+              Category ID
             </label>
-            <div className="relative">
-              <select
-                value={filters.category}
-                onChange={(e) => setFilters({...filters, category: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
-                disabled={loadingCategories}
-              >
-                <option value="">All Categories</option>
-                {loadingCategories ? (
-                  <option value="" disabled>Loading categories...</option>
-                ) : categories.length === 0 ? (
-                  <option value="" disabled>No categories found</option>
-                ) : (
-                  categories
-                    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-                    .map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name || `Category ${category.id}`}
-                      </option>
-                    ))
-                )}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                </svg>
-              </div>
-            </div>
+            <input
+              type="text"
+              value={filters.category}
+              onChange={(e) => setFilters({...filters, category: e.target.value})}
+              placeholder="Category ID"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
           </div>
 
           <div>
@@ -1299,7 +1209,6 @@ const handleFormSubmit = async (formData: any) => {
                 }}
                 onSubmit={handleFormSubmit}
                 isSubmitting={isSubmitting}
-                categories={categories}
               />
             </div>
           </div>
