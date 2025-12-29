@@ -292,7 +292,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     return Object.keys(newErrors).length === 0;
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setLoading(true);
   setErrors({});
@@ -306,91 +306,78 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     // Create FormData for file uploads
     const formData = new FormData();
     
-    // Helper function to append values properly
-    const appendValue = (key: string, value: any) => {
-      if (value === null || value === undefined || value === '') {
-        return; // Skip empty values
+    // Append all form values - SIMPLE DIRECT APPROACH
+    formData.append('name', formValues.name.trim());
+    formData.append('description', formValues.description.trim());
+    formData.append('price', parseFloat(formValues.price || '0').toString());
+    
+    if (formValues.discounted_price) {
+      const discounted = parseFloat(formValues.discounted_price);
+      if (!isNaN(discounted) && discounted > 0) {
+        formData.append('discounted_price', discounted.toString());
       }
-      
-      if (typeof value === 'boolean') {
-        formData.append(key, value ? '1' : '0');
-      } else if (typeof value === 'object') {
-        formData.append(key, JSON.stringify(value));
-      } else {
-        formData.append(key, value.toString());
-      }
-    };
-
-    // Append all form values
-    Object.entries(formValues).forEach(([key, value]) => {
-      if (key === 'attributes') {
-        // Handle attributes as JSON
-        try {
-          const parsed = value && value.toString().trim() !== '' 
-            ? JSON.parse(value.toString()) 
-            : {};
-          appendValue(key, parsed);
-        } catch (e) {
-          console.warn('Invalid JSON for attributes, using empty object');
-          appendValue(key, {});
-        }
-      } else if (key === 'price' || key === 'discounted_price' || key === 'weight') {
-        // Convert string numbers to actual numbers
-        const strValue = value?.toString() || '';
-        const numValue = parseFloat(strValue);
-        if (!isNaN(numValue)) {
-          appendValue(key, numValue);
-        } else if (strValue !== '') {
-          // If it's not empty but not a valid number, send as string
-          appendValue(key, strValue);
-        }
-      } else if (key === 'stock_quantity' || key === 'min_stock_threshold' || 
-                 key === 'category_id' || key === 'vendor_id') {
-        // Convert string numbers to integers
-        const strValue = value?.toString() || '';
-        const intValue = parseInt(strValue);
-        if (!isNaN(intValue)) {
-          appendValue(key, intValue);
-        } else if (strValue !== '') {
-          // If it's not empty but not a valid number, send as string
-          appendValue(key, strValue);
-        }
-      } else {
-        // For all other fields
-        appendValue(key, value);
-      }
-    });
+    }
+    
+    formData.append('stock_quantity', parseInt(formValues.stock_quantity || '0').toString());
+    formData.append('min_stock_threshold', parseInt(formValues.min_stock_threshold || '10').toString());
+    formData.append('category_id', parseInt(formValues.category_id || '0').toString());
+    
+    if (formValues.vendor_id) {
+      formData.append('vendor_id', parseInt(formValues.vendor_id || '0').toString());
+    }
+    
+    formData.append('sku', formValues.sku.trim());
+    formData.append('barcode', formValues.barcode.trim());
+    
+    if (formValues.weight) {
+      formData.append('weight', parseFloat(formValues.weight || '0').toString());
+    }
+    
+    formData.append('unit', formValues.unit);
+    formData.append('is_featured', formValues.is_featured ? '1' : '0');
+    formData.append('is_active', formValues.is_active ? '1' : '0');
+    
+    // Handle attributes - always send as JSON string
+    try {
+      const attributes = formValues.attributes && formValues.attributes.trim() !== '' 
+        ? JSON.parse(formValues.attributes) 
+        : {};
+      formData.append('attributes', JSON.stringify(attributes));
+    } catch (e) {
+      console.warn('Invalid JSON for attributes, using empty object');
+      formData.append('attributes', '{}');
+    }
 
     // Handle thumbnail
     if (thumbnail instanceof File) {
       console.log('Appending new thumbnail file:', thumbnail.name);
       formData.append('thumbnail', thumbnail);
-    } else if (thumbnail === null) {
-      // Explicitly set thumbnail to empty string to clear it
+    } else if (thumbnail === null && product) {
+      // Thumbnail was removed - send empty string
       formData.append('thumbnail', '');
     } else if (typeof thumbnail === 'string') {
-      // For existing thumbnails, send the path
+      // Keep existing thumbnail path
       formData.append('thumbnail', thumbnail);
     }
 
     // Handle gallery images - new files
     gallery.forEach((item, index) => {
       if (item instanceof File) {
-        formData.append(`gallery[${index}]`, item);
+        formData.append(`gallery[]`, item); // Use array notation for Laravel
       }
     });
 
     // Handle existing gallery images
     gallery.forEach((item, index) => {
       if (typeof item === 'string' && item) {
-        formData.append(`existing_gallery[${index}]`, item);
+        formData.append(`existing_gallery[]`, item);
       }
     });
 
     // Handle gallery deletions
     if (galleryToDelete.length > 0) {
-      galleryToDelete.forEach((path, index) => {
-        formData.append(`delete_gallery[${index}]`, path);
+      galleryToDelete.forEach(path => {
+        formData.append(`delete_gallery[]`, path);
       });
     }
 
@@ -399,22 +386,17 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
       formData.append('_method', 'PUT');
     }
 
-    console.log('FormData entries:');
-    for (let pair of formData.entries()) {
-      const value = pair[1];
-      const displayValue = value instanceof File 
-        ? `File: ${value.name} (${value.type}, ${value.size} bytes)` 
-        : value;
-      console.log(`${pair[0]}: ${displayValue}`);
+    // Debug logging - VERBOSE
+    console.log('=== FINAL FormData from ProductForm ===');
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`${key}: File - ${value.name} (${value.size} bytes, ${value.type})`);
+      } else if (typeof value === 'string' && value.length > 100) {
+        console.log(`${key}: "${value.substring(0, 50)}..." [${value.length} chars]`);
+      } else {
+        console.log(`${key}: "${value}"`);
+      }
     }
-
-    console.log('Form submission data:', {
-      isUpdate: !!product,
-      productId: product?.id,
-      thumbnailType: thumbnail instanceof File ? 'File' : typeof thumbnail,
-      galleryCount: gallery.length,
-      galleryToDeleteCount: galleryToDelete.length,
-    });
 
     // Call the onSubmit callback with FormData
     onSubmit(formData);

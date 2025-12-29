@@ -466,7 +466,7 @@ export default function ProductsPage() {
     }
   };
 
-const handleFormSubmit = async (formData: any) => {
+const handleFormSubmit = async (formData: FormData) => {
   if (isSubmitting) return;
   
   setIsSubmitting(true);
@@ -476,84 +476,42 @@ const handleFormSubmit = async (formData: any) => {
   try {
     console.log('=== Starting Product Update ===');
     
-    // Create FormData
-    const data = new FormData();
-    
-    // Append basic fields
-    data.append('name', formData.name || '');
-    data.append('description', formData.description || '');
-    data.append('price', (parseFloat(formData.price) || 0).toString());
-    data.append('stock_quantity', (parseInt(formData.stock_quantity) || 0).toString());
-    data.append('min_stock_threshold', (parseInt(formData.min_stock_threshold) || 10).toString());
-    data.append('category_id', (parseInt(formData.category_id) || 0).toString());
-    data.append('vendor_id', (parseInt(formData.vendor_id) || 1).toString());
-    data.append('sku', formData.sku || '');
-    data.append('barcode', formData.barcode || '');
-    data.append('weight', (parseFloat(formData.weight) || 0).toString());
-    data.append('unit', formData.unit || 'piece');
-    data.append('is_featured', formData.is_featured ? '1' : '0');
-    data.append('is_active', formData.is_active ? '1' : '1'); // Default to active
-    
-    // Handle attributes
-    if (formData.attributes) {
-      try {
-        const attributes = typeof formData.attributes === 'string' 
-          ? JSON.parse(formData.attributes)
-          : formData.attributes;
-        data.append('attributes', JSON.stringify(attributes));
-      } catch (e) {
-        console.warn('Invalid attributes, using empty object');
-        data.append('attributes', '{}');
-      }
-    } else {
-      data.append('attributes', '{}');
-    }
-    
-    // Handle discounted price
-    if (formData.discounted_price) {
-      const discounted = parseFloat(formData.discounted_price);
-      if (!isNaN(discounted) && discounted > 0) {
-        data.append('discounted_price', discounted.toString());
-      }
-    }
-    
-    // Handle thumbnail
-    if (formData.thumbnail && formData.thumbnail instanceof File) {
-      console.log('Adding thumbnail file:', formData.thumbnail.name);
-      data.append('thumbnail', formData.thumbnail);
-    } else if (typeof formData.thumbnail === 'string' && selectedProduct) {
-      // Keep existing thumbnail path
-      data.append('thumbnail', formData.thumbnail);
-    }
-    
-    // Handle gallery
-    if (formData.gallery && Array.isArray(formData.gallery)) {
-      formData.gallery.forEach((item: any, index: number) => {
-        if (item instanceof File) {
-          console.log(`Adding gallery file ${index}:`, item.name);
-          data.append(`gallery[${index}]`, item);
-        } else if (typeof item === 'string') {
-          // Existing gallery image
-          data.append(`existing_gallery[${index}]`, item);
-        }
-      });
-    }
-    
-    // For update, add _method=PUT
-    if (selectedProduct) {
-      data.append('_method', 'PUT');
-    }
-    
-    // Debug log
-    console.log('=== FormData Contents ===');
-    for (let [key, value] of (data as any).entries()) {
+    // Debug: Log the incoming FormData
+    console.log('=== Incoming FormData Contents ===');
+    for (let [key, value] of formData.entries()) {
       if (value instanceof File) {
-        console.log(`${key}: File (${value.name}, ${value.size} bytes)`);
+        console.log(`${key}: File (${value.name}, ${value.size} bytes, ${value.type})`);
       } else if (typeof value === 'string' && value.length > 50) {
-        console.log(`${key}: ${value.substring(0, 50)}...`);
+        console.log(`${key}: "${value.substring(0, 50)}..." [${value.length} chars]`);
       } else {
-        console.log(`${key}: ${value}`);
+        console.log(`${key}: "${value}"`);
       }
+    }
+    
+    // Check if we have the required data
+    const name = formData.get('name');
+    const categoryId = formData.get('category_id');
+    const description = formData.get('description');
+    const sku = formData.get('sku');
+    const attributes = formData.get('attributes');
+    
+    console.log('Required fields check:', {
+      name: name ? `"${name}" (${typeof name})` : 'MISSING',
+      category_id: categoryId ? `"${categoryId}" (${typeof categoryId})` : 'MISSING',
+      description: description ? `"${description.substring(0, 30)}..."` : 'MISSING',
+      sku: sku ? `"${sku}"` : 'MISSING',
+      attributes: attributes ? `"${attributes}"` : 'MISSING'
+    });
+    
+    // If we're missing required data, the FormData wasn't passed correctly
+    if (!name || !categoryId || !description || !sku || !attributes) {
+      throw new Error('FormData is missing required fields. Check ProductForm component.');
+    }
+    
+    // For update, ensure _method=PUT is present
+    if (selectedProduct && !formData.has('_method')) {
+      formData.append('_method', 'PUT');
+      console.log('Added _method=PUT for update');
     }
     
     setUploadProgress(30);
@@ -565,7 +523,7 @@ const handleFormSubmit = async (formData: any) => {
     
     console.log(`Sending to: ${endpoint}`);
     
-    const response = await api.post(endpoint, data, {
+    const response = await api.post(endpoint, formData, {
       onUploadProgress: (progressEvent) => {
         const total = progressEvent.total || 1;
         const loaded = progressEvent.loaded;
@@ -591,18 +549,15 @@ const handleFormSubmit = async (formData: any) => {
     
     if (error.response) {
       console.error('Status:', error.response.status);
-      console.error('Response data:', error.response.data);
+      console.error('Full response:', error.response.data);
       
       if (error.response.status === 422) {
-        // Get validation errors
         const errors = error.response.data.errors;
         
         if (errors) {
           console.error('Validation errors:', errors);
           
-          // Build error message
           let errorMessage = 'Please fix the following errors:\n\n';
-          
           Object.entries(errors).forEach(([field, messages]: [string, any]) => {
             if (Array.isArray(messages)) {
               messages.forEach(msg => {
@@ -629,7 +584,7 @@ const handleFormSubmit = async (formData: any) => {
       alert('No response from server. Please check your connection.');
       setError('No server response');
     } else {
-      console.error('Request setup error:', error.message);
+      console.error('Error:', error.message);
       alert(`Error: ${error.message}`);
       setError(error.message);
     }
