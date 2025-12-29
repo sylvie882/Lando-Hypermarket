@@ -334,21 +334,24 @@ export default function ProductsPage() {
       }
       
       // Normalize products
-      const normalizedProducts = productsArray.map(product => ({
-        ...product,
-        gallery: Array.isArray(product.gallery) ? product.gallery : [],
-        thumbnail: product.thumbnail || '',
-        main_image: product.main_image || product.thumbnail || '',
-        gallery_urls: product.gallery_urls || product.gallery || [],
-        // Ensure is_active is boolean
-        is_active: Boolean(product.is_active),
-        // Ensure gallery is array of strings
-        gallery: (Array.isArray(product.gallery) ? product.gallery : []).map((item: any) => {
-          if (typeof item === 'string') return item;
-          if (item && typeof item === 'object' && item.url) return item.url;
-          return String(item);
-        })
-      }));
+      const normalizedProducts = productsArray.map(product => {
+  // First normalize the gallery
+  const gallery = (Array.isArray(product.gallery) ? product.gallery : []).map((item: any) => {
+    if (typeof item === 'string') return item;
+    if (item && typeof item === 'object' && item.url) return item.url;
+    return String(item);
+  });
+  
+  return {
+    ...product,
+    gallery: gallery,
+    thumbnail: product.thumbnail || '',
+    main_image: product.main_image || product.thumbnail || '',
+    gallery_urls: product.gallery_urls || gallery,
+    // Ensure is_active is boolean
+    is_active: Boolean(product.is_active),
+  };
+});
       
       setProducts(normalizedProducts);
       
@@ -463,130 +466,180 @@ export default function ProductsPage() {
     }
   };
 
-  const handleFormSubmit = async (formData: any) => {
-    if (isSubmitting) return;
+const handleFormSubmit = async (formData: any) => {
+  if (isSubmitting) return;
+  
+  setIsSubmitting(true);
+  setError(null);
+  setUploadProgress(0);
+  
+  try {
+    console.log('Form data received:', formData);
     
-    setIsSubmitting(true);
-    setError(null);
-    setUploadProgress(0);
+    const price = parseFloat(formData.price) || 0;
+    const discountedPrice = parseFloat(formData.discounted_price);
     
-    try {
-      console.log('Form data received:', formData);
-      
-      const price = parseFloat(formData.price) || 0;
-      const discountedPrice = parseFloat(formData.discounted_price);
-      
-      if (!isNaN(discountedPrice) && discountedPrice >= price) {
-        alert('Discounted price must be less than regular price');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      const data = new FormData();
-      
-      const appendField = (key: string, value: any) => {
-        if (value !== undefined && value !== null && value !== '') {
-          if (typeof value === 'boolean') {
-            data.append(key, value ? '1' : '0');
-          } else if (typeof value === 'number') {
-            data.append(key, value.toString());
-          } else if (typeof value === 'object' && !(value instanceof File)) {
-            if (key === 'attributes') {
-              try {
-                if (typeof value === 'string') {
-                  const parsed = JSON.parse(value);
-                  if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-                    data.append(key, JSON.stringify(parsed));
-                  }
-                } else if (value && typeof value === 'object' && Object.keys(value).length > 0) {
-                  data.append(key, JSON.stringify(value));
+    if (!isNaN(discountedPrice) && discountedPrice >= price) {
+      alert('Discounted price must be less than regular price');
+      setIsSubmitting(false);
+      return;
+    }
+    
+    const data = new FormData();
+    
+    const appendField = (key: string, value: any) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (typeof value === 'boolean') {
+          data.append(key, value ? '1' : '0');
+        } else if (typeof value === 'number') {
+          data.append(key, value.toString());
+        } else if (typeof value === 'object' && !(value instanceof File)) {
+          // For attributes field, backend expects array, not JSON string
+          if (key === 'attributes') {
+            try {
+              let attributesValue = value;
+              
+              // If it's a string, try to parse it
+              if (typeof value === 'string') {
+                try {
+                  attributesValue = JSON.parse(value);
+                } catch (e) {
+                  console.warn('Invalid JSON string for attributes, sending as-is:', value);
+                  // If it's not valid JSON, send the string
+                  data.append(key, value);
+                  return;
                 }
-              } catch (e) {
-                console.warn('Invalid attributes format:', value);
               }
-            } else {
-              data.append(key, JSON.stringify(value));
+              
+              // If we have an array or object, convert to JSON for FormData
+              if (attributesValue && typeof attributesValue === 'object') {
+                // Check if it's empty
+                if (Object.keys(attributesValue).length === 0) {
+                  // Don't append empty attributes
+                  return;
+                }
+                // Convert to JSON string for FormData
+                data.append(key, JSON.stringify(attributesValue));
+              }
+            } catch (e) {
+              console.warn('Invalid attributes format:', value, e);
             }
-          } else if (typeof value === 'string') {
-            data.append(key, value.trim());
           } else {
-            data.append(key, value);
+            // For other objects, stringify them
+            data.append(key, JSON.stringify(value));
           }
-        }
-      };
-      
-      const hasValue = (value: any): boolean => {
-        if (value === undefined || value === null) return false;
-        if (typeof value === 'string') return value.trim() !== '';
-        if (typeof value === 'number') return !isNaN(value);
-        return true;
-      };
-      
-      // Required fields
-      appendField('name', formData.name);
-      appendField('description', formData.description);
-      appendField('price', price);
-      appendField('stock_quantity', parseInt(formData.stock_quantity) || 0);
-      appendField('category_id', parseInt(formData.category_id));
-      
-      // Optional fields
-      if (hasValue(formData.sku)) {
-        appendField('sku', formData.sku);
-      }
-      
-      if (hasValue(formData.discounted_price)) {
-        const discounted = parseFloat(formData.discounted_price);
-        if (!isNaN(discounted) && discounted > 0 && discounted < price) {
-          appendField('discounted_price', discounted);
+        } else if (typeof value === 'string') {
+          data.append(key, value.trim());
+        } else {
+          data.append(key, value);
         }
       }
-      
-      // Boolean fields
-      appendField('is_featured', formData.is_featured !== undefined ? formData.is_featured : false);
-      appendField('is_active', formData.is_active !== undefined ? formData.is_active : true);
-      
-      // Optional fields with validation
-      if (hasValue(formData.min_stock_threshold)) {
-        appendField('min_stock_threshold', parseInt(formData.min_stock_threshold));
+    };
+    
+    const hasValue = (value: any): boolean => {
+      if (value === undefined || value === null) return false;
+      if (typeof value === 'string') return value.trim() !== '';
+      if (typeof value === 'number') return !isNaN(value);
+      if (typeof value === 'object') {
+        // For objects/arrays, check if they're not empty
+        return Object.keys(value).length > 0;
       }
-      
-      if (hasValue(formData.barcode)) {
-        appendField('barcode', formData.barcode);
+      return true;
+    };
+    
+    // Required fields
+    appendField('name', formData.name);
+    appendField('description', formData.description);
+    appendField('price', price);
+    appendField('stock_quantity', parseInt(formData.stock_quantity) || 0);
+    appendField('category_id', parseInt(formData.category_id));
+    
+    // Optional fields
+    if (hasValue(formData.sku)) {
+      appendField('sku', formData.sku);
+    }
+    
+    if (hasValue(formData.discounted_price)) {
+      const discounted = parseFloat(formData.discounted_price);
+      if (!isNaN(discounted) && discounted > 0 && discounted < price) {
+        appendField('discounted_price', discounted);
       }
-      
-      if (hasValue(formData.weight)) {
-        appendField('weight', parseFloat(formData.weight));
+    }
+    
+    // Boolean fields
+    appendField('is_featured', formData.is_featured !== undefined ? formData.is_featured : false);
+    appendField('is_active', formData.is_active !== undefined ? formData.is_active : true);
+    
+    // Optional fields with validation
+    if (hasValue(formData.min_stock_threshold)) {
+      appendField('min_stock_threshold', parseInt(formData.min_stock_threshold));
+    }
+    
+    if (hasValue(formData.barcode)) {
+      appendField('barcode', formData.barcode);
+    }
+    
+    if (hasValue(formData.weight)) {
+      appendField('weight', parseFloat(formData.weight));
+    }
+    
+    if (hasValue(formData.unit)) {
+      appendField('unit', formData.unit);
+    }
+    
+    // Handle attributes - only if it has value
+    if (formData.attributes) {
+      // Check if attributes is not empty
+      const attributes = formData.attributes;
+      if (typeof attributes === 'string') {
+        if (attributes.trim() !== '' && attributes !== '{}' && attributes !== '[]') {
+          appendField('attributes', attributes);
+        }
+      } else if (typeof attributes === 'object') {
+        if (Object.keys(attributes).length > 0) {
+          appendField('attributes', attributes);
+        }
       }
-      
-      if (hasValue(formData.unit)) {
-        appendField('unit', formData.unit);
-      }
-      
-      if (formData.attributes && formData.attributes !== '{}') {
+    }
+    
+    if (hasValue(formData.vendor_id)) {
+      appendField('vendor_id', parseInt(formData.vendor_id));
+    }
+    
+    // Handle thumbnail (main image)
+    console.log('Processing thumbnail:', formData.thumbnail);
+    
+    if (formData.thumbnail) {
+      if (formData.thumbnail instanceof File) {
+        // New thumbnail file uploaded
+        const thumbnailFile = formData.thumbnail;
+        const validation = validateImage(thumbnailFile);
+        if (!validation.valid) {
+          alert(validation.message);
+          setIsSubmitting(false);
+          return;
+        }
+        
         try {
-          const attributes = typeof formData.attributes === 'string' 
-            ? JSON.parse(formData.attributes) 
-            : formData.attributes;
-          
-          if (attributes && typeof attributes === 'object' && Object.keys(attributes).length > 0) {
-            appendField('attributes', attributes);
-          }
-        } catch (e) {
-          console.warn('Invalid attributes format:', formData.attributes);
+          console.log('Compressing thumbnail...');
+          const compressedThumbnail = await compressImageFinal(thumbnailFile, 800, 2000);
+          data.append('thumbnail', compressedThumbnail);
+          setUploadProgress(20);
+          console.log('Thumbnail appended:', compressedThumbnail.name);
+        } catch (error) {
+          console.error('Failed to compress thumbnail:', error);
+          data.append('thumbnail', thumbnailFile);
+          setUploadProgress(20);
+          console.log('Original thumbnail appended:', thumbnailFile.name);
         }
-      }
-      
-      if (hasValue(formData.vendor_id)) {
-        appendField('vendor_id', parseInt(formData.vendor_id));
-      }
-      
-      // Handle thumbnail (main image)
-      console.log('Processing thumbnail:', formData.thumbnail);
-      
-      if (formData.thumbnail) {
-        if (formData.thumbnail instanceof File) {
-          // New thumbnail file uploaded
-          const thumbnailFile = formData.thumbnail;
+      } else if (typeof formData.thumbnail === 'string' && formData.thumbnail.startsWith('blob:')) {
+        // Blob URL from new image selection
+        try {
+          const response = await fetch(formData.thumbnail);
+          const blob = await response.blob();
+          const fileName = `thumbnail-${Date.now()}.jpg`;
+          const thumbnailFile = new File([blob], fileName, { type: 'image/jpeg' });
+          
           const validation = validateImage(thumbnailFile);
           if (!validation.valid) {
             alert(validation.message);
@@ -594,221 +647,196 @@ export default function ProductsPage() {
             return;
           }
           
-          try {
-            console.log('Compressing thumbnail...');
-            const compressedThumbnail = await compressImageFinal(thumbnailFile, 800, 2000);
-            data.append('thumbnail', compressedThumbnail);
-            setUploadProgress(20);
-            console.log('Thumbnail appended:', compressedThumbnail.name);
-          } catch (error) {
-            console.error('Failed to compress thumbnail:', error);
-            data.append('thumbnail', thumbnailFile);
-            setUploadProgress(20);
-            console.log('Original thumbnail appended:', thumbnailFile.name);
-          }
-        } else if (typeof formData.thumbnail === 'string' && formData.thumbnail.startsWith('blob:')) {
-          // Blob URL from new image selection
-          try {
-            const response = await fetch(formData.thumbnail);
-            const blob = await response.blob();
-            const fileName = `thumbnail-${Date.now()}.jpg`;
-            const thumbnailFile = new File([blob], fileName, { type: 'image/jpeg' });
-            
-            const validation = validateImage(thumbnailFile);
-            if (!validation.valid) {
-              alert(validation.message);
-              setIsSubmitting(false);
-              return;
-            }
-            
-            const compressedThumbnail = await compressImageFinal(thumbnailFile, 800, 2000);
-            data.append('thumbnail', compressedThumbnail);
-            setUploadProgress(20);
-          } catch (error) {
-            console.error('Failed to process thumbnail from blob:', error);
-            alert('Failed to process main image. Please try uploading again.');
-            setIsSubmitting(false);
-            return;
-          }
-        } else if (typeof formData.thumbnail === 'string' && selectedProduct) {
-          // For UPDATE: Check if it's the same as existing
-          const existingThumbnail = selectedProduct.thumbnail || '';
-          const newThumbnail = formData.thumbnail;
-          
-          // Only update if it's a new thumbnail (contains http or blob)
-          if (newThumbnail.includes('http') || newThumbnail.includes('blob:')) {
-            console.log('New thumbnail URL detected for update:', newThumbnail);
-          } else {
-            console.log('Using existing thumbnail path for update');
-            data.append('thumbnail', newThumbnail);
-          }
+          const compressedThumbnail = await compressImageFinal(thumbnailFile, 800, 2000);
+          data.append('thumbnail', compressedThumbnail);
+          setUploadProgress(20);
+        } catch (error) {
+          console.error('Failed to process thumbnail from blob:', error);
+          alert('Failed to process main image. Please try uploading again.');
+          setIsSubmitting(false);
+          return;
         }
-      } else if (selectedProduct && selectedProduct.thumbnail) {
-        // Keep existing thumbnail for updates
-        data.append('thumbnail', selectedProduct.thumbnail);
-      }
-      
-      // Handle gallery images
-      console.log('Processing gallery:', formData.gallery);
-      
-      if (formData.gallery && Array.isArray(formData.gallery)) {
-        // Separate existing paths from new files
-        const existingPaths: string[] = [];
-        const newFiles: File[] = [];
+      } else if (typeof formData.thumbnail === 'string' && selectedProduct) {
+        // For UPDATE: Check if it's the same as existing
+        const existingThumbnail = selectedProduct.thumbnail || '';
+        const newThumbnail = formData.thumbnail;
         
-        formData.gallery.forEach((item: any) => {
-          if (item instanceof File) {
-            newFiles.push(item);
-          } else if (typeof item === 'string' && item.startsWith('blob:')) {
-            // Handle blob URLs (convert to File)
-            // This should be done in ProductForm before submission
-            console.warn('Blob URL in gallery array, should be converted to File in ProductForm');
-          } else if (typeof item === 'string' && item.includes('products/gallery/')) {
-            existingPaths.push(item);
-          }
-        });
-        
-        // Append existing paths as keep_gallery_images
-        existingPaths.forEach((path, index) => {
-          data.append(`keep_gallery_images[${index}]`, path);
-        });
-        
-        // Append new gallery files
-        for (let i = 0; i < newFiles.length; i++) {
-          const galleryFile = newFiles[i];
-          const validation = validateImage(galleryFile);
-          if (!validation.valid) {
-            console.warn(`Gallery image ${i} validation failed:`, validation.message);
-            continue;
-          }
-          
-          try {
-            const compressedGallery = await compressImageFinal(galleryFile, 1200, 2000);
-            data.append('gallery[]', compressedGallery);
-            console.log(`Gallery image ${i} appended:`, compressedGallery.name);
-          } catch (error) {
-            console.error(`Failed to compress gallery image ${i}:`, error);
-            data.append('gallery[]', galleryFile);
-            console.log(`Original gallery image ${i} appended:`, galleryFile.name);
-          }
-          
-          const progress = 20 + ((i + 1) / newFiles.length) * 50;
-          setUploadProgress(progress);
-        }
-      }
-      
-      // For CREATE, thumbnail is required
-      if (!selectedProduct && !formData.thumbnail) {
-        alert('Please upload a main product image (thumbnail).');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      console.log('FormData entries summary:');
-      for (let [key, value] of (data as any).entries()) {
-        if (value instanceof File) {
-          console.log(`${key}: File - ${value.name} (${(value.size / 1024).toFixed(2)}KB)`);
-        } else if (typeof value === 'string' && value.length > 100) {
-          console.log(`${key}: [String length ${value.length}]`);
+        // Only update if it's a new thumbnail (contains http or blob)
+        if (newThumbnail.includes('http') || newThumbnail.includes('blob:')) {
+          console.log('New thumbnail URL detected for update:', newThumbnail);
         } else {
-          console.log(`${key}:`, value);
+          console.log('Using existing thumbnail path for update');
+          data.append('thumbnail', newThumbnail);
         }
       }
-      
-      setUploadProgress(80);
-      
-      let response;
-      const headers = { 
-        'Content-Type': 'multipart/form-data',
-        'Accept': 'application/json'
-      };
-      
-      if (selectedProduct) {
-        // Update existing product
-        console.log('Sending update request for product:', selectedProduct.id);
-        
-        response = await api.put(`/admin/products/${selectedProduct.id}`, data, {
-          headers,
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-            setUploadProgress(80 + (percentCompleted * 0.2));
-          }
-        }).catch(error => {
-          console.log('Update error:', error);
-          console.log('Update error response:', error.response?.data);
-          throw error;
-        });
-        
-        console.log('Update response:', response.data);
-        alert('Product updated successfully');
-      } else {
-        // Create new product
-        console.log('Sending create request');
-        
-        response = await api.post('/admin/products', data, {
-          headers,
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-            setUploadProgress(80 + (percentCompleted * 0.2));
-          }
-        }).catch(error => {
-          console.log('Create error:', error);
-          console.log('Create error response:', error.response?.data);
-          throw error;
-        });
-        
-        console.log('Create response:', response.data);
-        alert('Product created successfully');
-      }
-      
-      setUploadProgress(100);
-      setTimeout(() => {
-        setShowForm(false);
-        setSelectedProduct(null);
-        fetchProducts(pagination.currentPage, showAll);
-      }, 500);
-      
-    } catch (error: any) {
-      console.error('Form submission error:', error);
-      console.error('Error response data:', error.response?.data);
-      
-      if (error.response?.status === 413) {
-        const errorMessage = 'The data you are trying to upload is too large. Please reduce image sizes or upload fewer images.';
-        alert(errorMessage);
-        setError(errorMessage);
-      } else if (error.response?.status === 422) {
-        const validationErrors = error.response.data.errors;
-        console.log('Full validation errors:', validationErrors);
-        
-        let errorMessage = 'Please fix the following errors:\n\n';
-        
-        if (validationErrors) {
-          Object.keys(validationErrors).forEach(field => {
-            if (Array.isArray(validationErrors[field])) {
-              errorMessage += `• ${field}: ${validationErrors[field].join(', ')}\n`;
-            }
-          });
-        } else {
-          errorMessage = error.response.data.message || 'Validation failed';
-        }
-        
-        alert(errorMessage);
-        setError(errorMessage);
-      } else if (error.response?.data?.message) {
-        alert(error.response.data.message);
-        setError(error.response.data.message);
-      } else if (error.message) {
-        alert(error.message);
-        setError(error.message);
-      } else {
-        alert('Failed to save product');
-        setError('Failed to save product');
-      }
-    } finally {
-      setIsSubmitting(false);
-      setTimeout(() => setUploadProgress(0), 1000);
+    } else if (selectedProduct && selectedProduct.thumbnail) {
+      // Keep existing thumbnail for updates
+      data.append('thumbnail', selectedProduct.thumbnail);
     }
-  };
+    
+    // Handle gallery images
+    console.log('Processing gallery:', formData.gallery);
+    
+    if (formData.gallery && Array.isArray(formData.gallery)) {
+      // Separate existing paths from new files
+      const existingPaths: string[] = [];
+      const newFiles: File[] = [];
+      
+      formData.gallery.forEach((item: any) => {
+        if (item instanceof File) {
+          newFiles.push(item);
+        } else if (typeof item === 'string' && item.startsWith('blob:')) {
+          // Handle blob URLs (convert to File)
+          console.warn('Blob URL in gallery array, should be converted to File in ProductForm');
+        } else if (typeof item === 'string' && item.includes('products/gallery/')) {
+          existingPaths.push(item);
+        }
+      });
+      
+      // Append existing paths as keep_gallery_images
+      existingPaths.forEach((path, index) => {
+        data.append(`keep_gallery_images[${index}]`, path);
+      });
+      
+      // Append new gallery files
+      for (let i = 0; i < newFiles.length; i++) {
+        const galleryFile = newFiles[i];
+        const validation = validateImage(galleryFile);
+        if (!validation.valid) {
+          console.warn(`Gallery image ${i} validation failed:`, validation.message);
+          continue;
+        }
+        
+        try {
+          const compressedGallery = await compressImageFinal(galleryFile, 1200, 2000);
+          data.append('gallery[]', compressedGallery);
+          console.log(`Gallery image ${i} appended:`, compressedGallery.name);
+        } catch (error) {
+          console.error(`Failed to compress gallery image ${i}:`, error);
+          data.append('gallery[]', galleryFile);
+          console.log(`Original gallery image ${i} appended:`, galleryFile.name);
+        }
+        
+        const progress = 20 + ((i + 1) / newFiles.length) * 50;
+        setUploadProgress(progress);
+      }
+    }
+    
+    // For CREATE, thumbnail is required
+    if (!selectedProduct && !formData.thumbnail) {
+      alert('Please upload a main product image (thumbnail).');
+      setIsSubmitting(false);
+      return;
+    }
+    
+    // Debug: Log FormData entries
+    console.log('FormData entries summary:');
+    for (let [key, value] of (data as any).entries()) {
+      if (value instanceof File) {
+        console.log(`${key}: File - ${value.name} (${(value.size / 1024).toFixed(2)}KB)`);
+      } else if (key === 'attributes' && typeof value === 'string') {
+        console.log(`${key}: JSON string - ${value.substring(0, 100)}...`);
+      } else if (typeof value === 'string' && value.length > 100) {
+        console.log(`${key}: [String length ${value.length}]`);
+      } else {
+        console.log(`${key}:`, value);
+      }
+    }
+    
+    setUploadProgress(80);
+    
+    let response;
+    const headers = { 
+      'Content-Type': 'multipart/form-data',
+      'Accept': 'application/json'
+    };
+    
+    if (selectedProduct) {
+      // Update existing product
+      console.log('Sending update request for product:', selectedProduct.id);
+      
+      response = await api.put(`/admin/products/${selectedProduct.id}`, data, {
+        headers,
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+          setUploadProgress(80 + (percentCompleted * 0.2));
+        }
+      }).catch(error => {
+        console.log('Update error:', error);
+        console.log('Update error response:', error.response?.data);
+        throw error;
+      });
+      
+      console.log('Update response:', response.data);
+      alert('Product updated successfully');
+    } else {
+      // Create new product
+      console.log('Sending create request');
+      
+      response = await api.post('/admin/products', data, {
+        headers,
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+          setUploadProgress(80 + (percentCompleted * 0.2));
+        }
+      }).catch(error => {
+        console.log('Create error:', error);
+        console.log('Create error response:', error.response?.data);
+        throw error;
+      });
+      
+      console.log('Create response:', response.data);
+      alert('Product created successfully');
+    }
+    
+    setUploadProgress(100);
+    setTimeout(() => {
+      setShowForm(false);
+      setSelectedProduct(null);
+      fetchProducts(pagination.currentPage, showAll);
+    }, 500);
+    
+  } catch (error: any) {
+    console.error('Form submission error:', error);
+    console.error('Error response data:', error.response?.data);
+    
+    if (error.response?.status === 413) {
+      const errorMessage = 'The data you are trying to upload is too large. Please reduce image sizes or upload fewer images.';
+      alert(errorMessage);
+      setError(errorMessage);
+    } else if (error.response?.status === 422) {
+      const validationErrors = error.response.data.errors;
+      console.log('Full validation errors:', validationErrors);
+      
+      let errorMessage = 'Please fix the following errors:\n\n';
+      
+      if (validationErrors) {
+        Object.keys(validationErrors).forEach(field => {
+          if (Array.isArray(validationErrors[field])) {
+            errorMessage += `• ${field}: ${validationErrors[field].join(', ')}\n`;
+          }
+        });
+      } else {
+        errorMessage = error.response.data.message || 'Validation failed';
+      }
+      
+      alert(errorMessage);
+      setError(errorMessage);
+    } else if (error.response?.data?.message) {
+      alert(error.response.data.message);
+      setError(error.response.data.message);
+    } else if (error.message) {
+      alert(error.message);
+      setError(error.message);
+    } else {
+      alert('Failed to save product');
+      setError('Failed to save product');
+    }
+  } finally {
+    setIsSubmitting(false);
+    setTimeout(() => setUploadProgress(0), 1000);
+  }
+};
 
   const handleBulkUpload = async (file: File) => {
     try {
