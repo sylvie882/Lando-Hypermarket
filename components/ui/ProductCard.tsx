@@ -15,6 +15,17 @@ interface ProductCardProps {
   showPersonalizedPrice?: boolean;
 }
 
+interface PersonalizedPrice {
+  original_price: number;
+  final_price: number;
+  is_personalized_offer: boolean;
+  discount_type?: string;
+  discount_value?: number;
+  offer_name?: string;
+  valid_until?: string;
+  discount_rules_applied?: any[];
+}
+
 const ProductCard: React.FC<ProductCardProps> = ({ 
   product, 
   showActions = true,
@@ -28,27 +39,31 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [canReview, setCanReview] = useState(false);
   const [userReview, setUserReview] = useState<any>(null);
 
-  // Personalized Price Logic - FIXED TYPE ISSUES
-  const personalizedPrice = product.personalized_price || null;
+  // Personalized Price Logic - FIXED TYPE SAFE VERSION
+  const personalizedPrice: PersonalizedPrice | null = product.personalized_pricing || null;
+  
+  // Safely extract values with fallbacks
   const hasPersonalizedOffer = showPersonalizedPrice && 
     personalizedPrice?.is_personalized_offer === true &&
-    personalizedPrice.final_price < (product.price || 0);
+    personalizedPrice.final_price < (personalizedPrice.original_price || product.price || 0);
   
   // Use personalized price if available, otherwise use regular pricing
-  const finalPrice = hasPersonalizedOffer 
+  const finalPrice = hasPersonalizedOffer && personalizedPrice
     ? personalizedPrice.final_price 
-    : (product.final_price || product.discounted_price || product.price || 0);
+    : product.final_price || product.discounted_price || product.price || 0;
   
-  // Safely convert prices to numbers
-  const price = typeof product.price === 'number' ? product.price : 
-                product.price ? parseFloat(String(product.price)) : 0;
+  // Safely convert prices to numbers with proper type checking
+  const price = product.price ? parseFloat(String(product.price)) : 0;
   
-  const finalPriceNum = typeof finalPrice === 'number' ? finalPrice : 
-                        finalPrice ? parseFloat(String(finalPrice)) : 0;
+  const finalPriceNum = finalPrice ? parseFloat(String(finalPrice)) : 0;
   
   // Calculate discount percentage based on original price vs final price
-  const discountPercentage = price > 0 && finalPriceNum < price
-    ? Math.round(((price - finalPriceNum) / price) * 100)
+  const originalPriceForDiscount = hasPersonalizedOffer && personalizedPrice
+    ? personalizedPrice.original_price
+    : price;
+  
+  const discountPercentage = originalPriceForDiscount > 0 && finalPriceNum < originalPriceForDiscount
+    ? Math.round(((originalPriceForDiscount - finalPriceNum) / originalPriceForDiscount) * 100)
     : 0;
 
   // Personalized offer discount percentage (if different from regular discount)
@@ -56,22 +71,27 @@ const ProductCard: React.FC<ProductCardProps> = ({
     ? Math.round(((personalizedPrice.original_price - personalizedPrice.final_price) / personalizedPrice.original_price) * 100)
     : 0;
 
-  const stockQuantity = typeof product.stock_quantity === 'number' 
-    ? product.stock_quantity 
-    : parseInt(String(product.stock_quantity || 0));
+  // Safely handle stock quantity
+  const stockQuantity = product.stock_quantity ? 
+    (typeof product.stock_quantity === 'number' 
+      ? product.stock_quantity 
+      : parseInt(String(product.stock_quantity)))
+    : 0;
   
-  const isInStock = product.is_in_stock !== undefined ? 
-                   product.is_in_stock : 
-                   stockQuantity > 0;
+  const isInStock = product.is_in_stock !== undefined 
+    ? Boolean(product.is_in_stock)
+    : stockQuantity > 0;
 
   // Safely handle rating - convert to number
-  const rating = typeof product.rating === 'string' 
-    ? parseFloat(product.rating) 
-    : typeof product.rating === 'number' 
-      ? product.rating 
-      : 0;
+  const rating = product.rating 
+    ? (typeof product.rating === 'string' 
+        ? parseFloat(product.rating) 
+        : typeof product.rating === 'number' 
+          ? product.rating 
+          : 0)
+    : 0;
   
-  const displayRating = isNaN(rating) ? 0 : rating;
+  const displayRating = isNaN(rating) ? 0 : Math.min(Math.max(rating, 0), 5);
 
   // Check if user can review this product
   useEffect(() => {
@@ -127,10 +147,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  // Format currency in Kenyan Shillings - FIXED: Handle non-number values
+  // Format currency in Kenyan Shillings
   const formatKSH = (amount: any) => {
-    const numAmount = typeof amount === 'number' ? amount : 
-                     amount ? parseFloat(String(amount)) : 0;
+    const numAmount = amount ? parseFloat(String(amount)) : 0;
     
     if (isNaN(numAmount) || numAmount <= 0) {
       return 'KSh 0';
@@ -144,53 +163,40 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }).format(numAmount);
   };
 
-  // Get image URL - SIMPLIFIED VERSION
+  // Get image URL with cache busting
   const getImageUrl = () => {
     // Base URL for all images
     const baseUrl = 'https://api.hypermarket.co.ke';
     
+    // Add cache busting timestamp
+    const timestamp = product.updated_at ? new Date(product.updated_at).getTime() : Date.now();
+    
     // First, try main_image attribute (from Laravel model)
     if (product.main_image) {
-      return product.main_image.startsWith('http') ? 
-             product.main_image : 
-             `${baseUrl}${product.main_image.startsWith('/') ? '' : '/'}${product.main_image}`;
+      const url = product.main_image.startsWith('http') 
+        ? product.main_image 
+        : `${baseUrl}${product.main_image.startsWith('/') ? '' : '/'}${product.main_image}`;
+      
+      return `${url}${url.includes('?') ? '&' : '?'}t=${timestamp}`;
     }
     
     // Then try thumbnail
     if (product.thumbnail) {
-      if (product.thumbnail.startsWith('http')) {
-        return product.thumbnail;
+      let url = product.thumbnail;
+      if (!url.startsWith('http')) {
+        if (url.startsWith('/storage/')) {
+          url = `${baseUrl}${url}`;
+        } else if (url.startsWith('storage/')) {
+          url = `${baseUrl}/${url}`;
+        } else {
+          url = `${baseUrl}/storage/${url}`;
+        }
       }
-      // Construct full URL for storage images
-      if (product.thumbnail.startsWith('/storage/')) {
-        return `${baseUrl}${product.thumbnail}`;
-      }
-      if (product.thumbnail.startsWith('storage/')) {
-        return `${baseUrl}/${product.thumbnail}`;
-      }
-      return `${baseUrl}/storage/${product.thumbnail}`;
-    }
-    
-    // Then try gallery_urls
-    if (product.gallery_urls && Array.isArray(product.gallery_urls) && product.gallery_urls.length > 0) {
-      const firstImage = product.gallery_urls[0];
-      if (firstImage.startsWith('http')) {
-        return firstImage;
-      }
-      return `${baseUrl}/storage/${firstImage}`;
-    }
-    
-    // Then try images array
-    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-      const firstImage = product.images[0];
-      if (firstImage.startsWith('http')) {
-        return firstImage;
-      }
-      return `${baseUrl}/storage/${firstImage}`;
+      return `${url}${url.includes('?') ? '&' : '?'}t=${timestamp}`;
     }
     
     // Fallback to default product image
-    return 'https://api.hypermarket.co.ke/storage/default-product.jpg';
+    return `https://api.hypermarket.co.ke/storage/default-product.jpg?t=${timestamp}`;
   };
 
   const imageUrl = getImageUrl();
@@ -334,14 +340,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <div className="relative w-full" style={{ paddingBottom: '75%' }}>
             <img
               src={imageUrl}
-              alt={product.name}
+              alt={product.name || 'Product image'}
               className="absolute inset-0 object-cover w-full h-full group-hover:scale-110 transition-transform duration-500"
               onError={(e) => {
-                e.currentTarget.src = 'https://api.hypermarket.co.ke/storage/default-product.jpg';
+                e.currentTarget.src = `https://api.hypermarket.co.ke/storage/default-product.jpg?t=${Date.now()}`;
               }}
             />
             
-            {/* Personalized Offer Badge - Only show when showPersonalizedPrice is true */}
+            {/* Personalized Offer Badge */}
             {hasPersonalizedOffer && personalizedDiscountPercentage > 0 && (
               <div className="absolute top-3 left-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-xl z-10 flex items-center gap-1">
                 <Sparkles size={12} />
@@ -349,7 +355,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               </div>
             )}
             
-            {/* Regular Discount Badge - Only show if not showing personalized offer */}
+            {/* Regular Discount Badge */}
             {!hasPersonalizedOffer && discountPercentage > 0 && (
               <div className="absolute top-3 left-3 bg-gradient-to-r from-red-500 to-orange-500 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-xl z-10">
                 -{discountPercentage}% OFF
@@ -528,7 +534,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   <div className="text-xs text-purple-600 font-medium mt-1 flex items-center gap-1">
                     <Sparkles size={10} />
                     Personalized Price
-                    {personalizedPrice?.offer_name && (
+                    {personalizedPrice.offer_name && (
                       <span className="text-xs text-gray-600 ml-1">({personalizedPrice.offer_name})</span>
                     )}
                   </div>
