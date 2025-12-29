@@ -651,11 +651,14 @@ const handleFormSubmit = async (formData: any) => {
     };
     
     if (selectedProduct) {
-      // For updates - use PUT directly
+      // FIX: For updates, use POST with _method=PUT for file uploads
       console.log('Sending update request for product:', selectedProduct.id);
       
-      // IMPORTANT: The backend expects PUT method, not POST with _method=PUT
-      response = await api.put(`/admin/products/${selectedProduct.id}`, data, {
+      // Add _method=PUT to FormData
+      data.append('_method', 'PUT');
+      
+      // Use POST instead of PUT for file uploads
+      response = await api.post(`/admin/products/${selectedProduct.id}`, data, {
         headers,
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
@@ -670,7 +673,7 @@ const handleFormSubmit = async (formData: any) => {
       console.log('Update response:', response.data);
       alert('Product updated successfully');
     } else {
-      // For creates
+      // For creates - use POST
       console.log('Sending create request');
       
       response = await api.post('/admin/products', data, {
@@ -737,7 +740,6 @@ const handleFormSubmit = async (formData: any) => {
     setTimeout(() => setUploadProgress(0), 1000);
   }
 };
-
 
   const handleBulkUpload = async (file: File) => {
     try {
