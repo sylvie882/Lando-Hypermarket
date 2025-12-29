@@ -292,121 +292,130 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     return Object.keys(newErrors).length === 0;
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setErrors({});
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrors({});
 
-  if (!validateForm()) {
-    setLoading(false);
-    return;
-  }
+    if (!validateForm()) {
+      setLoading(false);
+      return;
+    }
 
-  try {
-    // Create FormData for file uploads
-    const formData = new FormData();
-    
-    // Append all form values - SIMPLE DIRECT APPROACH
-    formData.append('name', formValues.name.trim());
-    formData.append('description', formValues.description.trim());
-    formData.append('price', parseFloat(formValues.price || '0').toString());
-    
-    if (formValues.discounted_price) {
-      const discounted = parseFloat(formValues.discounted_price);
-      if (!isNaN(discounted) && discounted > 0) {
-        formData.append('discounted_price', discounted.toString());
-      }
-    }
-    
-    formData.append('stock_quantity', parseInt(formValues.stock_quantity || '0').toString());
-    formData.append('min_stock_threshold', parseInt(formValues.min_stock_threshold || '10').toString());
-    formData.append('category_id', parseInt(formValues.category_id || '0').toString());
-    
-    if (formValues.vendor_id) {
-      formData.append('vendor_id', parseInt(formValues.vendor_id || '0').toString());
-    }
-    
-    formData.append('sku', formValues.sku.trim());
-    formData.append('barcode', formValues.barcode.trim());
-    
-    if (formValues.weight) {
-      formData.append('weight', parseFloat(formValues.weight || '0').toString());
-    }
-    
-    formData.append('unit', formValues.unit);
-    formData.append('is_featured', formValues.is_featured ? '1' : '0');
-    formData.append('is_active', formValues.is_active ? '1' : '0');
-    
-    // Handle attributes - always send as JSON string
     try {
-      const attributes = formValues.attributes && formValues.attributes.trim() !== '' 
-        ? JSON.parse(formValues.attributes) 
-        : {};
-      formData.append('attributes', JSON.stringify(attributes));
-    } catch (e) {
-      console.warn('Invalid JSON for attributes, using empty object');
-      formData.append('attributes', '{}');
-    }
-
-    // Handle thumbnail
-    if (thumbnail instanceof File) {
-      console.log('Appending new thumbnail file:', thumbnail.name);
-      formData.append('thumbnail', thumbnail);
-    } else if (thumbnail === null && product) {
-      // Thumbnail was removed - send empty string
-      formData.append('thumbnail', '');
-    } else if (typeof thumbnail === 'string') {
-      // Keep existing thumbnail path
-      formData.append('thumbnail', thumbnail);
-    }
-
-    // Handle gallery images - new files
-    gallery.forEach((item, index) => {
-      if (item instanceof File) {
-        formData.append(`gallery[]`, item); // Use array notation for Laravel
+      // Create FormData for file uploads
+      const formData = new FormData();
+      
+      // Append all form values - SIMPLE DIRECT APPROACH
+      formData.append('name', formValues.name.trim());
+      formData.append('description', formValues.description.trim());
+      formData.append('price', parseFloat(formValues.price || '0').toString());
+      
+      if (formValues.discounted_price) {
+        const discounted = parseFloat(formValues.discounted_price);
+        if (!isNaN(discounted) && discounted > 0) {
+          formData.append('discounted_price', discounted.toString());
+        }
       }
-    });
-
-    // Handle existing gallery images
-    gallery.forEach((item, index) => {
-      if (typeof item === 'string' && item) {
-        formData.append(`existing_gallery[]`, item);
+      
+      formData.append('stock_quantity', parseInt(formValues.stock_quantity || '0').toString());
+      formData.append('min_stock_threshold', parseInt(formValues.min_stock_threshold || '10').toString());
+      formData.append('category_id', parseInt(formValues.category_id || '0').toString());
+      
+      if (formValues.vendor_id) {
+        formData.append('vendor_id', parseInt(formValues.vendor_id || '0').toString());
       }
-    });
+      
+      formData.append('sku', formValues.sku.trim());
+      formData.append('barcode', formValues.barcode.trim());
+      
+      if (formValues.weight) {
+        formData.append('weight', parseFloat(formValues.weight || '0').toString());
+      }
+      
+      formData.append('unit', formValues.unit);
+      formData.append('is_featured', formValues.is_featured ? '1' : '0');
+      formData.append('is_active', formValues.is_active ? '1' : '0');
+      
+      // FIX FOR ATTRIBUTES FIELD: Send as valid JSON string
+      try {
+        let attributesValue = '{}'; // Default to empty object
+        
+        if (formValues.attributes && formValues.attributes.trim() !== '') {
+          // Try to parse the JSON to validate it
+          const parsed = JSON.parse(formValues.attributes);
+          // Re-stringify to ensure valid JSON format
+          attributesValue = JSON.stringify(parsed);
+        }
+        
+        console.log('Attributes value being sent:', attributesValue);
+        formData.append('attributes', attributesValue);
+      } catch (e) {
+        console.warn('Invalid JSON for attributes, using empty object');
+        formData.append('attributes', '{}');
+      }
 
-    // Handle gallery deletions
-    if (galleryToDelete.length > 0) {
-      galleryToDelete.forEach(path => {
-        formData.append(`delete_gallery[]`, path);
+      // Handle thumbnail
+      if (thumbnail instanceof File) {
+        console.log('Appending new thumbnail file:', thumbnail.name);
+        formData.append('thumbnail', thumbnail);
+      } else if (thumbnail === null && product) {
+        // Thumbnail was removed - send empty string
+        formData.append('thumbnail', '');
+      } else if (typeof thumbnail === 'string') {
+        // Keep existing thumbnail path
+        formData.append('thumbnail', thumbnail);
+      }
+
+      // Handle gallery images - new files
+      gallery.forEach((item, index) => {
+        if (item instanceof File) {
+          formData.append(`gallery[]`, item); // Use array notation for Laravel
+        }
       });
-    }
 
-    // For Laravel PUT method with FormData
-    if (product) {
-      formData.append('_method', 'PUT');
-    }
+      // Handle existing gallery images
+      gallery.forEach((item, index) => {
+        if (typeof item === 'string' && item) {
+          formData.append(`existing_gallery[]`, item);
+        }
+      });
 
-    // Debug logging - VERBOSE
-    console.log('=== FINAL FormData from ProductForm ===');
-    for (let [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        console.log(`${key}: File - ${value.name} (${value.size} bytes, ${value.type})`);
-      } else if (typeof value === 'string' && value.length > 100) {
-        console.log(`${key}: "${value.substring(0, 50)}..." [${value.length} chars]`);
-      } else {
-        console.log(`${key}: "${value}"`);
+      // Handle gallery deletions
+      if (galleryToDelete.length > 0) {
+        galleryToDelete.forEach(path => {
+          formData.append(`delete_gallery[]`, path);
+        });
       }
-    }
 
-    // Call the onSubmit callback with FormData
-    onSubmit(formData);
-  } catch (error) {
-    console.error('Form preparation error:', error);
-    setErrors({ form: 'Failed to prepare form data' });
-  } finally {
-    setLoading(false);
-  }
-};
+      // For Laravel PUT method with FormData
+      if (product) {
+        formData.append('_method', 'PUT');
+      }
+
+      // Debug logging - VERBOSE
+      console.log('=== FINAL FormData from ProductForm ===');
+      for (let [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          console.log(`${key}: File - ${value.name} (${value.size} bytes, ${value.type})`);
+        } else if (key === 'attributes') {
+          console.log(`${key}: JSON string - ${value}`);
+        } else if (typeof value === 'string' && value.length > 100) {
+          console.log(`${key}: "${value.substring(0, 50)}..." [${value.length} chars]`);
+        } else {
+          console.log(`${key}: "${value}"`);
+        }
+      }
+
+      // Call the onSubmit callback with FormData
+      onSubmit(formData);
+    } catch (error) {
+      console.error('Form preparation error:', error);
+      setErrors({ form: 'Failed to prepare form data' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, type: 'thumbnail' | 'gallery') => {
     e.currentTarget.src = '/images/default-product.png';
