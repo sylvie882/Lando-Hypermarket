@@ -46,38 +46,29 @@ export default function ProductTable({ products, onEdit, onDelete }: ProductTabl
     }
   };
 
-  // FIXED: Helper function to safely get image URL
-  const getImageUrl = (image: string | null | undefined): string => {
-    if (!image) return '/images/placeholder-product.jpg';
-    
-    // If it's already a full URL, return it
-    if (image.startsWith('http://') || image.startsWith('https://')) {
-      return image;
+  // FIXED: Use the main_image attribute from Laravel which already has full URL
+  const getImageUrl = (product: Product): string => {
+    // Check if product has main_image attribute (from Laravel's getMainImageAttribute())
+    if (product.main_image) {
+      return product.main_image;
     }
     
-    // If it's a data URL (base64), return it
-    if (image.startsWith('data:')) {
-      return image;
+    // Fallback to thumbnail with full URL construction
+    if (!product.thumbnail) {
+      return 'https://api.hypermarket.co.ke/storage/default-product.jpg';
     }
     
-    // If it starts with /storage/, remove the slash
-    if (image.startsWith('/storage/')) {
-      const cleanPath = image.substring(1); // Remove leading slash
-      return `https://api.hypermarket.co.ke${cleanPath}`;
+    // If thumbnail is already a full URL
+    if (product.thumbnail.startsWith('http://') || product.thumbnail.startsWith('https://')) {
+      return product.thumbnail;
     }
     
-    // If it starts with storage/, add the full URL
-    if (image.startsWith('storage/')) {
-      return `https://api.hypermarket.co.ke/${image}`;
-    }
+    // Construct full URL
+    const baseUrl = 'https://api.hypermarket.co.ke';
+    const cleanPath = product.thumbnail.startsWith('/') ? 
+      product.thumbnail.substring(1) : product.thumbnail;
     
-    // If it's a relative path without storage/, assume it's in storage
-    if (image.startsWith('/')) {
-      return `https://api.hypermarket.co.ke/storage${image}`;
-    }
-    
-    // Default: assume it's a relative path in storage
-    return `https://api.hypermarket.co.ke/storage/${image}`;
+    return `${baseUrl}/storage/${cleanPath}`;
   };
 
   return (
@@ -120,14 +111,14 @@ export default function ProductTable({ products, onEdit, onDelete }: ProductTabl
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="h-10 w-10 flex-shrink-0">
-                      {/* FIXED: Always show img tag with proper URL */}
+                      {/* UPDATED: Use getImageUrl with product object */}
                       <img 
-                        src={getImageUrl(product.thumbnail)}
+                        src={getImageUrl(product)}
                         alt={product.name}
                         className="h-10 w-10 rounded object-cover border border-gray-200"
                         onError={(e) => {
-                          // Fallback to placeholder if image fails to load
-                          e.currentTarget.src = '/images/placeholder-product.jpg';
+                          // Fallback to default if image fails to load
+                          e.currentTarget.src = 'https://api.hypermarket.co.ke/storage/default-product.jpg';
                           e.currentTarget.classList.add('bg-gray-100');
                         }}
                       />
@@ -186,13 +177,13 @@ export default function ProductTable({ products, onEdit, onDelete }: ProductTabl
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex flex-col gap-1">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      (product as any).is_active !== false
+                      product.is_active !== false
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {(product as any).is_active !== false ? 'Active' : 'Inactive'}
+                      {product.is_active !== false ? 'Active' : 'Inactive'}
                     </span>
-                    {(product as any).is_featured && (
+                    {product.is_featured && (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
                         Featured
                       </span>

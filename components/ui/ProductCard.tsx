@@ -12,13 +12,13 @@ import ReviewModal from '../ReviewModal';
 interface ProductCardProps {
   product: Product;
   showActions?: boolean;
-  showPersonalizedPrice?: boolean; // Add this line
+  showPersonalizedPrice?: boolean;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ 
   product, 
   showActions = true,
-  showPersonalizedPrice = false // Add this line
+  showPersonalizedPrice = false
 }) => {
   const { isAuthenticated, user } = useAuth();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -28,19 +28,23 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [canReview, setCanReview] = useState(false);
   const [userReview, setUserReview] = useState<any>(null);
 
-  // Personalized Price Logic
-  const personalizedPrice = product.personalized_price;
+  // Personalized Price Logic - FIXED TYPE ISSUES
+  const personalizedPrice = product.personalized_price || null;
   const hasPersonalizedOffer = showPersonalizedPrice && 
     personalizedPrice?.is_personalized_offer === true &&
-    personalizedPrice.final_price < product.price;
+    personalizedPrice.final_price < (product.price || 0);
   
   // Use personalized price if available, otherwise use regular pricing
   const finalPrice = hasPersonalizedOffer 
     ? personalizedPrice.final_price 
-    : (product.final_price || product.discounted_price || product.price);
+    : (product.final_price || product.discounted_price || product.price || 0);
   
-  const price = typeof product.price === 'number' ? product.price : parseFloat(String(product.price || 0));
-  const finalPriceNum = typeof finalPrice === 'number' ? finalPrice : parseFloat(String(finalPrice || 0));
+  // Safely convert prices to numbers
+  const price = typeof product.price === 'number' ? product.price : 
+                product.price ? parseFloat(String(product.price)) : 0;
+  
+  const finalPriceNum = typeof finalPrice === 'number' ? finalPrice : 
+                        finalPrice ? parseFloat(String(finalPrice)) : 0;
   
   // Calculate discount percentage based on original price vs final price
   const discountPercentage = price > 0 && finalPriceNum < price
@@ -55,7 +59,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const stockQuantity = typeof product.stock_quantity === 'number' 
     ? product.stock_quantity 
     : parseInt(String(product.stock_quantity || 0));
-  const isInStock = product.is_in_stock !== undefined ? product.is_in_stock : stockQuantity > 0;
+  
+  const isInStock = product.is_in_stock !== undefined ? 
+                   product.is_in_stock : 
+                   stockQuantity > 0;
 
   // Safely handle rating - convert to number
   const rating = typeof product.rating === 'string' 
@@ -77,7 +84,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     try {
       // Check if user has already reviewed this product
       const myReviewsResponse = await api.reviews.getMyReviews();
-      const myReviews = myReviewsResponse.data;
+      const myReviews = myReviewsResponse.data || [];
       
       const existingReview = myReviews.find((review: any) => 
         review.product_id === product.id || review.product?.id === product.id
@@ -95,11 +102,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
       
       // Handle different response structures
       let ordersData = [];
-      if (ordersResponse.data.data && Array.isArray(ordersResponse.data.data)) {
+      if (ordersResponse.data && ordersResponse.data.data && Array.isArray(ordersResponse.data.data)) {
         ordersData = ordersResponse.data.data;
-      } else if (Array.isArray(ordersResponse.data)) {
+      } else if (ordersResponse.data && Array.isArray(ordersResponse.data)) {
         ordersData = ordersResponse.data;
-      } else if (ordersResponse.data.orders && Array.isArray(ordersResponse.data.orders)) {
+      } else if (ordersResponse.data && ordersResponse.data.orders && Array.isArray(ordersResponse.data.orders)) {
         ordersData = ordersResponse.data.orders;
       }
 
@@ -120,54 +127,70 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  // Format currency in Kenyan Shillings
-  const formatKSH = (amount: number) => {
+  // Format currency in Kenyan Shillings - FIXED: Handle non-number values
+  const formatKSH = (amount: any) => {
+    const numAmount = typeof amount === 'number' ? amount : 
+                     amount ? parseFloat(String(amount)) : 0;
+    
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return 'KSh 0';
+    }
+    
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
       currency: 'KES',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(numAmount);
   };
 
-  // Get image URL
+  // Get image URL - SIMPLIFIED VERSION
   const getImageUrl = () => {
-    // First, check if main_image exists (from API response)
+    // Base URL for all images
+    const baseUrl = 'https://api.hypermarket.co.ke';
+    
+    // First, try main_image attribute (from Laravel model)
     if (product.main_image) {
-      if (product.main_image.startsWith('http')) {
-        return product.main_image;
-      }
-      return api.getImageUrl(product.main_image);
+      return product.main_image.startsWith('http') ? 
+             product.main_image : 
+             `${baseUrl}${product.main_image.startsWith('/') ? '' : '/'}${product.main_image}`;
     }
     
-    // Then check thumbnail
+    // Then try thumbnail
     if (product.thumbnail) {
       if (product.thumbnail.startsWith('http')) {
         return product.thumbnail;
       }
-      return api.getImageUrl(product.thumbnail);
+      // Construct full URL for storage images
+      if (product.thumbnail.startsWith('/storage/')) {
+        return `${baseUrl}${product.thumbnail}`;
+      }
+      if (product.thumbnail.startsWith('storage/')) {
+        return `${baseUrl}/${product.thumbnail}`;
+      }
+      return `${baseUrl}/storage/${product.thumbnail}`;
     }
     
-    // Then check images array
+    // Then try gallery_urls
+    if (product.gallery_urls && Array.isArray(product.gallery_urls) && product.gallery_urls.length > 0) {
+      const firstImage = product.gallery_urls[0];
+      if (firstImage.startsWith('http')) {
+        return firstImage;
+      }
+      return `${baseUrl}/storage/${firstImage}`;
+    }
+    
+    // Then try images array
     if (product.images && Array.isArray(product.images) && product.images.length > 0) {
       const firstImage = product.images[0];
       if (firstImage.startsWith('http')) {
         return firstImage;
       }
-      return api.getImageUrl(firstImage);
+      return `${baseUrl}/storage/${firstImage}`;
     }
     
-    // Then check gallery_urls array from API response
-    if (product.gallery_urls && Array.isArray(product.gallery_urls) && product.gallery_urls.length > 0) {
-      const firstGalleryUrl = product.gallery_urls[0];
-      if (firstGalleryUrl.startsWith('http')) {
-        return firstGalleryUrl;
-      }
-      return api.getImageUrl(firstGalleryUrl);
-    }
-    
-    // Fallback
-    return '/images/placeholder-product.jpg';
+    // Fallback to default product image
+    return 'https://api.hypermarket.co.ke/storage/default-product.jpg';
   };
 
   const imageUrl = getImageUrl();
@@ -314,7 +337,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               alt={product.name}
               className="absolute inset-0 object-cover w-full h-full group-hover:scale-110 transition-transform duration-500"
               onError={(e) => {
-                e.currentTarget.src = '/images/placeholder-product.jpg';
+                e.currentTarget.src = 'https://api.hypermarket.co.ke/storage/default-product.jpg';
               }}
             />
             
@@ -417,7 +440,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       {/* Product Info Section */}
       <div className="p-4 flex-1 flex flex-col">
         {/* Category Badge */}
-        {product.category && (
+        {product.category?.name && (
           <div className="mb-2">
             <span className="inline-flex items-center gap-1 bg-orange-50 text-orange-700 text-xs font-semibold px-2.5 py-1 rounded-full">
               <Tag size={12} />
@@ -429,7 +452,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         {/* Product Title */}
         <Link href={`/products/${product.id}`} className="group/title mb-2">
           <h3 className="font-bold text-gray-900 text-base leading-tight group-hover/title:text-primary-600 line-clamp-2 min-h-[48px]">
-            {product.name}
+            {product.name || 'Unnamed Product'}
           </h3>
         </Link>
 
@@ -466,7 +489,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               </div>
             ) : canReview ? (
               <button
-                onClick={() => setShowReviewModal(true)}
+                onClick={handleReviewClick}
                 className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center"
               >
                 <Star size={12} className="mr-1" />
@@ -492,14 +515,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex items-center justify-between mb-2">
             <div className="flex flex-col">
               {/* Personalized Price Display */}
-              {hasPersonalizedOffer ? (
+              {hasPersonalizedOffer && personalizedPrice ? (
                 <>
                   <div className="flex items-baseline">
                     <span className="text-xl font-bold text-purple-600">
-                      {formatKSH(personalizedPrice!.final_price)}
+                      {formatKSH(personalizedPrice.final_price)}
                     </span>
                     <span className="text-sm text-gray-500 line-through ml-2">
-                      {formatKSH(personalizedPrice!.original_price)}
+                      {formatKSH(personalizedPrice.original_price)}
                     </span>
                   </div>
                   <div className="text-xs text-purple-600 font-medium mt-1 flex items-center gap-1">
@@ -516,7 +539,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   <span className="text-xl font-bold text-gray-900">
                     {formatKSH(finalPriceNum)}
                   </span>
-                  {product.discounted_price && (
+                  {finalPriceNum < price && price > 0 && (
                     <span className="text-sm text-gray-500 line-through ml-2">
                       {formatKSH(price)}
                     </span>
