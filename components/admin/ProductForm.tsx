@@ -35,7 +35,11 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
   const [gallery, setGallery] = useState<(File | string)[]>([]);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [galleryToDelete, setGalleryToDelete] = useState<string[]>([]); // Track gallery deletions
   const [loading, setLoading] = useState(false);
+  
+  const API_BASE_URL = 'https://api.hypermarket.co.ke';
+  const STORAGE_BASE_URL = 'https://api.hypermarket.co.ke/storage'; // Updated storage URL
 
   // Initialize form with product data if editing
   useEffect(() => {
@@ -64,18 +68,8 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
       // Set thumbnail if it exists
       if (product.thumbnail) {
         setThumbnail(product.thumbnail);
-        // Check if it's a URL or base64/data URL
-        if (product.thumbnail.startsWith('http') || product.thumbnail.startsWith('/')) {
-          // It's a URL, use it directly
-          setThumbnailPreview(product.thumbnail);
-        } else if (product.thumbnail.startsWith('data:')) {
-          // It's a base64/data URL
-          setThumbnailPreview(product.thumbnail);
-        } else {
-          // It might be a relative path, construct full URL
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://hypermarket.co.ke';
-          setThumbnailPreview(`${baseUrl}/storage/${product.thumbnail}`);
-        }
+        // Generate preview for thumbnail
+        generateThumbnailPreview(product.thumbnail);
       }
 
       // Set gallery if it exists
@@ -83,20 +77,36 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         const galleryItems = product.gallery;
         setGallery(galleryItems);
         
+        // Generate previews for gallery
         const previews = galleryItems.map((img: string) => {
-          if (img.startsWith('http') || img.startsWith('/')) {
-            return img;
-          } else if (img.startsWith('data:')) {
-            return img;
-          } else {
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://hypermarket.co.ke';
-            return `${baseUrl}/storage/${img}`;
-          }
+          return generateImageUrl(img);
         });
         setGalleryPreviews(previews);
       }
     }
   }, [product]);
+
+  // Helper function to generate image URL
+  const generateImageUrl = (imagePath: string): string => {
+    if (!imagePath) return '';
+    
+    if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
+      return imagePath;
+    } else if (imagePath.startsWith('data:')) {
+      return imagePath;
+    } else if (imagePath.startsWith('/')) {
+      return `${API_BASE_URL}${imagePath}`;
+    } else {
+      // Handle relative paths
+      return `${STORAGE_BASE_URL}/${imagePath.replace(/^storage\//, '')}`;
+    }
+  };
+
+  // Helper function to generate thumbnail preview
+  const generateThumbnailPreview = (imagePath: string) => {
+    const url = generateImageUrl(imagePath);
+    setThumbnailPreview(url);
+  };
 
   const fetchCategories = async () => {
     try {
@@ -135,30 +145,63 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
   const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     
-    files.forEach(file => {
-      if (file) {
-        const newGallery = [...gallery, file];
-        setGallery(newGallery);
-        
+    if (files.length > 0) {
+      const newFiles = files.slice(0, 10 - gallery.length); // Limit to 10 total
+      
+      newFiles.forEach(file => {
         const reader = new FileReader();
         reader.onloadend = () => {
+          // Add to gallery state
+          const newGallery = [...gallery, file];
+          setGallery(newGallery);
+          
+          // Add to previews
           setGalleryPreviews(prev => [...prev, reader.result as string]);
         };
         reader.readAsDataURL(file);
-      }
-    });
+      });
+    }
   };
 
   const removeThumbnail = () => {
-    setThumbnail(null);
+    if (typeof thumbnail === 'string' && product) {
+      // For existing thumbnails, we need to handle deletion
+      // You might want to set thumbnail to null and send delete instruction
+      setThumbnail(null);
+    } else {
+      setThumbnail(null);
+    }
     setThumbnailPreview(null);
   };
 
   const removeGalleryImage = (index: number) => {
+    const itemToRemove = gallery[index];
+    
+    // If it's an existing image (string path), add to deletion list
+    if (typeof itemToRemove === 'string') {
+      // Extract the path - remove any storage/ prefix or full URLs
+      let path = itemToRemove;
+      if (path.startsWith(STORAGE_BASE_URL)) {
+        path = path.replace(STORAGE_BASE_URL + '/', '');
+      } else if (path.startsWith(API_BASE_URL)) {
+        path = path.replace(API_BASE_URL + '/storage/', '');
+      }
+      
+      console.log('Adding gallery image to delete list:', path);
+      setGalleryToDelete(prev => [...prev, path]);
+    }
+    
+    // Remove from gallery and previews
     const newGallery = gallery.filter((_, i) => i !== index);
     const newPreviews = galleryPreviews.filter((_, i) => i !== index);
+    
     setGallery(newGallery);
     setGalleryPreviews(newPreviews);
+    
+    console.log('Updated gallery state:', {
+      gallery: newGallery,
+      galleryToDelete
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -167,7 +210,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
 
     try {
       // Prepare data for submission
-      const submitData = {
+      const submitData: any = {
         ...formData,
         price: parseFloat(formData.price) || 0,
         discounted_price: formData.discounted_price ? parseFloat(formData.discounted_price) : null,
@@ -176,9 +219,26 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         category_id: parseInt(formData.category_id) || null,
         vendor_id: formData.vendor_id ? parseInt(formData.vendor_id) : null,
         weight: formData.weight ? parseFloat(formData.weight) : null,
-        thumbnail, // This will be either File object or existing URL
-        gallery, // This will be array of File objects or existing URLs
       };
+      
+      // Add thumbnail if it exists (could be File or existing URL)
+      if (thumbnail) {
+        submitData.thumbnail = thumbnail;
+      } else if (product && product.thumbnail) {
+        // Keep existing thumbnail if not changing
+        submitData.thumbnail = product.thumbnail;
+      }
+      
+      // Add gallery data
+      if (gallery.length > 0) {
+        submitData.gallery = gallery;
+      }
+      
+      // Add gallery deletions if any
+      if (galleryToDelete.length > 0) {
+        submitData.delete_gallery_images = galleryToDelete;
+        console.log('Sending gallery deletions:', galleryToDelete);
+      }
       
       console.log('Submitting data:', submitData);
       onSubmit(submitData);
@@ -388,7 +448,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                               <button
                                 type="button"
                                 onClick={removeThumbnail}
-                                className="absolute top-0 right-0 p-1 text-white bg-red-500 rounded-full -translate-y-1/2 translate-x-1/2"
+                                className="absolute top-0 right-0 p-1 text-white bg-red-500 rounded-full -translate-y-1/2 translate-x-1/2 hover:bg-red-600"
                               >
                                 <X size={16} />
                               </button>
@@ -425,7 +485,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                   {/* Gallery Upload */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
-                      Gallery Images (Optional)
+                      Gallery Images (Optional) - Max 10
                     </label>
                     <div className="mt-1">
                       <div className="flex items-center justify-center w-full px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
@@ -440,12 +500,16 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                                 accept="image/*"
                                 onChange={handleGalleryChange}
                                 className="sr-only"
+                                disabled={gallery.length >= 10}
                               />
                             </label>
                             <p className="pl-1">or drag and drop</p>
                           </div>
                           <p className="text-xs text-gray-500">
                             PNG, JPG, GIF, WebP up to 10MB each
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {gallery.length}/10 images selected
                           </p>
                         </div>
                       </div>
@@ -454,22 +518,29 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                     {/* Gallery Preview */}
                     {galleryPreviews.length > 0 && (
                       <div className="mt-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Gallery Preview:</h4>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Gallery Preview ({galleryPreviews.length} images):</h4>
                         <div className="grid grid-cols-4 gap-2">
                           {galleryPreviews.map((preview, index) => (
-                            <div key={index} className="relative">
+                            <div key={index} className="relative group">
                               <img
                                 src={preview}
                                 alt={`Gallery ${index + 1}`}
                                 className="object-cover w-20 h-20 rounded"
                               />
-                              <button
-                                type="button"
-                                onClick={() => removeGalleryImage(index)}
-                                className="absolute top-0 right-0 p-1 text-white bg-red-500 rounded-full -translate-y-1/2 translate-x-1/2"
-                              >
-                                <X size={12} />
-                              </button>
+                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity rounded flex items-center justify-center">
+                                <button
+                                  type="button"
+                                  onClick={() => removeGalleryImage(index)}
+                                  className="opacity-0 group-hover:opacity-100 p-1 text-white bg-red-500 rounded-full hover:bg-red-600 transition-opacity"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                              {typeof gallery[index] === 'string' && (
+                                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs text-center py-0.5">
+                                  Existing
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
