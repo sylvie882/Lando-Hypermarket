@@ -17,11 +17,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
-  Image
+  Image as ImageIcon
 } from 'lucide-react';
 import debounce from 'lodash/debounce';
 
-// Image compression utility (same as before)
+// Image compression utility - FIXED: Added width parameter to Image constructor
 const compressImage = async (file: File, maxWidth: number = 1200, maxSizeKB: number = 500): Promise<File> => {
   return new Promise((resolve, reject) => {
     if (file.size <= maxSizeKB * 1024) {
@@ -31,7 +31,8 @@ const compressImage = async (file: File, maxWidth: number = 1200, maxSizeKB: num
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const img = new Image();
+      // FIX: Pass width parameter to Image constructor
+      const img = new Image(maxWidth, maxWidth);
       img.onload = () => {
         const canvas = document.createElement('canvas');
         
@@ -105,6 +106,80 @@ const compressImage = async (file: File, maxWidth: number = 1200, maxSizeKB: num
     reader.readAsDataURL(file);
   });
 };
+
+// Alternative simpler compression function
+const compressImageSimple = async (file: File, maxWidth: number = 1200, maxSizeKB: number = 500): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    if (file.size <= maxSizeKB * 1024) {
+      resolve(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      // Create image element
+      const img = document.createElement('img');
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+        
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to blob with quality
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Canvas to Blob conversion failed'));
+              return;
+            }
+            
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '') + '.jpg', {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            
+            console.log(`Compressed ${file.name}: ${(file.size / 1024).toFixed(2)}KB -> ${(blob.size / 1024).toFixed(2)}KB`);
+            resolve(compressedFile);
+          },
+          'image/jpeg',
+          0.8
+        );
+      };
+      
+      img.onerror = () => {
+        reject(new Error('Failed to load image'));
+      };
+      
+      img.src = e.target?.result as string;
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('Failed to read file'));
+    };
+    
+    reader.readAsDataURL(file);
+  });
+};
+
+// Use the simple version to avoid Image constructor issues
+const compressImageFinal = compressImageSimple;
 
 // Validate image file
 const validateImage = (file: File): { valid: boolean; message?: string } => {
@@ -521,7 +596,7 @@ export default function ProductsPage() {
           
           try {
             console.log('Compressing thumbnail...');
-            const compressedThumbnail = await compressImage(thumbnailFile, 800, 2000);
+            const compressedThumbnail = await compressImageFinal(thumbnailFile, 800, 2000);
             data.append('thumbnail', compressedThumbnail);
             setUploadProgress(20);
             console.log('Thumbnail appended:', compressedThumbnail.name);
@@ -546,7 +621,7 @@ export default function ProductsPage() {
               return;
             }
             
-            const compressedThumbnail = await compressImage(thumbnailFile, 800, 2000);
+            const compressedThumbnail = await compressImageFinal(thumbnailFile, 800, 2000);
             data.append('thumbnail', compressedThumbnail);
             setUploadProgress(20);
           } catch (error) {
@@ -608,7 +683,7 @@ export default function ProductsPage() {
           }
           
           try {
-            const compressedGallery = await compressImage(galleryFile, 1200, 2000);
+            const compressedGallery = await compressImageFinal(galleryFile, 1200, 2000);
             data.append('gallery[]', compressedGallery);
             console.log(`Gallery image ${i} appended:`, compressedGallery.name);
           } catch (error) {
