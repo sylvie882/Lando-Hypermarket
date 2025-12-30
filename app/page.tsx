@@ -1411,7 +1411,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      <section className="py-16 bg-gray-50">
+      {/* <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-12">
             <div className="mb-8 lg:mb-0">
@@ -1451,7 +1451,7 @@ const HomePage: React.FC = () => {
             </div>
           )}
         </div>
-      </section>
+      </section> */}
 
       <section className="py-16">
         <div className="container mx-auto px-4">
