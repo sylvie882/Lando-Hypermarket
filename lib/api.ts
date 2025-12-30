@@ -185,8 +185,17 @@ class ApiService {
 
   // Auth APIs
   auth = {
-    login: (credentials: { email: string; password: string }) => 
-      this.api.post('/login', credentials),
+      // Accept either email or phone for login
+  login: (credentials: { email?: string; phone?: string; password: string }) => {
+    // Validate that either email or phone is provided
+    if (!credentials.email && !credentials.phone) {
+      return Promise.reject(new Error('Either email or phone must be provided'));
+    }
+    return this.api.post('/login', credentials);
+  },
+
+    // login: (credentials: { email: string; password: string }) => 
+    //   this.api.post('/login', credentials),
     
     register: (data: { 
       name: string; 
