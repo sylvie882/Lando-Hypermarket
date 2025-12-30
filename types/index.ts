@@ -212,6 +212,7 @@ export interface Review {
   user?: User;
   product?: Product;
   order?: Order;
+  title?: string;
 }
 
 export interface Promotion {

@@ -2,15 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { api } from '@/lib/api';
 import { Product, Review } from '@/types';
 import { useAuth } from '@/lib/auth';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import ProductCard from '@/components/ui/ProductCard';
-import { Star, ShoppingCart, Heart, Truck, Shield, RefreshCw, ChevronLeft, ChevronRight, Package } from 'lucide-react';
+import { Star, ShoppingCart, Heart, Truck, Shield, RefreshCw, ChevronRight, Package, Check, ArrowLeft, Share2, Award, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
-import ReviewList from '@/components/ReviewList';
+import Link from 'next/link';
 
 // Helper function to format currency in Kenyan Shillings
 const formatCurrencyKES = (amount: number) => {
@@ -22,7 +20,7 @@ const formatCurrencyKES = (amount: number) => {
   }).format(amount);
 };
 
-// Helper function to format number with thousands separators
+// Helper function to format number with KSh
 const formatNumberKES = (amount: number) => {
   return `KSh ${amount.toLocaleString('en-KE')}`;
 };
@@ -43,6 +41,7 @@ const ProductDetailPage: React.FC = () => {
   const [addingToWishlist, setAddingToWishlist] = useState(false);
   const [inWishlist, setInWishlist] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
+  const [imageLoading, setImageLoading] = useState(true);
 
   useEffect(() => {
     fetchProductDetails();
@@ -51,32 +50,77 @@ const ProductDetailPage: React.FC = () => {
   const fetchProductDetails = async () => {
     try {
       setIsLoading(true);
-      const [productRes, reviewsRes, relatedRes] = await Promise.all([
-        api.products.getById(productId),
-        api.products.getReviews(productId),
-        api.products.getRelated(productId)
-      ]);
+      
+      // Fetch product details directly from API
+      const productRes = await fetch(`https://api.hypermarket.co.ke/api/products/${productId}`, {
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
 
-      // Convert string numbers to numbers
-      const processedProduct = {
-        ...productRes.data,
-        rating: parseFloat(productRes.data.rating) || 0,
-        price: parseFloat(productRes.data.price),
-        discounted_price: productRes.data.discounted_price ? parseFloat(productRes.data.discounted_price) : null,
-        stock_quantity: parseInt(productRes.data.stock_quantity),
-        review_count: parseInt(productRes.data.review_count || '0'),
-        sold_count: parseInt(productRes.data.sold_count || '0'),
+      if (!productRes.ok) {
+        throw new Error('Product not found');
+      }
+
+      const productData = await productRes.json();
+      
+      // Process product data
+      const processedProduct: Product = {
+        ...productData.data,
+        id: productData.data.id.toString(),
+        price: parseFloat(productData.data.price) || 0,
+        discounted_price: productData.data.discounted_price ? parseFloat(productData.data.discounted_price) : null,
+        rating: parseFloat(productData.data.rating) || 0,
+        stock_quantity: parseInt(productData.data.stock_quantity || '0'),
+        review_count: parseInt(productData.data.review_count || '0'),
+        sold_count: parseInt(productData.data.sold_count || '0'),
+        images: productData.data.images || [],
+        thumbnail: productData.data.thumbnail || productData.data.images?.[0] || '',
+        description: productData.data.description || '',
+        sku: productData.data.sku || '',
+        category: productData.data.category || null,
+        attributes: productData.data.attributes || {},
       };
 
       setProduct(processedProduct);
-      setReviews(reviewsRes.data.data || []);
-      setRelatedProducts(relatedRes.data || []);
+
+      // Fetch reviews directly
+      try {
+        const reviewsRes = await fetch(`https://api.hypermarket.co.ke/api/products/${productId}/reviews`);
+        if (reviewsRes.ok) {
+          const reviewsData = await reviewsRes.json();
+          setReviews(reviewsData.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch reviews:', error);
+      }
+
+      // Fetch related products directly
+      try {
+        const relatedRes = await fetch(`https://api.hypermarket.co.ke/api/products/${productId}/related`);
+        if (relatedRes.ok) {
+          const relatedData = await relatedRes.json();
+          setRelatedProducts(relatedData.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch related products:', error);
+      }
 
       // Check if in wishlist
       if (isAuthenticated) {
         try {
-          const wishlistCheck = await api.wishlist.check(processedProduct.id);
-          setInWishlist(wishlistCheck.data.in_wishlist);
+          const token = localStorage.getItem('token');
+          const wishlistCheck = await fetch(`https://api.hypermarket.co.ke/api/wishlist/check/${processedProduct.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json',
+            },
+          });
+          
+          if (wishlistCheck.ok) {
+            const wishlistData = await wishlistCheck.json();
+            setInWishlist(wishlistData.data?.in_wishlist || false);
+          }
         } catch (error) {
           // Wishlist check might fail if not logged in, ignore
         }
@@ -103,15 +147,30 @@ const ProductDetailPage: React.FC = () => {
 
     setAddingToCart(true);
     try {
-      await api.cart.addItem({
-        product_id: product.id,
-        quantity,
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://api.hypermarket.co.ke/api/cart/items`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          product_id: product.id,
+          quantity,
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add to cart');
+      }
+
       toast.success(`${quantity} ${product.name} added to cart!`);
-      return true; // Return success
+      return true;
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to add to cart');
-      return false; // Return failure
+      toast.error(error.message || 'Failed to add to cart');
+      return false;
     } finally {
       setAddingToCart(false);
     }
@@ -120,7 +179,6 @@ const ProductDetailPage: React.FC = () => {
   const handleBuyNow = async () => {
     const success = await handleAddToCart();
     if (success) {
-      // Navigate to cart page after successful addition
       setTimeout(() => {
         router.push('/cart');
       }, 300);
@@ -136,17 +194,47 @@ const ProductDetailPage: React.FC = () => {
 
     setAddingToWishlist(true);
     try {
+      const token = localStorage.getItem('token');
+      
       if (inWishlist) {
-        await api.wishlist.remove(product!.id);
-        setInWishlist(false);
-        toast.success('Removed from wishlist');
+        // Remove from wishlist
+        const response = await fetch(`https://api.hypermarket.co.ke/api/wishlist/items/${product!.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          setInWishlist(false);
+          toast.success('Removed from wishlist');
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to remove from wishlist');
+        }
       } else {
-        await api.wishlist.add(product!.id);
-        setInWishlist(true);
-        toast.success('Added to wishlist!');
+        // Add to wishlist
+        const response = await fetch(`https://api.hypermarket.co.ke/api/wishlist/items`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({ product_id: product!.id }),
+        });
+
+        if (response.ok) {
+          setInWishlist(true);
+          toast.success('Added to wishlist!');
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to add to wishlist');
+        }
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update wishlist');
+      toast.error(error.message || 'Failed to update wishlist');
     } finally {
       setAddingToWishlist(false);
     }
@@ -179,7 +267,47 @@ const ProductDetailPage: React.FC = () => {
     
     // Clean path and construct URL
     const cleanPath = imagePath.replace(/^\//, '');
-    return `http://localhost:8000/storage/${cleanPath}`;
+    return `https://api.hypermarket.co.ke/storage/${cleanPath}`;
+  };
+
+  const shareProduct = () => {
+    if (navigator.share && product) {
+      navigator.share({
+        title: product.name,
+        text: `Check out ${product.name} on Hypermarket`,
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copied to clipboard!');
+    }
+  };
+
+  const submitReview = async (reviewData: { rating: number; comment: string; title?: string }) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://api.hypermarket.co.ke/api/products/${productId}/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(reviewData),
+      });
+
+      if (response.ok) {
+        toast.success('Review submitted successfully!');
+        fetchProductDetails(); // Refresh reviews
+        return true;
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit review');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to submit review');
+      return false;
+    }
   };
 
   if (isLoading) {
@@ -192,17 +320,23 @@ const ProductDetailPage: React.FC = () => {
 
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Product not found</h1>
-          <p className="text-gray-600">The product you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mb-6">The product you're looking for doesn't exist.</p>
+          <Link 
+            href="/products"
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <ArrowLeft size={20} className="mr-2" />
+            Back to Products
+          </Link>
         </div>
       </div>
     );
   }
 
-  // Ensure all numbers are numbers
-  const finalPrice = (product.discounted_price || product.price);
+  const finalPrice = product.discounted_price || product.price;
   const finalPriceNum = typeof finalPrice === 'number' ? finalPrice : parseFloat(finalPrice);
   const priceNum = typeof product.price === 'number' ? product.price : parseFloat(product.price);
   
@@ -215,32 +349,58 @@ const ProductDetailPage: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <nav className="flex items-center text-sm text-gray-600 mb-8">
-          <a href="/" className="hover:text-blue-600">Home</a>
+          <Link href="/" className="hover:text-blue-600">Home</Link>
           <ChevronRight size={16} className="mx-2" />
-          <a href="/products" className="hover:text-blue-600">Products</a>
+          <Link href="/products" className="hover:text-blue-600">Products</Link>
           <ChevronRight size={16} className="mx-2" />
           {product.category && (
             <>
-              <a href={`/categories/${product.category.slug || product.category.id}`} className="hover:text-blue-600">
+              <Link 
+                href={`/categories/${product.category.slug || product.category.id}`} 
+                className="hover:text-blue-600"
+              >
                 {product.category.name}
-              </a>
+              </Link>
               <ChevronRight size={16} className="mx-2" />
             </>
           )}
-          <span className="text-gray-900 font-medium">{product.name}</span>
+          <span className="text-gray-900 font-medium truncate">{product.name}</span>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        {/* Back Button for Mobile */}
+        <button
+          onClick={() => router.back()}
+          className="lg:hidden flex items-center text-blue-600 mb-4"
+        >
+          <ArrowLeft size={20} className="mr-2" />
+          Back
+        </button>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Product Images */}
-          <div>
+          <div className="space-y-4">
             {/* Main Image */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-4">
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               <div className="relative aspect-square">
+                {imageLoading && (
+                  <div className="absolute inset-0 bg-gray-100 animate-pulse" />
+                )}
                 <img
                   src={getImageUrl(product.images?.[selectedImage] || product.thumbnail)}
                   alt={product.name}
-                  className="object-contain p-8 w-full h-full"
+                  className="object-contain p-4 md:p-8 w-full h-full transition-opacity duration-300"
+                  onLoad={() => setImageLoading(false)}
+                  onError={(e) => {
+                    e.currentTarget.src = '/images/placeholder-product.jpg';
+                    setImageLoading(false);
+                  }}
+                  style={{ opacity: imageLoading ? 0 : 1 }}
                 />
+                {discountPercentage > 0 && (
+                  <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-lg font-bold">
+                    -{discountPercentage}%
+                  </div>
+                )}
               </div>
             </div>
 
@@ -250,95 +410,127 @@ const ProductDetailPage: React.FC = () => {
                 {product.images.map((image, index) => (
                   <button
                     key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${selectedImage === index ? 'border-blue-500' : 'border-gray-200'}`}
+                    onClick={() => {
+                      setSelectedImage(index);
+                      setImageLoading(true);
+                    }}
+                    className={`flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden border-2 transition-all ${selectedImage === index ? 'border-blue-500 scale-105' : 'border-gray-200 hover:border-gray-300'}`}
                   >
                     <img
                       src={getImageUrl(image)}
                       alt={`${product.name} - ${index + 1}`}
                       className="object-cover w-full h-full"
+                      onError={(e) => e.currentTarget.src = '/images/placeholder-product.jpg'}
                     />
                   </button>
                 ))}
               </div>
             )}
+
+            {/* Share Button */}
+            <button
+              onClick={shareProduct}
+              className="flex items-center justify-center w-full py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Share2 size={20} className="mr-2" />
+              Share Product
+            </button>
           </div>
 
           {/* Product Info */}
-          <div>
-            <div className="bg-white rounded-xl shadow-sm p-8">
-              {/* Category */}
-              {product.category && (
-                <a
-                  href={`/categories/${product.category.slug || product.category.id}`}
-                  className="inline-block text-sm text-blue-600 hover:text-blue-700 mb-2"
-                >
-                  {product.category.name}
-                </a>
-              )}
-
-              {/* Title */}
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
-
-              {/* Rating */}
-              <div className="flex items-center mb-4">
-                <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      size={20}
-                      className={i < Math.floor(product.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}
-                    />
-                  ))}
-                </div>
-                <span className="ml-2 text-gray-600">
-                  {(product.rating || 0).toFixed(1)} ({product.review_count || 0} reviews)
-                </span>
-                <span className="mx-2">•</span>
-                <span className="text-gray-600">{product.sold_count || 0} sold</span>
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm p-6 md:p-8">
+              {/* Category & Brand */}
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                {product.category && (
+                  <Link
+                    href={`/categories/${product.category.slug || product.category.id}`}
+                    className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-sm rounded-full hover:bg-blue-100 transition-colors"
+                  >
+                    {product.category.name}
+                  </Link>
+                )}
+                {product.attributes?.brand && (
+                  <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
+                    {product.attributes.brand}
+                  </span>
+                )}
               </div>
 
-              {/* Price - CHANGED FROM USD TO KES */}
-              <div className="mb-6">
+              {/* Title */}
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
+
+              {/* Rating & Sold Count */}
+              <div className="flex flex-wrap items-center gap-4 mb-4">
                 <div className="flex items-center">
-                  <span className="text-4xl font-bold text-gray-900">
+                  <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        size={20}
+                        className={i < Math.floor(product.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}
+                      />
+                    ))}
+                  </div>
+                  <span className="ml-2 text-gray-600">
+                    {(product.rating || 0).toFixed(1)} ({product.review_count || 0} reviews)
+                  </span>
+                </div>
+                <span className="hidden md:inline text-gray-300">|</span>
+                <div className="flex items-center text-gray-600">
+                  <Check size={16} className="mr-1 text-green-500" />
+                  {product.sold_count || 0} sold
+                </div>
+              </div>
+
+              {/* Price */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-3xl md:text-4xl font-bold text-gray-900">
                     {formatNumberKES(finalPriceNum)}
                   </span>
                   {discountPercentage > 0 && (
                     <>
-                      <span className="text-xl text-gray-500 line-through ml-3">
+                      <span className="text-xl text-gray-500 line-through">
                         {formatNumberKES(priceNum)}
                       </span>
-                      <span className="ml-3 bg-red-100 text-red-800 text-sm font-bold px-2 py-1 rounded">
+                      <span className="px-3 py-1 bg-red-100 text-red-800 text-sm font-bold rounded-full">
                         Save {discountPercentage}%
                       </span>
                     </>
                   )}
                 </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  Inclusive of all taxes
+                </p>
               </div>
 
               {/* Stock Status */}
               <div className="mb-6">
                 {product.stock_quantity > 0 ? (
-                  <div className="flex items-center text-green-600">
-                    <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                    <span className="font-medium">In Stock</span>
-                    <span className="text-gray-600 ml-2">({product.stock_quantity} available)</span>
+                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                      <span className="font-medium text-green-800">In Stock</span>
+                    </div>
+                    <span className="text-sm text-green-700">
+                      {product.stock_quantity} units available
+                    </span>
                   </div>
                 ) : (
-                  <div className="flex items-center text-red-600">
+                  <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg">
                     <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                    <span className="font-medium">Out of Stock</span>
+                    <span className="font-medium text-red-800">Out of Stock</span>
                   </div>
                 )}
               </div>
 
-              {/* Quantity */}
-              <div className="mb-8">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              {/* Quantity Selector */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
                   Quantity
                 </label>
-                <div className="flex items-center w-40">
+                <div className="flex items-center w-fit">
                   <button
                     onClick={decrementQuantity}
                     disabled={quantity <= 1}
@@ -346,7 +538,7 @@ const ProductDetailPage: React.FC = () => {
                   >
                     -
                   </button>
-                  <div className="w-16 h-12 flex items-center justify-center border-t border-b border-gray-300 text-lg font-medium">
+                  <div className="w-16 h-12 flex items-center justify-center border-t border-b border-gray-300 text-lg font-medium bg-white">
                     {quantity}
                   </div>
                   <button
@@ -356,13 +548,15 @@ const ProductDetailPage: React.FC = () => {
                   >
                     +
                   </button>
+                  <div className="ml-4 text-sm text-gray-500">
+                    Max: {product.stock_quantity} units
+                  </div>
                 </div>
               </div>
 
-              {/* Actions - Updated with clear buttons */}
-              <div className="mb-8">
+              {/* Action Buttons */}
+              <div className="space-y-4 mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Add to Cart Button */}
                   <button
                     onClick={handleAddToCart}
                     disabled={addingToCart || product.stock_quantity === 0}
@@ -371,11 +565,10 @@ const ProductDetailPage: React.FC = () => {
                     <ShoppingCart size={24} className="mr-3 group-hover:scale-110 transition-transform" />
                     <div className="text-left">
                       <div className="text-lg">{addingToCart ? 'Adding...' : 'Add to Cart'}</div>
-                      <div className="text-sm opacity-90 font-normal">Save for later purchase</div>
+                      <div className="text-sm opacity-90 font-normal">Save for later</div>
                     </div>
                   </button>
 
-                  {/* Buy Now Button */}
                   <button
                     onClick={handleBuyNow}
                     disabled={addingToCart || product.stock_quantity === 0}
@@ -384,91 +577,85 @@ const ProductDetailPage: React.FC = () => {
                     <Package size={24} className="mr-3 group-hover:scale-110 transition-transform" />
                     <div className="text-left">
                       <div className="text-lg">Buy Now</div>
-                      <div className="text-sm opacity-90 font-normal">Proceed to checkout</div>
+                      <div className="text-sm opacity-90 font-normal">Fast checkout</div>
                     </div>
                   </button>
                 </div>
 
-                {/* Wishlist Button */}
-                <button
-                  onClick={handleAddToWishlist}
-                  disabled={addingToWishlist || !isAuthenticated}
-                  className="w-full mt-4 flex items-center justify-center border-2 border-red-500 text-red-600 hover:bg-red-50 py-3 px-6 rounded-lg font-semibold disabled:opacity-50 transition-colors"
-                >
-                  <Heart
-                    size={22}
-                    className={`mr-3 ${inWishlist ? 'fill-red-500 text-red-500 animate-pulse' : ''}`}
-                  />
-                  <span className="text-lg">
-                    {addingToWishlist ? 'Updating...' : inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                  </span>
-                </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    onClick={handleAddToWishlist}
+                    disabled={addingToWishlist || !isAuthenticated}
+                    className="flex items-center justify-center border-2 border-red-500 text-red-600 hover:bg-red-50 py-3 px-6 rounded-lg font-semibold disabled:opacity-50 transition-colors"
+                  >
+                    <Heart
+                      size={22}
+                      className={`mr-3 ${inWishlist ? 'fill-red-500 text-red-500' : ''}`}
+                    />
+                    <span className="text-lg">
+                      {addingToWishlist ? 'Updating...' : inWishlist ? 'In Wishlist' : 'Add to Wishlist'}
+                    </span>
+                  </button>
+                </div>
               </div>
 
-              {/* Stock Warning */}
-              {product.stock_quantity > 0 && product.stock_quantity <= 10 && (
-                <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
-                    <span className="text-yellow-800 font-medium">
-                      Only {product.stock_quantity} items left in stock!
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Features - UPDATED PRICES TO KES */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+              {/* Product Features */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="flex items-center p-3 bg-blue-50 rounded-lg">
                   <Truck size={20} className="text-blue-600 mr-3" />
                   <div>
                     <p className="text-sm font-medium">Free Delivery</p>
-                    <p className="text-xs text-gray-500">On orders over KSh 5,000</p>
+                    <p className="text-xs text-gray-500">Orders over KSh 5,000</p>
                   </div>
                 </div>
-                <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                  <Shield size={20} className="text-blue-600 mr-3" />
+                <div className="flex items-center p-3 bg-green-50 rounded-lg">
+                  <Shield size={20} className="text-green-600 mr-3" />
                   <div>
-                    <p className="text-sm font-medium">Quality Guarantee</p>
-                    <p className="text-xs text-gray-500">100% fresh products</p>
+                    <p className="text-sm font-medium">Quality Guaranteed</p>
+                    <p className="text-xs text-gray-500">Fresh products</p>
                   </div>
                 </div>
-                <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                  <RefreshCw size={20} className="text-blue-600 mr-3" />
+                <div className="flex items-center p-3 bg-purple-50 rounded-lg">
+                  <RefreshCw size={20} className="text-purple-600 mr-3" />
                   <div>
                     <p className="text-sm font-medium">Easy Returns</p>
-                    <p className="text-xs text-gray-500">30-day return policy</p>
+                    <p className="text-xs text-gray-500">7-day return policy</p>
                   </div>
                 </div>
-                <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                  <Truck size={20} className="text-blue-600 mr-3" />
+                <div className="flex items-center p-3 bg-orange-50 rounded-lg">
+                  <Clock size={20} className="text-orange-600 mr-3" />
                   <div>
-                    <p className="text-sm font-medium">Fast Shipping</p>
-                    <p className="text-xs text-gray-500">Same-day delivery</p>
+                    <p className="text-sm font-medium">Fast Delivery</p>
+                    <p className="text-xs text-gray-500">Same-day in Nairobi</p>
                   </div>
                 </div>
               </div>
 
               {/* SKU */}
               <div className="text-sm text-gray-600 border-t border-gray-100 pt-4">
-                <span className="font-medium">SKU:</span> <span className="font-mono">{product.sku}</span>
+                <span className="font-medium">SKU:</span> <span className="font-mono bg-gray-100 px-2 py-1 rounded">{product.sku}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Product Tabs */}
         <div className="mt-12">
           <div className="border-b border-gray-200">
-            <nav className="flex space-x-8">
-              {['description', 'reviews', 'specifications'].map((tab) => (
+            <nav className="flex space-x-8 overflow-x-auto">
+              {[
+                { id: 'description', label: 'Description', icon: null },
+                { id: 'specifications', label: 'Specifications', icon: <Award size={16} /> },
+                { id: 'reviews', label: 'Reviews', icon: <Star size={16} /> },
+              ].map((tab) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`py-4 px-1 font-medium text-sm border-b-2 transition-colors ${activeTab === tab ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center py-4 px-1 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                 >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  {tab === 'reviews' && (
+                  {tab.icon && <span className="mr-2">{tab.icon}</span>}
+                  {tab.label}
+                  {tab.id === 'reviews' && (
                     <span className="ml-2 bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
                       {reviews.length}
                     </span>
@@ -480,28 +667,53 @@ const ProductDetailPage: React.FC = () => {
 
           <div className="mt-8">
             {activeTab === 'description' && (
-              <div className="bg-white rounded-xl shadow-sm p-8">
-                <h3 className="text-xl font-semibold mb-4">Product Description</h3>
+              <div className="bg-white rounded-xl shadow-sm p-6 md:p-8">
+                <h3 className="text-xl font-semibold mb-6">Product Description</h3>
                 <div className="prose max-w-none">
-                  <p className="text-gray-600 whitespace-pre-line">{product.description}</p>
+                  <div className="text-gray-600 whitespace-pre-line leading-relaxed">
+                    {product.description || 'No description available.'}
+                  </div>
                 </div>
               </div>
             )}
 
+            {activeTab === 'specifications' && (
+              <div className="bg-white rounded-xl shadow-sm p-6 md:p-8">
+                <h3 className="text-xl font-semibold mb-6">Product Specifications</h3>
+                {product.attributes && Object.keys(product.attributes).length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {Object.entries(product.attributes).map(([key, value]) => (
+                      <div key={key} className="border-b border-gray-100 py-3">
+                        <span className="font-medium text-gray-700 block mb-1">{key}</span>
+                        <span className="text-gray-600">{String(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No specifications available for this product.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeTab === 'reviews' && (
-              <div className="bg-white rounded-xl shadow-sm p-8">
-                <div className="flex justify-between items-center mb-6">
+              <div className="bg-white rounded-xl shadow-sm p-6 md:p-8">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
                   <h3 className="text-xl font-semibold">Customer Reviews</h3>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                  <button 
+                    onClick={() => router.push(`/products/${productId}/review`)}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
                     Write a Review
                   </button>
                 </div>
 
-                {/* Average Rating */}
-                <div className="flex items-center mb-8">
-                  <div className="text-center mr-8">
-                    <div className="text-5xl font-bold">{calculateAverageRating().toFixed(1)}</div>
-                    <div className="flex justify-center mt-2">
+                {/* Average Rating Summary */}
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-8 mb-8 p-6 bg-gray-50 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-5xl font-bold text-gray-900">{calculateAverageRating().toFixed(1)}</div>
+                    <div className="flex justify-center mt-2 mb-1">
                       {[...Array(5)].map((_, i) => (
                         <Star
                           key={i}
@@ -510,22 +722,22 @@ const ProductDetailPage: React.FC = () => {
                         />
                       ))}
                     </div>
-                    <p className="text-gray-600 mt-1">{reviews.length} reviews</p>
+                    <p className="text-gray-600">{reviews.length} reviews</p>
                   </div>
                   <div className="flex-1">
                     {[5, 4, 3, 2, 1].map((star) => {
-                      const count = reviews.filter(r => r.rating === star).length;
+                      const count = reviews.filter(r => Math.round(r.rating) === star).length;
                       const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
                       return (
                         <div key={star} className="flex items-center mb-2">
-                          <span className="w-10 text-sm text-gray-600">{star} star</span>
-                          <div className="flex-1 mx-3 bg-gray-200 rounded-full h-2">
+                          <span className="w-12 text-sm text-gray-600">{star} ★</span>
+                          <div className="flex-1 mx-3 bg-gray-200 rounded-full h-2.5">
                             <div
-                              className="bg-yellow-400 h-2 rounded-full transition-all duration-300"
+                              className="bg-yellow-400 h-2.5 rounded-full transition-all duration-300"
                               style={{ width: `${percentage}%` }}
-                            ></div>
+                            />
                           </div>
-                          <span className="w-10 text-sm text-gray-600">{count}</span>
+                          <span className="w-12 text-sm text-gray-600 text-right">{count}</span>
                         </div>
                       );
                     })}
@@ -537,50 +749,41 @@ const ProductDetailPage: React.FC = () => {
                   {reviews.length > 0 ? (
                     reviews.map((review) => (
                       <div key={review.id} className="border-b border-gray-100 pb-6 last:border-0">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="flex items-center">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  size={16}
-                                  className={i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}
-                                />
-                              ))}
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center mb-2">
+                              <div className="flex">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    size={16}
+                                    className={i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}
+                                  />
+                                ))}
+                              </div>
+                              <span className="ml-3 font-medium">{review.user?.name || 'Anonymous'}</span>
                             </div>
-                            <h4 className="font-medium mt-2">{review.user?.name}</h4>
-                            <p className="text-gray-600 mt-1">{review.comment}</p>
+                            <h4 className="font-medium text-gray-900 mb-2">{review.title || 'Great Product!'}</h4>
+                            <p className="text-gray-600">{review.comment}</p>
                           </div>
-                          <span className="text-sm text-gray-500">
-                            {new Date(review.created_at).toLocaleDateString()}
+                          <span className="text-sm text-gray-500 whitespace-nowrap">
+                            {new Date(review.created_at).toLocaleDateString('en-KE', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
                           </span>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500">No reviews yet. Be the first to review this product!</p>
+                    <div className="text-center py-12">
+                      <Star size={48} className="text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500 text-lg mb-2">No reviews yet</p>
+                      <p className="text-gray-400">Be the first to review this product!</p>
                     </div>
                   )}
                 </div>
-              </div>
-            )}
-
-            {activeTab === 'specifications' && (
-              <div className="bg-white rounded-xl shadow-sm p-8">
-                <h3 className="text-xl font-semibold mb-4">Product Specifications</h3>
-                {product.attributes ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    {Object.entries(product.attributes).map(([key, value]) => (
-                      <div key={key} className="border-b border-gray-100 py-3">
-                        <span className="font-medium text-gray-700">{key}:</span>
-                        <span className="ml-2 text-gray-600">{String(value)}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500">No specifications available for this product.</p>
-                )}
               </div>
             )}
           </div>
@@ -589,8 +792,16 @@ const ProductDetailPage: React.FC = () => {
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div className="mt-16">
-            <h3 className="text-2xl font-bold mb-8">Related Products</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-2xl font-bold">Related Products</h3>
+              <Link 
+                href={`/categories/${product.category?.slug || product.category?.id}`}
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                View All in Category →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
               {relatedProducts.map((relatedProduct) => (
                 <ProductCard key={relatedProduct.id} product={relatedProduct} />
               ))}
