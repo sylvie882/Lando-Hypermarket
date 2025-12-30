@@ -26,6 +26,7 @@ interface AuthContextType {
   verifyEmail: (token: string) => Promise<boolean>;
   resendVerificationEmail: (email: string) => Promise<boolean>;
   checkRole: () => Promise<any>;
+  syncAuthToCookies: (token: string, user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,6 +60,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (storedToken && storedUser) {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
+        
+        // Sync to cookies for middleware
+        syncAuthToCookies(storedToken, JSON.parse(storedUser));
+        
         // Verify token is still valid
         await refreshUser();
       }
@@ -70,11 +75,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Function to sync auth data to cookies (for middleware access)
+  const syncAuthToCookies = (token: string, user: User) => {
+    try {
+      // Set token and user cookies
+      document.cookie = `token=${token}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
+      document.cookie = `user=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=${60 * 60 * 24 * 7}`;
+    } catch (error) {
+      console.error('Failed to sync auth to cookies:', error);
+    }
+  };
+
   const clearAuthData = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    
+    // Clear cookies too
+    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+    document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
   };
 
   const refreshUser = async (): Promise<boolean> => {
@@ -83,6 +103,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userData = response.data;
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Sync to cookies
+      const currentToken = localStorage.getItem('token');
+      if (currentToken) {
+        syncAuthToCookies(currentToken, userData);
+      }
+      
       return true;
     } catch (error: any) {
       console.error('Failed to refresh user:', error);
@@ -105,6 +132,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      
+      // Sync to cookies for middleware
+      syncAuthToCookies(token, user);
       
       toast.success('Login successful!');
       return true;
@@ -135,6 +165,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       
+      // Sync to cookies for middleware
+      syncAuthToCookies(token, user);
+      
       toast.success('Admin login successful!');
       return true;
     } catch (error: any) {
@@ -157,6 +190,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      
+      // Sync to cookies for middleware
+      syncAuthToCookies(token, user);
       
       toast.success('Registration successful! Please check your email for verification.');
       return true;
@@ -208,6 +244,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      // Sync updated user to cookies
+      const currentToken = localStorage.getItem('token');
+      if (currentToken) {
+        syncAuthToCookies(currentToken, updatedUser);
+      }
       
       toast.success('Profile updated successfully!');
       return true;
@@ -315,6 +357,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     verifyEmail,
     resendVerificationEmail,
     checkRole,
+    syncAuthToCookies,
   };
 
   return (

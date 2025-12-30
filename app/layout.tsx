@@ -6,6 +6,7 @@ import ClientLayout from './ClientLayout';
 import { AuthProvider } from '@/lib/auth';
 import { QueryProvider } from '@/lib/query';
 import { Toaster } from 'react-hot-toast';
+import AuthSync from '@/components/auth/AuthSync';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -144,6 +145,7 @@ export default function RootLayout({
             <ClientLayout>
               {children}
             </ClientLayout>
+              <AuthSync /> {/* Add this line */}
             <Toaster 
               position="top-right" 
               toastOptions={{

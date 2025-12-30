@@ -29,6 +29,65 @@ interface PromotionValidationResponse {
   discount_amount?: number;
 }
 
+// Format currency to KSH
+const formatKSH = (amount: any): string => {
+  const numAmount = amount ? parseFloat(String(amount)) : 0;
+  
+  if (isNaN(numAmount) || numAmount <= 0) {
+    return 'KSh 0';
+  }
+  
+  return new Intl.NumberFormat('en-KE', {
+    style: 'currency',
+    currency: 'KES',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(numAmount);
+};
+
+// Helper to get proper image URL from API
+const getImageUrl = (thumbnail: string | null | undefined): string => {
+  if (!thumbnail) {
+    return '/images/placeholder-product.jpg';
+  }
+  
+  // Clean any leading slash
+  const cleanThumbnail = thumbnail.replace(/^\//, '');
+  
+  // Check if it's already a full URL
+  if (thumbnail.startsWith('http')) {
+    return thumbnail;
+  }
+  
+  // Construct proper storage URL
+  // Assuming your API is at https://api.hypermarket.co.ke
+  return `https://api.hypermarket.co.ke/storage/${cleanThumbnail}`;
+};
+
+// Helper to get gallery images
+const getGalleryImages = (product: any): string[] => {
+  if (!product || !product.images) {
+    return [];
+  }
+  
+  // Handle different image formats from API
+  const images = [];
+  
+  if (Array.isArray(product.images)) {
+    // If images is an array of strings
+    images.push(...product.images);
+  } else if (product.images.gallery_images && Array.isArray(product.images.gallery_images)) {
+    // If images has gallery_images property
+    images.push(...product.images.gallery_images);
+  } else if (product.gallery_images && Array.isArray(product.gallery_images)) {
+    // If gallery_images is directly on product
+    images.push(...product.gallery_images);
+  }
+  
+  // Process each image to get proper URL
+  return images.map(img => getImageUrl(img));
+};
+
 const CartPage: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [cart, setCart] = useState<Cart | null>(null);
@@ -38,6 +97,7 @@ const CartPage: React.FC = () => {
   const [appliedPromo, setAppliedPromo] = useState<Promotion | null>(null);
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [selectedProductImages, setSelectedProductImages] = useState<{[key: number]: string[]}>({});
 
   // Helper function to create empty cart
   const getEmptyCart = (): Cart => ({
@@ -61,6 +121,18 @@ const CartPage: React.FC = () => {
       setIsLoading(true);
       const response = await api.cart.get();
       setCart(response.data.cart || getEmptyCart());
+      
+      // Extract gallery images for each product
+      const items = response.data.cart?.items || [];
+      const imageMap: {[key: number]: string[]} = {};
+      
+      items.forEach((item: CartItem) => {
+        if (item.product) {
+          imageMap[item.product.id] = getGalleryImages(item.product);
+        }
+      });
+      
+      setSelectedProductImages(imageMap);
     } catch (error) {
       console.error('Failed to fetch cart:', error);
       toast.error('Failed to load cart');
@@ -120,8 +192,7 @@ const CartPage: React.FC = () => {
         return sum + (price * quantity);
       }, 0);
       
-      // Check if your API has promotions endpoint - adjust based on your actual API structure
-      // If you don't have a promotions endpoint, you'll need to create one
+      // Check if your API has promotions endpoint
       const response = await api.post<PromotionValidationResponse>('/promotions/validate', {
         code: promoCode.trim(),
         subtotal: subtotal
@@ -150,7 +221,7 @@ const CartPage: React.FC = () => {
           setAppliedDiscount(discount);
         }
         
-        toast.success(`Promo code applied! Discount: $${appliedDiscount.toFixed(2)}`);
+        toast.success(`Promo code applied! Discount: ${formatKSH(appliedDiscount)}`);
       } else {
         toast.error(data.message || 'Invalid promo code');
         removePromoCode();
@@ -196,31 +267,11 @@ const CartPage: React.FC = () => {
     return isNaN(num) ? 0 : num;
   };
 
-  // Helper function to format price
-  const formatPrice = (price: any): string => {
-    return safeParseNumber(price).toFixed(2);
-  };
-
   // Helper function to calculate item total
   const calculateItemTotal = (item: CartItem): number => {
     const price = safeParseNumber(item.price);
     const quantity = safeParseNumber(item.quantity);
     return price * quantity;
-  };
-
-  // SIMPLE: Get image URL - Use the same logic as ProductCard
-  const getImageUrl = (thumbnail: string | null): string => {
-    if (!thumbnail) {
-      return '/images/placeholder-product.jpg';
-    }
-    
-    // Clean any leading slash
-    const cleanThumbnail = thumbnail.replace(/^\//, '');
-    
-    // Just add the thumbnail to the base storage URL
-    // Note: Your API shows thumbnails as "products/thumbnails/thumbnail-1766085582-694453ce4d11c.png"
-    // So we need to add "storage/" in front
-    return `http://localhost:8000/storage/${cleanThumbnail}`;
   };
 
   if (!isAuthenticated) {
@@ -232,7 +283,7 @@ const CartPage: React.FC = () => {
           <p className="text-gray-600 mb-6">Login to view your shopping cart</p>
           <Link
             href="/auth/login"
-            className="inline-flex items-center justify-center bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors"
+            className="inline-flex items-center justify-center bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
           >
             Login to Continue
           </Link>
@@ -261,7 +312,7 @@ const CartPage: React.FC = () => {
             <p className="text-gray-600 mb-8">Add some items to get started!</p>
             <Link
               href="/products"
-              className="inline-flex items-center justify-center bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors"
+              className="inline-flex items-center justify-center bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
             >
               Continue Shopping
               <ArrowRight className="ml-2" size={20} />
@@ -272,13 +323,13 @@ const CartPage: React.FC = () => {
     );
   }
 
-  // Calculate totals
+  // Calculate totals - FREE DELIVERY, NO VAT
   const subtotal = cartItems.reduce((sum, item) => {
     return sum + calculateItemTotal(item);
   }, 0);
   
-  const shipping = subtotal > 50 ? 0 : 5.99;
-  const tax = subtotal * 0.1; // 10% tax
+  const shipping = 0; // FREE DELIVERY
+  const tax = 0; // NO VAT
   const total = Math.max(0, subtotal + shipping + tax - appliedDiscount);
 
   return (
@@ -307,8 +358,8 @@ const CartPage: React.FC = () => {
 
               <div className="divide-y divide-gray-200">
                 {cartItems.map((item) => {
-                  // Get image URL using the same logic as ProductCard
-                  const imageUrl = getImageUrl(item.product?.thumbnail || null);
+                  const imageUrl = getImageUrl(item.product?.thumbnail);
+                  const galleryImages = selectedProductImages[item.product?.id || 0] || [];
                   const itemTotal = calculateItemTotal(item);
                   const isUpdating = updatingItems.includes(item.id);
                   const stockQuantity = safeParseNumber(item.product?.stock_quantity);
@@ -317,31 +368,56 @@ const CartPage: React.FC = () => {
                     <div key={item.id} className="p-6 hover:bg-gray-50 transition-colors duration-200">
                       <div className="flex flex-col sm:flex-row">
                         {/* Product Image */}
-                        <div className="w-full sm:w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden mb-4 sm:mb-0 relative">
-                          <img
-                            src={imageUrl}
-                            alt={item.product?.name || 'Product'}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              console.log('Image failed to load:', imageUrl);
-                              e.currentTarget.src = '/images/placeholder-product.jpg';
-                            }}
-                            loading="lazy"
-                          />
-                          {stockQuantity === 0 && (
-                            <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex items-center justify-center">
-                              <span className="text-white font-bold text-sm">Out of Stock</span>
+                        <div className="flex-shrink-0 mb-4 sm:mb-0 sm:mr-6">
+                          <div className="w-full sm:w-24 h-24 bg-gray-100 rounded-lg overflow-hidden relative">
+                            <img
+                              src={imageUrl}
+                              alt={item.product?.name || 'Product'}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                console.log('Image failed to load:', imageUrl);
+                                e.currentTarget.src = '/images/placeholder-product.jpg';
+                              }}
+                              loading="lazy"
+                            />
+                            {stockQuantity === 0 && (
+                              <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex items-center justify-center">
+                                <span className="text-white font-bold text-sm">Out of Stock</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Gallery Images Thumbnails */}
+                          {galleryImages.length > 0 && (
+                            <div className="flex mt-2 space-x-1 overflow-x-auto">
+                              {galleryImages.slice(0, 3).map((img, index) => (
+                                <div key={index} className="w-8 h-8 flex-shrink-0">
+                                  <img
+                                    src={img}
+                                    alt={`Gallery ${index + 1}`}
+                                    className="w-full h-full object-cover rounded"
+                                    onError={(e) => {
+                                      e.currentTarget.src = '/images/placeholder-product.jpg';
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                              {galleryImages.length > 3 && (
+                                <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-gray-100 rounded text-xs">
+                                  +{galleryImages.length - 3}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
 
                         {/* Product Info */}
-                        <div className="sm:ml-6 flex-1">
+                        <div className="flex-1">
                           <div className="flex flex-col sm:flex-row sm:justify-between">
                             <div className="mb-4 sm:mb-0">
                               <Link
                                 href={`/products/${item.product?.id}`}
-                                className="font-medium text-gray-900 hover:text-primary-600 text-lg transition-colors"
+                                className="font-medium text-gray-900 hover:text-green-600 text-lg transition-colors"
                               >
                                 {item.product?.name || 'Product'}
                               </Link>
@@ -349,7 +425,7 @@ const CartPage: React.FC = () => {
                                 {item.product?.category?.name || 'Uncategorized'}
                               </p>
                               <p className="text-sm text-gray-500">
-                                Price: ${formatPrice(item.price)} each
+                                Price: {formatKSH(item.price)} each
                               </p>
                               <p className="text-sm text-gray-500">
                                 SKU: {item.product?.sku || 'N/A'}
@@ -362,11 +438,11 @@ const CartPage: React.FC = () => {
                             </div>
                             <div className="text-left sm:text-right">
                               <div className="text-lg font-bold text-gray-900">
-                                ${formatPrice(itemTotal)}
+                                {formatKSH(itemTotal)}
                               </div>
                               {item.price !== item.product?.price && (
                                 <p className="text-sm text-gray-500 line-through">
-                                  Original: ${formatPrice(item.product?.price)}
+                                  Original: {formatKSH(item.product?.price)}
                                 </p>
                               )}
                             </div>
@@ -384,7 +460,7 @@ const CartPage: React.FC = () => {
                               </button>
                               <span className="w-12 h-8 flex items-center justify-center border-t border-b border-gray-300 bg-gray-50">
                                 {isUpdating ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
                                 ) : (
                                   item.quantity
                                 )}
@@ -422,7 +498,7 @@ const CartPage: React.FC = () => {
             <div className="mt-6">
               <Link
                 href="/products"
-                className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium hover:underline transition-colors"
+                className="inline-flex items-center text-green-600 hover:text-green-700 font-medium hover:underline transition-colors"
               >
                 ← Continue Shopping
               </Link>
@@ -448,7 +524,7 @@ const CartPage: React.FC = () => {
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                     placeholder="Enter promo code"
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors disabled:bg-gray-100"
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors disabled:bg-gray-100"
                     disabled={!!appliedPromo || isApplyingPromo}
                   />
                   {appliedPromo ? (
@@ -482,7 +558,7 @@ const CartPage: React.FC = () => {
                         </span>
                       </div>
                       <span className="text-sm font-bold text-green-800">
-                        -${appliedDiscount.toFixed(2)}
+                        -{formatKSH(appliedDiscount)}
                       </span>
                     </div>
                     {appliedPromo.name && (
@@ -492,7 +568,7 @@ const CartPage: React.FC = () => {
                       <p className="text-xs text-green-600">
                         {appliedPromo.discount_value}% off
                         {appliedPromo.max_discount_amount && (
-                          ` (max $${appliedPromo.max_discount_amount})`
+                          ` (max ${formatKSH(appliedPromo.max_discount_amount)})`
                         )}
                       </p>
                     )}
@@ -504,39 +580,37 @@ const CartPage: React.FC = () => {
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium text-gray-900">${subtotal.toFixed(2)}</span>
+                  <span className="font-medium text-gray-900">{formatKSH(subtotal)}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium text-gray-900">
-                    {shipping === 0 ? (
-                      <span className="text-green-600">FREE</span>
-                    ) : (
-                      `$${shipping.toFixed(2)}`
-                    )}
-                  </span>
+                
+                {/* FREE DELIVERY */}
+                <div className="flex justify-between items-center text-green-600">
+                  <span className="font-medium">Delivery</span>
+                  <span className="font-bold">FREE</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Tax (10%)</span>
-                  <span className="font-medium text-gray-900">${tax.toFixed(2)}</span>
-                </div>
+                
                 {appliedDiscount > 0 && (
                   <div className="flex justify-between items-center text-green-600">
                     <span className="font-medium">Discount</span>
-                    <span className="font-bold">-${appliedDiscount.toFixed(2)}</span>
+                    <span className="font-bold">-{formatKSH(appliedDiscount)}</span>
                   </div>
                 )}
+                
                 <hr className="my-4 border-gray-300" />
                 <div className="flex justify-between items-center text-xl font-bold text-gray-900">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>{formatKSH(total)}</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  {shipping === 0 ? 
-                    '🎉 Free shipping on orders over $50!' : 
-                    `Add $${Math.max(0, 50 - subtotal).toFixed(2)} more for free shipping`
-                  }
-                </p>
+                
+                {/* FREE DELIVERY MESSAGE */}
+                <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center">
+                    <span className="text-green-600 font-medium text-sm">🎉 Free Delivery on All Orders</span>
+                  </div>
+                  <p className="text-xs text-green-600 mt-1">
+                    Enjoy free delivery to your doorstep on every order
+                  </p>
+                </div>
               </div>
 
               {/* Checkout Button */}
@@ -562,7 +636,7 @@ const CartPage: React.FC = () => {
                 <div className="flex justify-center items-center gap-6">
                   <div className="text-xl" title="Credit Cards">💳</div>
                   <div className="text-xl" title="Bank Transfer">🏦</div>
-                  <div className="text-xl" title="Mobile Money">📱</div>
+                  <div className="text-xl" title="M-Pesa">📱</div>
                   <div className="text-xl" title="PayPal">💰</div>
                 </div>
                 <p className="text-center text-xs text-gray-400 mt-3">

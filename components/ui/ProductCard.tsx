@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Product } from '@/types';
 import { api } from '@/lib/api';
@@ -26,6 +26,25 @@ interface PersonalizedPrice {
   discount_rules_applied?: any[];
 }
 
+// Debounce function to prevent rapid API calls
+const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): ((...args: Parameters<T>) => void) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
+// Cache for wishlist checks to prevent duplicate calls
+const wishlistCheckCache = new Map<number, {
+  timestamp: number;
+  result: boolean;
+  promise?: Promise<boolean>;
+}>();
+
 const ProductCard: React.FC<ProductCardProps> = ({ 
   product, 
   showActions = true,
@@ -38,8 +57,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [canReview, setCanReview] = useState(false);
   const [userReview, setUserReview] = useState<any>(null);
+  const [hasCheckedWishlist, setHasCheckedWishlist] = useState(false);
 
-  // Personalized Price Logic - FIXED: Use the correct property name from your Product type
+  // Personalized Price Logic
   const personalizedPrice: PersonalizedPrice | null = product.personalized_price || null;
   
   // Safely extract values with fallbacks
@@ -57,7 +77,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   
   const finalPriceNum = finalPrice ? parseFloat(String(finalPrice)) : 0;
   
-  // Calculate discount percentage based on original price vs final price
+  // Calculate discount percentage
   const originalPriceForDiscount = hasPersonalizedOffer && personalizedPrice
     ? personalizedPrice.original_price
     : price;
@@ -66,7 +86,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     ? Math.round(((originalPriceForDiscount - finalPriceNum) / originalPriceForDiscount) * 100)
     : 0;
 
-  // Personalized offer discount percentage (if different from regular discount)
+  // Personalized offer discount percentage
   const personalizedDiscountPercentage = hasPersonalizedOffer && personalizedPrice?.original_price
     ? Math.round(((personalizedPrice.original_price - personalizedPrice.final_price) / personalizedPrice.original_price) * 100)
     : 0;
@@ -82,7 +102,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     ? Boolean(product.is_in_stock)
     : stockQuantity > 0;
 
-  // Safely handle rating - convert to number
+  // Safely handle rating
   const rating = product.rating 
     ? (typeof product.rating === 'string' 
         ? parseFloat(product.rating) 
@@ -146,6 +166,86 @@ const ProductCard: React.FC<ProductCardProps> = ({
       setCanReview(false);
     }
   };
+
+  // Debounced check for wishlist status
+  const checkWishlistStatus = useCallback(
+    debounce(async (productId: number) => {
+      if (!isAuthenticated || hasCheckedWishlist) return;
+      
+      // Check cache first
+      const cached = wishlistCheckCache.get(productId);
+      const now = Date.now();
+      
+      // Use cached result if less than 30 seconds old
+      if (cached && (now - cached.timestamp) < 30000) {
+        setInWishlist(cached.result);
+        setHasCheckedWishlist(true);
+        return;
+      }
+      
+      try {
+        // If there's an ongoing promise for this product, wait for it
+        if (cached?.promise) {
+          const result = await cached.promise;
+          setInWishlist(result);
+          setHasCheckedWishlist(true);
+          return;
+        }
+        
+        // Create new promise for checking
+        const checkPromise = (async () => {
+          try {
+            const checkResponse = await api.wishlist.check(productId);
+            const isInWishlist = checkResponse.data?.in_wishlist || 
+                                checkResponse.data?.is_in_wishlist || 
+                                false;
+            
+            // Cache the result
+            wishlistCheckCache.set(productId, {
+              timestamp: Date.now(),
+              result: isInWishlist,
+              promise: undefined
+            });
+            
+            return isInWishlist;
+          } catch (error: any) {
+            // Don't show error for 429 (rate limit) - it's expected
+            if (error.response?.status !== 429) {
+              console.error('Failed to check wishlist status:', error);
+            }
+            return false;
+          }
+        })();
+        
+        // Store the promise in cache
+        wishlistCheckCache.set(productId, {
+          timestamp: now,
+          result: false, // temporary
+          promise: checkPromise
+        });
+        
+        const result = await checkPromise;
+        setInWishlist(result);
+        setHasCheckedWishlist(true);
+      } catch (error) {
+        console.error('Error in wishlist check:', error);
+        setInWishlist(false);
+      }
+    }, 500), // Wait 500ms before checking
+    [isAuthenticated, hasCheckedWishlist]
+  );
+
+  // Check wishlist status on mount
+  useEffect(() => {
+    if (isAuthenticated && product.id && !hasCheckedWishlist) {
+      // Check after a short delay to prevent rapid calls when multiple cards load
+      const timer = setTimeout(() => {
+        checkWishlistStatus(product.id);
+      }, Math.random() * 300); // Random delay between 0-300ms to spread out requests
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, product.id, hasCheckedWishlist, checkWishlistStatus]);
 
   // Format currency in Kenyan Shillings
   const formatKSH = (amount: any) => {
@@ -234,40 +334,34 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
     setIsAddingToWishlist(true);
     try {
-      const checkResponse = await api.wishlist.check(product.id);
-      const isInWishlist = checkResponse.data?.in_wishlist || false;
-      
-      if (isInWishlist) {
+      if (inWishlist) {
         await api.wishlist.remove(product.id);
         setInWishlist(false);
+        // Clear cache for this product
+        wishlistCheckCache.delete(product.id);
+        setHasCheckedWishlist(false);
         toast.success('Removed from wishlist');
       } else {
         await api.wishlist.add(product.id);
         setInWishlist(true);
+        // Update cache for this product
+        wishlistCheckCache.set(product.id, {
+          timestamp: Date.now(),
+          result: true
+        });
         toast.success('Added to wishlist!');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update wishlist');
+      // Handle rate limit error specifically
+      if (error.response?.status === 429) {
+        toast.error('Please wait a moment before trying again');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to update wishlist');
+      }
     } finally {
       setIsAddingToWishlist(false);
     }
   };
-
-  // Check wishlist status on mount
-  useEffect(() => {
-    const checkWishlistStatus = async () => {
-      if (isAuthenticated && product.id) {
-        try {
-          const checkResponse = await api.wishlist.check(product.id);
-          setInWishlist(checkResponse.data?.in_wishlist || false);
-        } catch (error) {
-          console.error('Error checking wishlist:', error);
-        }
-      }
-    };
-    
-    checkWishlistStatus();
-  }, [isAuthenticated, product.id]);
 
   const handleReviewClick = () => {
     if (!isAuthenticated) {

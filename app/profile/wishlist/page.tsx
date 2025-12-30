@@ -19,11 +19,19 @@ import {
   AlertCircle,
   ExternalLink
 } from 'lucide-react';
-import ProductCard from '@/components/ui/ProductCard';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
-import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/lib/auth';
+
+// Format currency to KSH
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-KE', {
+    style: 'currency',
+    currency: 'KES',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
 interface WishlistItem {
   id: number;
@@ -55,7 +63,7 @@ interface WishlistItem {
 
 export default function WishlistPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [removing, setRemoving] = useState<number | null>(null);
@@ -66,6 +74,7 @@ export default function WishlistPage() {
   
   useEffect(() => {
     if (!isAuthenticated) {
+      toast.error('Please login to view your wishlist');
       router.push('/auth/login');
       return;
     }
@@ -73,20 +82,58 @@ export default function WishlistPage() {
   }, [isAuthenticated, router]);
 
   const fetchWishlist = async () => {
+    if (!isAuthenticated) return;
+    
     try {
       setLoading(true);
-      // Use the correct API endpoint based on your routes
-      const response = await api.get('/wishlist');
-      console.log('Wishlist response:', response.data);
       
-      if (response.data) {
+      // First, get the user's token from localStorage
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      if (!token) {
+        toast.error('Please login again');
+        router.push('/auth/login');
+        return;
+      }
+
+      console.log('Fetching wishlist with token:', token.substring(0, 20) + '...');
+      
+      const response = await fetch('https://api.hypermarket.co.ke/api/wishlist', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        credentials: 'include', // Important for cookies/sessions
+      });
+
+      console.log('Wishlist response status:', response.status);
+      
+      if (response.status === 401) {
+        toast.error('Your session has expired. Please login again.');
+        router.push('/auth/login');
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Wishlist data:', data);
+      
+      if (data) {
         // Handle different response structures
-        if (Array.isArray(response.data)) {
-          setWishlist(response.data);
-        } else if (response.data.data && Array.isArray(response.data.data)) {
-          setWishlist(response.data.data);
-        } else if (response.data.wishlist && Array.isArray(response.data.wishlist)) {
-          setWishlist(response.data.wishlist);
+        if (Array.isArray(data)) {
+          setWishlist(data);
+        } else if (data.data && Array.isArray(data.data)) {
+          setWishlist(data.data);
+        } else if (data.wishlist && Array.isArray(data.wishlist)) {
+          setWishlist(data.wishlist);
+        } else if (data.message) {
+          // If the API returns a message like "Wishlist empty"
+          console.log(data.message);
+          setWishlist([]);
         } else {
           setWishlist([]);
         }
@@ -95,12 +142,17 @@ export default function WishlistPage() {
       }
     } catch (error: any) {
       console.error('Failed to fetch wishlist:', error);
-      if (error.response?.status === 401) {
+      
+      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
         toast.error('Please login to view wishlist');
         router.push('/auth/login');
+      } else if (error.message?.includes('Network')) {
+        toast.error('Network error. Please check your connection.');
       } else {
         toast.error('Failed to load wishlist');
       }
+      
+      setWishlist([]);
     } finally {
       setLoading(false);
     }
@@ -109,14 +161,36 @@ export default function WishlistPage() {
   const handleRemoveFromWishlist = async (wishlistItemId: number, productId: number) => {
     try {
       setRemoving(wishlistItemId);
-      // Use the correct DELETE endpoint: DELETE /wishlist/{productId}
-      await api.delete(`/wishlist/${productId}`);
       
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      const response = await fetch(`https://api.hypermarket.co.ke/api/wishlist/${productId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (response.status === 401) {
+        toast.error('Your session has expired. Please login again.');
+        router.push('/auth/login');
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to remove from wishlist');
+      }
+
       // Update local state
       setWishlist(prev => prev.filter(item => item.id !== wishlistItemId));
       toast.success('Removed from wishlist');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to remove from wishlist');
+      console.error('Remove from wishlist error:', error);
+      toast.error(error.message || 'Failed to remove from wishlist');
     } finally {
       setRemoving(null);
     }
@@ -125,12 +199,34 @@ export default function WishlistPage() {
   const handleAddToCart = async (productId: number) => {
     try {
       setAddingToCart(productId);
-      // Use the correct add to cart endpoint
-      await api.post('/cart/add', {
-        product_id: productId,
-        quantity: 1,
-      });
       
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      const response = await fetch('https://api.hypermarket.co.ke/api/cart/add', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          product_id: productId,
+          quantity: 1,
+        }),
+        credentials: 'include',
+      });
+
+      if (response.status === 401) {
+        toast.error('Your session has expired. Please login again.');
+        router.push('/auth/login');
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add to cart');
+      }
+
       // Remove from wishlist after adding to cart
       const itemToRemove = wishlist.find(item => item.product_id === productId);
       if (itemToRemove) {
@@ -139,7 +235,8 @@ export default function WishlistPage() {
       
       toast.success('Added to cart!');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to add to cart');
+      console.error('Add to cart error:', error);
+      toast.error(error.message || 'Failed to add to cart');
     } finally {
       setAddingToCart(null);
     }
@@ -151,11 +248,25 @@ export default function WishlistPage() {
         item.product.is_in_stock && item.product.stock_quantity > 0
       );
       
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
       for (const item of inStockItems) {
-        await api.post('/cart/add', {
-          product_id: item.product_id,
-          quantity: 1,
+        const response = await fetch('https://api.hypermarket.co.ke/api/cart/add', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            product_id: item.product_id,
+            quantity: 1,
+          }),
         });
+
+        if (!response.ok) {
+          console.error(`Failed to add item ${item.id} to cart`);
+          continue; // Skip this item and continue with others
+        }
       }
       
       // Remove in-stock items from wishlist
@@ -165,6 +276,7 @@ export default function WishlistPage() {
       
       toast.success(`Added ${inStockItems.length} items to cart!`);
     } catch (error: any) {
+      console.error('Move all to cart error:', error);
       toast.error('Failed to add some items to cart');
     }
   };
@@ -175,12 +287,27 @@ export default function WishlistPage() {
     }
     
     try {
-      // Remove items one by one from backend
-      for (const item of wishlist) {
-        try {
-          await api.delete(`/wishlist/${item.product_id}`);
-        } catch (error) {
-          console.error(`Failed to remove item ${item.id}`, error);
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      // Clear wishlist API endpoint
+      const response = await fetch('https://api.hypermarket.co.ke/api/wishlist/clear', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        // If no clear endpoint, remove items one by one
+        for (const item of wishlist) {
+          await fetch(`https://api.hypermarket.co.ke/api/wishlist/${item.product_id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
         }
       }
       
@@ -188,6 +315,7 @@ export default function WishlistPage() {
       setWishlist([]);
       toast.success('Wishlist cleared');
     } catch (error: any) {
+      console.error('Clear wishlist error:', error);
       toast.error('Failed to clear wishlist');
     }
   };
@@ -215,11 +343,16 @@ export default function WishlistPage() {
     // Clean any leading slash
     const cleanThumbnail = thumbnail.replace(/^\//, '');
     
-    // Just add the thumbnail to the base storage URL
-    return `http://localhost:8000/storage/${cleanThumbnail}`;
+    // Check if it's already a full URL
+    if (thumbnail.startsWith('http')) {
+      return thumbnail;
+    }
+    
+    // Return full URL to API storage
+    return `https://api.hypermarket.co.ke/storage/${cleanThumbnail}`;
   };
 
-  if (loading) {
+  if (!isAuthenticated || loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto px-4">
@@ -260,7 +393,7 @@ export default function WishlistPage() {
                 <button
                   onClick={handleMoveAllToCart}
                   disabled={inStockItems.length === 0}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
                   <ShoppingCart className="w-4 h-4 mr-2" />
                   Add All to Cart ({inStockItems.length})
@@ -290,7 +423,7 @@ export default function WishlistPage() {
                     placeholder="Search in wishlist..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   />
                 </div>
               </div>
@@ -340,7 +473,7 @@ export default function WishlistPage() {
             <div className="flex gap-4 justify-center">
               <Link
                 href="/products"
-                className="bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 font-medium"
+                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium"
               >
                 Browse Products
               </Link>
@@ -364,7 +497,7 @@ export default function WishlistPage() {
                 setSearchQuery('');
                 setFilterInStock(false);
               }}
-              className="bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 font-medium"
+              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium"
             >
               Clear Filters
             </button>
@@ -442,7 +575,7 @@ export default function WishlistPage() {
                         )}
 
                         <Link href={`/products/${item.product.id}`} className="group/title mb-2">
-                          <h3 className="font-bold text-gray-900 text-base leading-tight group-hover/title:text-primary-600 line-clamp-2 min-h-[48px]">
+                          <h3 className="font-bold text-gray-900 text-base leading-tight group-hover/title:text-green-600 line-clamp-2 min-h-[48px]">
                             {item.product.name}
                           </h3>
                         </Link>
@@ -452,11 +585,11 @@ export default function WishlistPage() {
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-baseline">
                               <span className="text-xl font-bold text-gray-900">
-                                ${item.product.final_price.toFixed(2)}
+                                {formatCurrency(item.product.final_price)}
                               </span>
                               {item.product.discounted_price && (
                                 <span className="text-sm text-gray-500 line-through ml-2">
-                                  ${item.product.price.toFixed(2)}
+                                  {formatCurrency(item.product.price)}
                                 </span>
                               )}
                             </div>
@@ -479,7 +612,7 @@ export default function WishlistPage() {
                             <button
                               onClick={() => handleAddToCart(item.product_id)}
                               disabled={!item.product.is_in_stock || addingToCart === item.product_id}
-                              className="flex-1 bg-primary-600 text-white py-2.5 px-4 rounded-lg font-semibold text-sm disabled:opacity-50 flex items-center justify-center"
+                              className="flex-1 bg-green-600 text-white py-2.5 px-4 rounded-lg font-semibold text-sm disabled:opacity-50 flex items-center justify-center"
                             >
                               {addingToCart === item.product_id ? (
                                 <span className="flex items-center justify-center">
@@ -565,11 +698,11 @@ export default function WishlistPage() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex flex-col">
                               <span className="font-bold text-lg text-gray-900">
-                                ${item.product.final_price.toFixed(2)}
+                                {formatCurrency(item.product.final_price)}
                               </span>
                               {item.product.discounted_price && (
                                 <span className="text-sm text-gray-500 line-through">
-                                  ${item.product.price.toFixed(2)}
+                                  {formatCurrency(item.product.price)}
                                 </span>
                               )}
                             </div>
@@ -592,7 +725,7 @@ export default function WishlistPage() {
                               <button
                                 onClick={() => handleAddToCart(item.product_id)}
                                 disabled={!item.product.is_in_stock || addingToCart === item.product_id}
-                                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center"
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center"
                               >
                                 {addingToCart === item.product_id ? (
                                   <>

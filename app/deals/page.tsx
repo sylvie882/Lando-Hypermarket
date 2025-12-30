@@ -13,10 +13,20 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+// Format currency to KSH
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-KE', {
+    style: 'currency',
+    currency: 'KES',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
 // Create a simple API function for this page
 const fetchDeals = async (): Promise<Product[]> => {
   try {
-    const response = await fetch('http://localhost:8000/api/products?per_page=50');
+    const response = await fetch('https://api.hypermarket.co.ke/api/products?per_page=50');
     const data = await response.json();
     const products = data.data || data || [];
     
@@ -49,7 +59,7 @@ const ProductCard = ({ product }: { product: Product }) => {
     if (!product.thumbnail) return '/images/placeholder-product.jpg';
     
     const cleanThumbnail = product.thumbnail.replace(/^\//, '');
-    return `http://localhost:8000/storage/${cleanThumbnail}`;
+    return `https://api.hypermarket.co.ke/storage/${cleanThumbnail}`;
   };
 
   return (
@@ -87,11 +97,11 @@ const ProductCard = ({ product }: { product: Product }) => {
         <div className="flex items-center justify-between mb-3">
           <div>
             <span className="text-lg font-bold text-gray-900">
-              ${discountedPrice.toFixed(2)}
+              {formatCurrency(discountedPrice)}
             </span>
             {discountPercentage > 0 && (
               <span className="text-sm text-gray-500 line-through ml-2">
-                ${price.toFixed(2)}
+                {formatCurrency(price)}
               </span>
             )}
           </div>
@@ -177,10 +187,10 @@ const DealsPage = () => {
                 
                 <div className="flex items-center gap-3 mb-4">
                   <span className="text-2xl font-bold text-gray-900">
-                    ${parseFloat(bestDeal.discounted_price?.toString() || '0').toFixed(2)}
+                    {formatCurrency(parseFloat(bestDeal.discounted_price?.toString() || '0'))}
                   </span>
                   <span className="text-lg text-gray-500 line-through">
-                    ${parseFloat(bestDeal.price.toString()).toFixed(2)}
+                    {formatCurrency(parseFloat(bestDeal.price.toString()))}
                   </span>
                   <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-bold">
                     {calculateDiscountPercentage(

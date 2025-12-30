@@ -156,48 +156,6 @@ const CategoriesPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Stats Bar */}
-      <section className="py-8 bg-white border-b border-gray-100">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-6 rounded-2xl shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                  <Tag size={24} className="text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Total Categories</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalCategories}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-100 p-6 rounded-2xl shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                  <ShoppingBag size={24} className="text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Total Products</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalProducts}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-amber-50 to-orange-100 p-6 rounded-2xl shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                  <Star size={24} className="text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">With Images</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.categoriesWithImages}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Main Content */}
       <section className="py-12">
@@ -288,8 +246,8 @@ const CategoriesPage: React.FC = () => {
                           {category.image_url ? (
                             <img
                               src={category.image_url.replace(
-                                'http://localhost/storage/',
-                                'http://localhost:8000/storage/'
+                                'https://api.hypermarket.co.ke/',
+                                'https://api.hypermarket.co.ke/storage/'
                               )}
                               alt={category.name}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
@@ -375,44 +333,6 @@ const CategoriesPage: React.FC = () => {
                   Clear Search
                 </button>
               )}
-            </div>
-          )}
-          
-          {/* Categories with Images Section */}
-          {categories.filter(c => c.image || c.image_url).length > 0 && (
-            <div className="mt-20">
-              <div className="flex items-center justify-between mb-10">
-                <div>
-                  <div className="inline-flex items-center gap-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 px-4 py-2 rounded-full mb-4">
-                    <Sparkles size={18} className="text-green-600" />
-                    <span className="text-sm font-semibold">Featured Collections</span>
-                  </div>
-                  <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
-                    Categories with <span className="text-green-600">Images</span>
-                  </h2>
-                  <p className="text-gray-600 mt-2">
-                    Beautifully presented categories ready for browsing
-                  </p>
-                </div>
-                
-                <a
-                  href="/"
-                  className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold"
-                >
-                  <span>Back to Home</span>
-                  <span>→</span>
-                </a>
-              </div>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                {categories
-                  .filter(category => category.image || category.image_url)
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .slice(0, 12)
-                  .map((category) => (
-                    <CategoryCard key={category.id} category={category} />
-                  ))}
-              </div>
             </div>
           )}
         </div>

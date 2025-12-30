@@ -68,7 +68,7 @@ const SupportPage = () => {
 
     try {
       // Send support request to your public endpoint
-      const response = await fetch('http://localhost:8000/api/support/public', {
+      const response = await fetch('https://api.hypermarket.co.ke/api/support', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -199,7 +199,7 @@ const SupportPage = () => {
                   href="tel:+254712345678" 
                   className="block text-2xl font-bold text-gray-900 hover:text-green-600 transition-colors"
                 >
-                  +254 712 345 678
+                  +254 716 354589
                 </a>
                 <div className="flex items-center gap-2 text-gray-600">
                   <Clock size={16} />
@@ -223,12 +223,6 @@ const SupportPage = () => {
                   className="block text-lg font-medium text-gray-900 hover:text-green-600 transition-colors truncate"
                 >
                   support@landoranch.com
-                </a>
-                <a 
-                  href="mailto:orders@landoranch.com" 
-                  className="block text-lg font-medium text-gray-900 hover:text-green-600 transition-colors truncate"
-                >
-                  orders@landoranch.com
                 </a>
               </div>
             </div>
