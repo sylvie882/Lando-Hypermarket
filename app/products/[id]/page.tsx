@@ -574,13 +574,13 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Related Products - FIXED: Mobile 2 per row, Desktop 4 per row */}
+        {/* Related Products - FIXED: Mobile 1 per row, Desktop 4 per row */}
         {relatedProducts.length > 0 && (
           <div className="mt-12 sm:mt-16">
             <h3 className="text-xl sm:text-2xl font-bold mb-6 sm:mb-8">Related Products</h3>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {relatedProducts.map((relatedProduct) => (
-                <div key={relatedProduct.id} className="min-w-0">
+                <div key={relatedProduct.id}>
                   <ProductCard product={relatedProduct} />
                 </div>
               ))}
