@@ -363,12 +363,12 @@ const Header: React.FC = () => {
                       <div className="h-0.5 w-full mt-0.5 bg-gradient-to-r from-emerald-400 via-orange-400 to-amber-400 rounded-full transform -skew-x-6 opacity-80"></div>
                     </div>
                     {/* Tagline */}
-                    <p className="text-xs text-gray-700 mt-0.5 italic flex items-center">
+                    {/* <p className="text-xs text-gray-700 mt-0.5 italic flex items-center">
                       <Sparkles size={6} className="text-emerald-500 mr-0.5" />
                       <span className="bg-gradient-to-r from-emerald-600 to-orange-500 bg-clip-text text-transparent">
                         Famous and renowned throughout the land
                       </span>
-                    </p>
+                    </p> */}
                   </div>
                 </Link>
               </div>
