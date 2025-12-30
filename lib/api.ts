@@ -185,18 +185,15 @@ class ApiService {
 
   // Auth APIs
   auth = {
-      // Accept either email or phone for login
-  login: (credentials: { email?: string; phone?: string; password: string }) => {
-    // Validate that either email or phone is provided
-    if (!credentials.email && !credentials.phone) {
-      return Promise.reject(new Error('Either email or phone must be provided'));
-    }
-    return this.api.post('/login', credentials);
-  },
+    // Accept either email or phone for login
+    login: (credentials: { email?: string; phone?: string; password: string }) => {
+      // Validate that either email or phone is provided
+      if (!credentials.email && !credentials.phone) {
+        return Promise.reject(new Error('Either email or phone must be provided'));
+      }
+      return this.api.post('/login', credentials);
+    },
 
-    // login: (credentials: { email: string; password: string }) => 
-    //   this.api.post('/login', credentials),
-    
     register: (data: { 
       name: string; 
       email: string; 
@@ -488,13 +485,30 @@ class ApiService {
     updateTicketStatus: (id: number, data: any) => 
       this.api.put(`/admin/support/tickets/${id}/status`, data),
     getSupportStats: () => this.api.get('/admin/support/stats'),
-    
-    // Delivery Management
-    assignDelivery: (orderId: number, data: any) => 
-      this.api.post(`/admin/orders/${orderId}/assign-delivery`, data),
-    bulkAssignDelivery: (data: any) => this.api.post('/admin/delivery/bulk-assign', data),
+
+    // DELIVERY MANAGEMENT - CORRECTED: Using this.api instead of api
     getDeliveries: (params?: any) => this.api.get('/admin/deliveries', { params }),
+    getDeliveryStats: () => this.api.get('/admin/deliveries/stats'),
+    assignDelivery: (data: any) => this.api.post('/admin/deliveries/assign', data),
+    
+    // Delivery Staff Management
+    getDeliveryStaff: (params?: any) => this.api.get('/admin/delivery-staff', { params }),
+    addDeliveryStaff: (data: any) => this.api.post('/admin/delivery-staff', data),
+    updateDeliveryStaff: (id: number, data: any) => this.api.put(`/admin/delivery-staff/${id}`, data),
+    deleteDeliveryStaff: (id: number) => this.api.delete(`/admin/delivery-staff/${id}`),
+    toggleDeliveryStaffOnline: (id: number, data: { is_online: boolean }) => 
+      this.api.put(`/admin/delivery-staff/${id}/toggle-online`, data),
+    getDeliveryStaffDetails: (id: number) => this.api.get(`/admin/delivery-staff/${id}`),
+    
+    // Bulk assignments
+    bulkAssignDeliveries: (data: any) => this.api.post('/admin/delivery/bulk-assign', data),
+    
+    // Delivery tracking
     getDeliveryTracking: (id: number) => this.api.get(`/admin/deliveries/${id}/tracking`),
+    
+    // Order delivery assignment
+    assignOrderDelivery: (orderId: number, data: any) => 
+      this.api.post(`/admin/orders/${orderId}/assign-delivery`, data),
     
     // Payment Management
     getPayments: (params?: any) => this.api.get('/admin/payments', { params }),
@@ -512,15 +526,25 @@ class ApiService {
     getProducts: () => this.api.get('/vendor/products'),
   };
 
-  // Delivery Staff APIs
+  // Delivery Staff APIs - UPDATED to match actual routes
   delivery = {
-    getMyDeliveries: () => this.api.get('/delivery/my-deliveries'),
-    updateLocation: (id: number, data: any) => this.api.post(`/delivery/${id}/update-location`, data),
-    startDelivery: (id: number) => this.api.post(`/delivery/${id}/start`),
-    completeDelivery: (id: number) => this.api.post(`/delivery/${id}/complete`),
-    updateStatus: (id: number, data: any) => this.api.put(`/delivery/${id}/status`, data),
-    verifyDelivery: (id: number, data: any) => this.api.post(`/delivery/${id}/verify`, data),
-    getRoute: (id: number) => this.api.get(`/delivery/${id}/route`),
+    // Delivery staff endpoints (for delivery staff themselves)
+    getMyDeliveries: () => this.api.get('/delivery-staff/deliveries'),
+    updateLocation: (id: number, data: any) => this.api.post(`/delivery-staff/deliveries/${id}/location`, data),
+    updateStatus: (id: number, data: any) => this.api.put(`/delivery-staff/deliveries/${id}/status`, data),
+    verifyDelivery: (id: number, data: any) => this.api.post(`/delivery-staff/deliveries/${id}/verify`, data),
+    getRoute: (id: number) => this.api.get(`/delivery-staff/deliveries/${id}/route`),
+    getStats: () => this.api.get('/delivery-staff/stats'),
+    
+    // Delivery staff profile/authentication
+    login: (data: any) => this.api.post('/delivery-staff/login', data),
+    logout: () => this.api.post('/delivery-staff/logout'),
+    profile: () => this.api.get('/delivery-staff/profile'),
+    updateProfile: (data: any) => this.api.put('/delivery-staff/profile', data),
+    register: (data: any) => this.api.post('/delivery-staff/register', data),
+    forgotPassword: (data: any) => this.api.post('/delivery-staff/forgot-password', data),
+    resetPassword: (data: any) => this.api.post('/delivery-staff/reset-password', data),
+    updateOnlineStatus: (data: any) => this.api.put('/delivery-staff/online-status', data),
   };
 
   // Public API sections
