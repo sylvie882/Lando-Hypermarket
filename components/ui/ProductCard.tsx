@@ -13,17 +13,7 @@ interface ProductCardProps {
   product: Product;
   showActions?: boolean;
   showPersonalizedPrice?: boolean;
-}
-
-interface PersonalizedPrice {
-  original_price: number;
-  final_price: number;
-  is_personalized_offer: boolean;
-  discount_type?: string;
-  discount_value?: number;
-  offer_name?: string;
-  valid_until?: string;
-  discount_rules_applied?: any[];
+  onViewTrack?: (productId: number) => void;
 }
 
 // Debounce function to prevent rapid API calls
@@ -48,7 +38,8 @@ const wishlistCheckCache = new Map<number, {
 const ProductCard: React.FC<ProductCardProps> = ({ 
   product, 
   showActions = true,
-  showPersonalizedPrice = false
+  showPersonalizedPrice = false,
+  onViewTrack
 }) => {
   const { isAuthenticated, user } = useAuth();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -59,18 +50,20 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [userReview, setUserReview] = useState<any>(null);
   const [hasCheckedWishlist, setHasCheckedWishlist] = useState(false);
 
-  // Personalized Price Logic
-  const personalizedPrice: PersonalizedPrice | null = product.personalized_price || null;
-  
+  // Track product view when component mounts or product changes
+  useEffect(() => {
+    if (onViewTrack && product.id) {
+      onViewTrack(product.id);
+    }
+  }, [product.id, onViewTrack]);
+
   // Safely extract values with fallbacks
   const hasPersonalizedOffer = showPersonalizedPrice && 
-    personalizedPrice?.is_personalized_offer === true &&
-    personalizedPrice.final_price < (personalizedPrice.original_price || product.price || 0);
+    product.relevance_score && 
+    product.relevance_score > 70; // Show personalized badge if relevance > 70%
   
   // Use personalized price if available, otherwise use regular pricing
-  const finalPrice = hasPersonalizedOffer && personalizedPrice
-    ? personalizedPrice.final_price 
-    : product.final_price || product.discounted_price || product.price || 0;
+  const finalPrice = product.final_price || product.discounted_price || product.price || 0;
   
   // Safely convert prices to numbers with proper type checking
   const price = product.price ? parseFloat(String(product.price)) : 0;
@@ -78,17 +71,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const finalPriceNum = finalPrice ? parseFloat(String(finalPrice)) : 0;
   
   // Calculate discount percentage
-  const originalPriceForDiscount = hasPersonalizedOffer && personalizedPrice
-    ? personalizedPrice.original_price
-    : price;
-  
-  const discountPercentage = originalPriceForDiscount > 0 && finalPriceNum < originalPriceForDiscount
-    ? Math.round(((originalPriceForDiscount - finalPriceNum) / originalPriceForDiscount) * 100)
-    : 0;
-
-  // Personalized offer discount percentage
-  const personalizedDiscountPercentage = hasPersonalizedOffer && personalizedPrice?.original_price
-    ? Math.round(((personalizedPrice.original_price - personalizedPrice.final_price) / personalizedPrice.original_price) * 100)
+  const discountPercentage = price > 0 && finalPriceNum < price
+    ? Math.round(((price - finalPriceNum) / price) * 100)
     : 0;
 
   // Safely handle stock quantity
@@ -430,7 +414,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
     <div className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-200 overflow-hidden h-full flex flex-col transform hover:-translate-y-1 w-full">
       {/* Product Image Section */}
       <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
-        <Link href={`/products/${product.id}`} className="block">
+        <Link 
+          href={`/products/${product.id}`} 
+          className="block"
+          onClick={() => onViewTrack && onViewTrack(product.id)}
+        >
           <div className="relative w-full" style={{ paddingBottom: '75%' }}>
             <img
               src={imageUrl}
@@ -442,10 +430,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
             />
             
             {/* Personalized Offer Badge */}
-            {hasPersonalizedOffer && personalizedDiscountPercentage > 0 && (
+            {hasPersonalizedOffer && (
               <div className="absolute top-3 left-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-xl z-10 flex items-center gap-1">
                 <Sparkles size={12} />
-                -{personalizedDiscountPercentage}%
+                AI Recommended
+                {product.relevance_score && (
+                  <span className="ml-1">{Math.round(product.relevance_score)}%</span>
+                )}
               </div>
             )}
             
@@ -526,6 +517,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                       href={`/products/${product.id}`}
                       className="p-2.5 bg-white text-gray-700 hover:bg-gray-50 rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
                       title="View details"
+                      onClick={() => onViewTrack && onViewTrack(product.id)}
                     >
                       <Eye size={16} />
                     </Link>
@@ -550,7 +542,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
         )}
 
         {/* Product Title */}
-        <Link href={`/products/${product.id}`} className="group/title mb-2">
+        <Link 
+          href={`/products/${product.id}`} 
+          className="group/title mb-2"
+          onClick={() => onViewTrack && onViewTrack(product.id)}
+        >
           <h3 className="font-bold text-gray-900 text-base leading-tight group-hover/title:text-primary-600 line-clamp-2 min-h-[48px]">
             {product.name || 'Unnamed Product'}
           </h3>
@@ -614,36 +610,23 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <div className="mt-auto pt-3 border-t border-gray-100">
           <div className="flex items-center justify-between mb-2">
             <div className="flex flex-col">
-              {/* Personalized Price Display */}
-              {hasPersonalizedOffer && personalizedPrice ? (
-                <>
-                  <div className="flex items-baseline">
-                    <span className="text-xl font-bold text-purple-600">
-                      {formatKSH(personalizedPrice.final_price)}
-                    </span>
-                    <span className="text-sm text-gray-500 line-through ml-2">
-                      {formatKSH(personalizedPrice.original_price)}
-                    </span>
-                  </div>
-                  <div className="text-xs text-purple-600 font-medium mt-1 flex items-center gap-1">
-                    <Sparkles size={10} />
-                    Personalized Price
-                    {personalizedPrice.offer_name && (
-                      <span className="text-xs text-gray-600 ml-1">({personalizedPrice.offer_name})</span>
-                    )}
-                  </div>
-                </>
-              ) : (
-                /* Regular Price Display */
-                <div className="flex items-baseline">
-                  <span className="text-xl font-bold text-gray-900">
-                    {formatKSH(finalPriceNum)}
+              {/* Regular Price Display */}
+              <div className="flex items-baseline">
+                <span className="text-xl font-bold text-gray-900">
+                  {formatKSH(finalPriceNum)}
+                </span>
+                {finalPriceNum < price && price > 0 && (
+                  <span className="text-sm text-gray-500 line-through ml-2">
+                    {formatKSH(price)}
                   </span>
-                  {finalPriceNum < price && price > 0 && (
-                    <span className="text-sm text-gray-500 line-through ml-2">
-                      {formatKSH(price)}
-                    </span>
-                  )}
+                )}
+              </div>
+              
+              {/* Personalized Recommendation Note */}
+              {hasPersonalizedOffer && (
+                <div className="text-xs text-purple-600 font-medium mt-1 flex items-center gap-1">
+                  <Sparkles size={10} />
+                  Recommended for you
                 </div>
               )}
             </div>
@@ -677,8 +660,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
             )}
             {hasPersonalizedOffer && (
               <div className="flex items-center text-purple-600 bg-purple-50 px-2 py-1 rounded text-xs">
-                <Percent size={12} className="mr-1" />
-                <span>Exclusive Offer</span>
+                <Sparkles size={12} className="mr-1" />
+                <span>AI Recommended</span>
               </div>
             )}
           </div>
