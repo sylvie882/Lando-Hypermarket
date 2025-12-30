@@ -4,8 +4,16 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
+import { 
+  Mail, 
+  Phone, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  Loader2,
+  MessageCircle,
+  AlertCircle
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
@@ -13,30 +21,68 @@ export default function LoginPage() {
   
   const [formData, setFormData] = useState({
     email: '',
+    phone: '',
     password: '',
   });
+  const [loginType, setLoginType] = useState<'email' | 'phone'>('email');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+
+    // Clear error for this field
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.email || !formData.password) {
-      toast.error('Please fill in all fields');
+    // Clear previous errors
+    setFormErrors({});
+
+    // Validation
+    const errors: Record<string, string> = {};
+    
+    if (loginType === 'email' && !formData.email.trim()) {
+      errors.email = 'Please enter your email';
+    } else if (loginType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    if (loginType === 'phone' && !formData.phone.trim()) {
+      errors.phone = 'Please enter your phone number';
+    }
+    
+    if (!formData.password) {
+      errors.password = 'Please enter your password';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      const firstError = Object.values(errors)[0];
+      if (firstError) {
+        toast.error(firstError);
+      }
       return;
     }
 
-    setIsLoading(true);
+    setIsLoggingIn(true);
     try {
-      // Direct API call to login
-      const response = await api.auth.login({ email: formData.email, password: formData.password });
+      const credentials = {
+        password: formData.password,
+        ...(loginType === 'email' ? { email: formData.email } : { phone: formData.phone })
+      };
+
+      const response = await api.auth.login(credentials);
       
       if (response.data.token && response.data.user) {
         const { token, user } = response.data;
@@ -45,12 +91,21 @@ export default function LoginPage() {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
         
-        // Check if user is admin and redirect accordingly
+        // Remember me
+        if (rememberMe) {
+          localStorage.setItem('remember_me', 'true');
+          localStorage.setItem('email', formData.email);
+        } else {
+          localStorage.removeItem('remember_me');
+          localStorage.removeItem('email');
+        }
+        
+        toast.success('Login successful! Welcome back.');
+        
+        // Redirect based on user role
         if (user.role === 'admin') {
-          toast.success('Admin login successful!');
           router.push('/admin/dashboard');
         } else {
-          toast.success('Login successful!');
           router.push('/');
         }
         
@@ -59,26 +114,22 @@ export default function LoginPage() {
         toast.error('Invalid response from server');
       }
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('Login error details:', error);
       
-      // Handle specific error cases
+      // Handle Laravel validation errors
       if (error.response?.status === 422) {
-        // Validation errors
-        const errors = error.response.data.errors;
-        if (errors) {
-          const firstError = Object.values(errors)[0];
-          if (Array.isArray(firstError)) {
-            toast.error(firstError[0]);
-          } else if (typeof firstError === 'string') {
-            toast.error(firstError);
-          }
-        } else {
-          toast.error(error.response.data.message || 'Invalid credentials');
+        const validationErrors = error.response.data.errors;
+        const mappedErrors: Record<string, string> = {};
+        Object.keys(validationErrors).forEach(key => {
+          mappedErrors[key] = validationErrors[key][0];
+        });
+        
+        setFormErrors(mappedErrors);
+        
+        const firstError = Object.values(mappedErrors)[0];
+        if (firstError) {
+          toast.error(firstError);
         }
-      } else if (error.response?.status === 401) {
-        toast.error('Invalid email or password');
-      } else if (error.response?.status === 429) {
-        toast.error('Too many attempts. Please try again later.');
       } else if (error.response?.data?.message) {
         toast.error(error.response.data.message);
       } else if (error.message === 'Network Error') {
@@ -87,14 +138,34 @@ export default function LoginPage() {
         toast.error('Login failed. Please try again.');
       }
     } finally {
-      setIsLoading(false);
+      setIsLoggingIn(false);
     }
   };
 
-  // Handle social login redirect
-  const handleGoogleLogin = () => {
-    // This will redirect to Laravel's Google OAuth endpoint
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/social/google`;
+  // Handle Google login redirect
+ // Get Google OAuth URL
+const handleGoogleLogin = async () => {
+  try {
+    const response = await api.auth.getGoogleAuthUrl();
+    const googleAuthUrl = response.data.url;
+    window.location.href = googleAuthUrl;
+  } catch (error) {
+    console.error('Google login error:', error);
+    toast.error('Failed to initiate Google login');
+  }
+};
+
+// Or simply redirect to the endpoint
+const handleGoogleLoginDirect = () => {
+  window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/social/google`;
+};
+
+  // Handle WhatsApp contact
+  const handleWhatsAppContact = () => {
+    const phoneNumber = '+254716354589';
+    const message = encodeURIComponent('Hello! I need help with login.');
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   return (
@@ -103,33 +174,93 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900">Welcome Back</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Sign in to your account to continue
+            Sign in to your Lando Ranch account
           </p>
         </div>
 
+        {/* Login Type Toggle */}
+        <div className="flex border border-gray-300 rounded-lg mb-6">
+          <button
+            type="button"
+            onClick={() => setLoginType('email')}
+            className={`flex-1 py-3 text-sm font-medium rounded-l-lg ${
+              loginType === 'email'
+                ? 'bg-orange-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Email Login
+          </button>
+          <button
+            type="button"
+            onClick={() => setLoginType('phone')}
+            className={`flex-1 py-3 text-sm font-medium rounded-r-lg ${
+              loginType === 'phone'
+                ? 'bg-orange-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Phone Login
+          </button>
+        </div>
+
         <form className="space-y-6" onSubmit={handleSubmit}>
-          {/* Email */}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-gray-400" />
+          {/* Email or Phone Input */}
+          {loginType === 'email' ? (
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  className={`block w-full pl-10 pr-3 py-3 border ${
+                    formErrors.email ? 'border-red-300' : 'border-gray-300'
+                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent`}
+                  placeholder="you@example.com"
+                />
               </div>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="you@example.com"
-              />
+              {formErrors.email && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+              )}
             </div>
-          </div>
+          ) : (
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                Phone Number
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Phone className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  required
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className={`block w-full pl-10 pr-3 py-3 border ${
+                    formErrors.phone ? 'border-red-300' : 'border-gray-300'
+                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent`}
+                  placeholder="0712 345 678"
+                />
+              </div>
+              {formErrors.phone && (
+                <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>
+              )}
+            </div>
+          )}
 
           {/* Password */}
           <div>
@@ -139,7 +270,7 @@ export default function LoginPage() {
               </label>
               <Link
                 href="/auth/forgot-password"
-                className="text-sm font-medium text-orange-600 hover:text-orange-500"
+                className="text-sm text-orange-600 hover:text-orange-500"
               >
                 Forgot password?
               </Link>
@@ -156,7 +287,9 @@ export default function LoginPage() {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className={`block w-full pl-10 pr-12 py-3 border ${
+                  formErrors.password ? 'border-red-300' : 'border-gray-300'
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent`}
                 placeholder="••••••••"
               />
               <button
@@ -171,17 +304,22 @@ export default function LoginPage() {
                 )}
               </button>
             </div>
+            {formErrors.password && (
+              <p className="mt-1 text-sm text-red-600">{formErrors.password}</p>
+            )}
           </div>
 
           {/* Remember Me */}
           <div className="flex items-center">
             <input
-              id="remember-me"
-              name="remember-me"
+              id="remember_me"
+              name="remember_me"
               type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
               className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
             />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+            <label htmlFor="remember_me" className="ml-2 block text-sm text-gray-700">
               Remember me
             </label>
           </div>
@@ -190,20 +328,38 @@ export default function LoginPage() {
           <div>
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoggingIn}
+              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
-              {isLoading ? (
+              {isLoggingIn ? (
                 <>
                   <Loader2 className="animate-spin h-5 w-5 mr-2" />
                   Signing in...
                 </>
               ) : (
-                'Sign in'
+                'Sign In'
               )}
             </button>
           </div>
         </form>
+
+        {/* Help Section */}
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+          <div className="flex items-start">
+            <MessageCircle className="h-5 w-5 text-blue-500 mt-0.5 mr-3" />
+            <div className="text-sm text-blue-700">
+              <p className="font-medium mb-1">Need help with login?</p>
+              <p className="text-blue-600 mb-2">Our support team is available via WhatsApp.</p>
+              <button
+                onClick={handleWhatsAppContact}
+                className="inline-flex items-center px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-lg transition-colors"
+              >
+                <MessageCircle className="h-3 w-3 mr-1" />
+                Get Help on WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Divider */}
         <div className="mt-6">
@@ -245,7 +401,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Sign Up Link */}
+        {/* Register Link */}
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-600">
             Don't have an account?{' '}
@@ -253,11 +409,10 @@ export default function LoginPage() {
               href="/auth/register"
               className="font-medium text-orange-600 hover:text-orange-500"
             >
-              Sign up for free
+              Create an account
             </Link>
           </p>
         </div>
-
       </div>
     </div>
   );

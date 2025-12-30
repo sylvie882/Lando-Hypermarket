@@ -235,6 +235,34 @@ class ApiService {
 
     checkRole: () => this.api.get('/user/check-role'),
 
+    // Google OAuth Methods - ADDED
+    getGoogleAuthUrl: () => 
+      this.api.get('/social/google'),
+    
+    handleGoogleCallback: () => 
+      this.api.get('/social/google/callback'),
+    
+    checkGoogleUser: (email: string) => 
+      this.api.post('/social/google/check', { email }),
+    
+    linkGoogleAccount: (data: { email: string; google_id: string }) => 
+      this.api.post('/social/google/link', data),
+    
+    unlinkGoogleAccount: () => 
+      this.api.post('/social/google/unlink'),
+
+    // Social login methods - Alternative naming
+    social: {
+      google: {
+        redirect: () => this.api.get('/social/google'),
+        callback: () => this.api.get('/social/google/callback'),
+        checkUser: (email: string) => this.api.post('/social/google/check', { email }),
+        linkAccount: (data: { email: string; google_id: string }) => 
+          this.api.post('/social/google/link', data),
+        unlinkAccount: () => this.api.post('/social/google/unlink'),
+      }
+    },
+
     getAdminStatus: async (): Promise<boolean> => {
       try {
         const response = await this.api.get('/user');
@@ -329,21 +357,21 @@ class ApiService {
         });
       }
     },
-// In your api.ts file, update the updateProduct method:
-updateProduct: (id: number, data: any) => {
-  if (data instanceof FormData) {
-    // For FormData, let browser set Content-Type with boundary
-    return this.api.post(`/admin/products/${id}`, data, {
-      headers: {
-        // Don't set Content-Type for FormData - browser will set it with boundary
+    // In your api.ts file, update the updateProduct method:
+    updateProduct: (id: number, data: any) => {
+      if (data instanceof FormData) {
+        // For FormData, let browser set Content-Type with boundary
+        return this.api.post(`/admin/products/${id}`, data, {
+          headers: {
+            // Don't set Content-Type for FormData - browser will set it with boundary
+          }
+        });
+      } else {
+        return this.api.put(`/admin/products/${id}`, data, {
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
-    });
-  } else {
-    return this.api.put(`/admin/products/${id}`, data, {
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-},
+    },
     deleteProduct: (id: number) => this.api.delete(`/admin/products/${id}`),
     uploadProductsBulk: (data: FormData) => 
       this.api.post('/admin/products/bulk-upload', data),

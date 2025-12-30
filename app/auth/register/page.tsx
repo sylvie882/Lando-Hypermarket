@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api'; // Import your API service
+import { api } from '@/lib/api';
 import { 
   User, 
   Mail, 
@@ -13,7 +13,8 @@ import {
   EyeOff, 
   Loader2,
   CheckCircle,
-  MessageCircle
+  MessageCircle,
+  AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -32,6 +33,13 @@ export default function RegisterPage() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [passwordRequirements, setPasswordRequirements] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    specialChar: false
+  });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,14 +54,20 @@ export default function RegisterPage() {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
     }
 
-    // Check password strength
+    // Check password requirements and strength
     if (name === 'password') {
-      let strength = 0;
-      if (value.length >= 8) strength++;
-      if (/[A-Z]/.test(value)) strength++;
-      if (/[a-z]/.test(value)) strength++;
-      if (/[0-9]/.test(value)) strength++;
-      if (/[^A-Za-z0-9]/.test(value)) strength++;
+      const requirements = {
+        length: value.length >= 8,
+        uppercase: /[A-Z]/.test(value),
+        lowercase: /[a-z]/.test(value),
+        number: /[0-9]/.test(value),
+        specialChar: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value)
+      };
+      
+      setPasswordRequirements(requirements);
+      
+      // Calculate strength (0-5)
+      let strength = Object.values(requirements).filter(req => req).length;
       setPasswordStrength(strength);
     }
   };
@@ -82,6 +96,17 @@ export default function RegisterPage() {
       errors.password = 'Please enter a password';
     } else if (formData.password.length < 8) {
       errors.password = 'Password must be at least 8 characters';
+    } else {
+      // Check all password requirements
+      const missingRequirements = [];
+      if (!passwordRequirements.uppercase) missingRequirements.push('uppercase letter');
+      if (!passwordRequirements.lowercase) missingRequirements.push('lowercase letter');
+      if (!passwordRequirements.number) missingRequirements.push('number');
+      if (!passwordRequirements.specialChar) missingRequirements.push('special character');
+      
+      if (missingRequirements.length > 0) {
+        errors.password = `Password must contain at least one ${missingRequirements.join(', ')}`;
+      }
     }
     if (!formData.password_confirmation) {
       errors.password_confirmation = 'Please confirm your password';
@@ -95,7 +120,11 @@ export default function RegisterPage() {
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      Object.values(errors).forEach(error => toast.error(error));
+      // Show first error as toast
+      const firstError = Object.values(errors)[0];
+      if (firstError) {
+        toast.error(firstError);
+      }
       return false;
     }
 
@@ -181,20 +210,52 @@ export default function RegisterPage() {
   const getPasswordStrengthColor = () => {
     if (passwordStrength <= 2) return 'bg-red-500';
     if (passwordStrength === 3) return 'bg-yellow-500';
+    if (passwordStrength === 4) return 'bg-blue-500';
     return 'bg-green-500';
   };
 
   const getPasswordStrengthText = () => {
     if (passwordStrength <= 2) return 'Weak';
     if (passwordStrength === 3) return 'Medium';
-    return 'Strong';
+    if (passwordStrength === 4) return 'Strong';
+    return 'Very Strong';
+  };
+
+  const getPasswordStrengthDescription = () => {
+    switch (passwordStrength) {
+      case 0:
+        return 'Enter a password';
+      case 1:
+      case 2:
+        return 'Password is too weak';
+      case 3:
+        return 'Password is okay';
+      case 4:
+        return 'Password is strong';
+      case 5:
+        return 'Password is very strong';
+      default:
+        return '';
+    }
   };
 
   // Handle social login redirect
-  const handleGoogleLogin = () => {
-    // This will redirect to Laravel's Google OAuth endpoint
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/social/google`;
-  };
+// Get Google OAuth URL
+const handleGoogleLogin = async () => {
+  try {
+    const response = await api.auth.getGoogleAuthUrl();
+    const googleAuthUrl = response.data.url;
+    window.location.href = googleAuthUrl;
+  } catch (error) {
+    console.error('Google login error:', error);
+    toast.error('Failed to initiate Google login');
+  }
+};
+
+// Or simply redirect to the endpoint
+const handleGoogleLoginDirect = () => {
+  window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/social/google`;
+};
 
   // Handle WhatsApp contact
   const handleWhatsAppContact = () => {
@@ -336,44 +397,114 @@ export default function RegisterPage() {
                 )}
               </button>
             </div>
-            {formErrors.password && (
-              <p className="mt-1 text-sm text-red-600">{formErrors.password}</p>
-            )}
-
-            {/* Password Strength */}
-            {formData.password && (
-              <div className="mt-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-gray-600">Password strength:</span>
-                  <span className={`text-sm font-medium ${
-                    passwordStrength <= 2 ? 'text-red-600' :
-                    passwordStrength === 3 ? 'text-yellow-600' : 'text-green-600'
+            
+            {/* Password Requirements */}
+            <div className="mt-3">
+              <div className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</div>
+              <ul className="space-y-2">
+                <li className="flex items-center">
+                  <div className={`w-5 h-5 mr-2 rounded-full flex items-center justify-center ${
+                    passwordRequirements.length ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
                   }`}>
-                    {getPasswordStrengthText()}
-                  </span>
-                </div>
-                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${getPasswordStrengthColor()}`}
-                    style={{ width: `${(passwordStrength / 5) * 100}%` }}
-                  ></div>
-                </div>
-                <ul className="mt-2 space-y-1 text-xs text-gray-600">
-                  <li className="flex items-center">
-                    <CheckCircle className={`h-3 w-3 mr-1 ${formData.password.length >= 8 ? 'text-green-500' : 'text-gray-300'}`} />
+                    {passwordRequirements.length ? (
+                      <CheckCircle className="w-3 h-3" />
+                    ) : (
+                      <AlertCircle className="w-3 h-3" />
+                    )}
+                  </div>
+                  <span className={`text-sm ${passwordRequirements.length ? 'text-gray-700' : 'text-gray-500'}`}>
                     At least 8 characters
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className={`h-3 w-3 mr-1 ${/[A-Z]/.test(formData.password) ? 'text-green-500' : 'text-gray-300'}`} />
-                    One uppercase letter
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className={`h-3 w-3 mr-1 ${/[0-9]/.test(formData.password) ? 'text-green-500' : 'text-gray-300'}`} />
-                    One number
-                  </li>
-                </ul>
-              </div>
-            )}
+                  </span>
+                </li>
+                <li className="flex items-center">
+                  <div className={`w-5 h-5 mr-2 rounded-full flex items-center justify-center ${
+                    passwordRequirements.uppercase ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {passwordRequirements.uppercase ? (
+                      <CheckCircle className="w-3 h-3" />
+                    ) : (
+                      <AlertCircle className="w-3 h-3" />
+                    )}
+                  </div>
+                  <span className={`text-sm ${passwordRequirements.uppercase ? 'text-gray-700' : 'text-gray-500'}`}>
+                    One uppercase letter (A-Z)
+                  </span>
+                </li>
+                <li className="flex items-center">
+                  <div className={`w-5 h-5 mr-2 rounded-full flex items-center justify-center ${
+                    passwordRequirements.lowercase ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {passwordRequirements.lowercase ? (
+                      <CheckCircle className="w-3 h-3" />
+                    ) : (
+                      <AlertCircle className="w-3 h-3" />
+                    )}
+                  </div>
+                  <span className={`text-sm ${passwordRequirements.lowercase ? 'text-gray-700' : 'text-gray-500'}`}>
+                    One lowercase letter (a-z)
+                  </span>
+                </li>
+                <li className="flex items-center">
+                  <div className={`w-5 h-5 mr-2 rounded-full flex items-center justify-center ${
+                    passwordRequirements.number ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {passwordRequirements.number ? (
+                      <CheckCircle className="w-3 h-3" />
+                    ) : (
+                      <AlertCircle className="w-3 h-3" />
+                    )}
+                  </div>
+                  <span className={`text-sm ${passwordRequirements.number ? 'text-gray-700' : 'text-gray-500'}`}>
+                    One number (0-9)
+                  </span>
+                </li>
+                <li className="flex items-center">
+                  <div className={`w-5 h-5 mr-2 rounded-full flex items-center justify-center ${
+                    passwordRequirements.specialChar ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {passwordRequirements.specialChar ? (
+                      <CheckCircle className="w-3 h-3" />
+                    ) : (
+                      <AlertCircle className="w-3 h-3" />
+                    )}
+                  </div>
+                  <span className={`text-sm ${passwordRequirements.specialChar ? 'text-gray-700' : 'text-gray-500'}`}>
+                    One special character (!@#$%^&* etc.)
+                  </span>
+                </li>
+              </ul>
+              
+              {/* Password Strength Meter */}
+              {formData.password && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-gray-700">
+                      Password Strength: <span className={getPasswordStrengthColor().replace('bg-', 'text-')}>
+                        {getPasswordStrengthText()}
+                      </span>
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {getPasswordStrengthDescription()}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${getPasswordStrengthColor()}`}
+                      style={{ width: `${(passwordStrength / 5) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+              
+              {formErrors.password && (
+                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+                    {formErrors.password}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Confirm Password */}
@@ -414,7 +545,12 @@ export default function RegisterPage() {
               <p className="mt-1 text-sm text-red-600">{formErrors.password_confirmation}</p>
             )}
             {formData.password_confirmation && formData.password !== formData.password_confirmation && (
-              <p className="mt-1 text-sm text-red-600">Passwords do not match</p>
+              <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+                  Passwords do not match
+                </p>
+              </div>
             )}
           </div>
 
@@ -466,8 +602,8 @@ export default function RegisterPage() {
           <div>
             <button
               type="submit"
-              disabled={isRegistering || !agreedToTerms}
-              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isRegistering || !agreedToTerms || passwordStrength < 3}
+              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
               {isRegistering ? (
                 <>
@@ -478,6 +614,12 @@ export default function RegisterPage() {
                 'Create Account'
               )}
             </button>
+            
+            {passwordStrength < 3 && formData.password && (
+              <p className="mt-2 text-sm text-amber-600 text-center">
+                Please meet all password requirements to continue
+              </p>
+            )}
           </div>
         </form>
 
@@ -497,35 +639,6 @@ export default function RegisterPage() {
               </button>
             </div>
           </div>
-        </div>
-
-        {/* Debug Info (remove in production) */}
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <details className="text-sm">
-            <summary className="font-medium text-gray-700 cursor-pointer hover:text-gray-900">
-              Debug Info (Click to expand)
-            </summary>
-            <div className="mt-2 space-y-2">
-              <div>
-                <span className="font-medium">Form Data:</span>
-                <pre className="mt-1 text-xs bg-gray-100 p-2 rounded overflow-x-auto">
-                  {JSON.stringify(formData, null, 2)}
-                </pre>
-              </div>
-              <div>
-                <span className="font-medium">Clean Phone:</span>
-                <code className="ml-2 text-xs bg-gray-100 px-2 py-1 rounded">
-                  {formData.phone.replace(/[^\d+]/g, '')}
-                </code>
-              </div>
-              <div>
-                <span className="font-medium">Form Errors:</span>
-                <pre className="mt-1 text-xs bg-gray-100 p-2 rounded overflow-x-auto">
-                  {JSON.stringify(formErrors, null, 2)}
-                </pre>
-              </div>
-            </div>
-          </details>
         </div>
 
         {/* Divider */}
@@ -579,6 +692,41 @@ export default function RegisterPage() {
               Sign in here
             </Link>
           </p>
+        </div>
+
+        {/* Debug Info (remove in production) */}
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <details className="text-sm">
+            <summary className="font-medium text-gray-700 cursor-pointer hover:text-gray-900">
+              Debug Info (Click to expand)
+            </summary>
+            <div className="mt-2 space-y-2">
+              <div>
+                <span className="font-medium">Form Data:</span>
+                <pre className="mt-1 text-xs bg-gray-100 p-2 rounded overflow-x-auto">
+                  {JSON.stringify(formData, null, 2)}
+                </pre>
+              </div>
+              <div>
+                <span className="font-medium">Clean Phone:</span>
+                <code className="ml-2 text-xs bg-gray-100 px-2 py-1 rounded">
+                  {formData.phone.replace(/[^\d+]/g, '')}
+                </code>
+              </div>
+              <div>
+                <span className="font-medium">Password Requirements:</span>
+                <pre className="mt-1 text-xs bg-gray-100 p-2 rounded overflow-x-auto">
+                  {JSON.stringify(passwordRequirements, null, 2)}
+                </pre>
+              </div>
+              <div>
+                <span className="font-medium">Form Errors:</span>
+                <pre className="mt-1 text-xs bg-gray-100 p-2 rounded overflow-x-auto">
+                  {JSON.stringify(formErrors, null, 2)}
+                </pre>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
     </div>
