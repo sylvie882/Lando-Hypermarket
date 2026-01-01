@@ -71,8 +71,9 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
 
       // Set thumbnail if it exists
       if (product.thumbnail) {
+        const thumbUrl = generateImageUrl(product.thumbnail);
         setThumbnail(product.thumbnail);
-        generateThumbnailPreview(product.thumbnail);
+        setThumbnailPreview(thumbUrl);
       } else {
         // Set default image for NULL thumbnails
         setThumbnailPreview('/images/default-product.png');
@@ -89,6 +90,9 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         }).filter(Boolean); // Filter out empty/null images
         setGalleryPreviews(previews);
       }
+    } else {
+      // For new products, set default preview
+      setThumbnailPreview('/images/default-product.png');
     }
   }, [product]);
 
@@ -109,12 +113,6 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
       const cleanPath = imagePath.replace(/^storage\//, '');
       return `${STORAGE_BASE_URL}/${cleanPath}`;
     }
-  };
-
-  // Helper function to generate thumbnail preview
-  const generateThumbnailPreview = (imagePath: string) => {
-    const url = generateImageUrl(imagePath);
-    setThumbnailPreview(url || '/images/default-product.png');
   };
 
   const fetchCategories = async () => {
@@ -177,23 +175,24 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     const file = e.target.files?.[0];
     if (file) {
       console.log('New thumbnail selected:', file.name, file.type, file.size);
-      setThumbnail(file); // This is a File object
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setThumbnailPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      
+      // Create a preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setThumbnailPreview(previewUrl);
+      
+      // Set the file in state
+      setThumbnail(file);
+      
+      // Clear thumbnail error
+      if (errors.thumbnail) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.thumbnail;
+          return newErrors;
+        });
+      }
     } else {
       console.log('No file selected for thumbnail');
-    }
-    
-    // Clear thumbnail error
-    if (errors.thumbnail) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.thumbnail;
-        return newErrors;
-      });
     }
     
     // Reset the input so same file can be selected again
@@ -239,6 +238,11 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
 
   const removeThumbnail = () => {
     console.log('Removing thumbnail, current thumbnail:', thumbnail);
+    
+    // Revoke object URL if it's a blob URL
+    if (thumbnailPreview && thumbnailPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(thumbnailPreview);
+    }
     
     if (thumbnail instanceof File) {
       // If it's a new file that hasn't been uploaded yet, just remove it
@@ -291,11 +295,29 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
   };
 
   const validateForm = (): boolean => {
+    console.log('=== Validating Form ===');
+    console.log('Product (editing?):', product ? 'YES' : 'NO');
+    console.log('Thumbnail state:', thumbnail);
+    console.log('Thumbnail preview exists:', !!thumbnailPreview);
+    console.log('Is thumbnail a File?', thumbnail instanceof File);
+    console.log('Is thumbnail a string?', typeof thumbnail === 'string');
+    
     const newErrors: {[key: string]: string} = {};
     
     // For new products, thumbnail is required
-    if (!product && !thumbnail) {
-      newErrors.thumbnail = 'Main image is required for new products';
+    if (!product) {
+      console.log('Checking thumbnail for new product...');
+      console.log('- thumbnail state:', thumbnail);
+      console.log('- thumbnailPreview:', thumbnailPreview);
+      console.log('- thumbnailPreview is default?', thumbnailPreview === '/images/default-product.png');
+      
+      if (!thumbnail) {
+        console.log('ERROR: No thumbnail found for new product');
+        newErrors.thumbnail = 'Main image is required for new products';
+      } else if (thumbnailPreview === '/images/default-product.png') {
+        console.log('ERROR: Only default preview exists, no actual thumbnail');
+        newErrors.thumbnail = 'Main image is required for new products';
+      }
     }
     
     // Required fields
@@ -314,16 +336,20 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
       }
     }
     
+    console.log('Validation errors:', newErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('=== Form Submit Started ===');
+    
     setLoading(true);
     setErrors({});
 
     if (!validateForm()) {
+      console.log('Form validation failed');
       setLoading(false);
       return;
     }
@@ -332,7 +358,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
       // Create FormData for file uploads
       const formData = new FormData();
       
-      // Append all form values - SIMPLE DIRECT APPROACH
+      // Append all form values
       formData.append('name', formValues.name.trim());
       formData.append('description', formValues.description.trim());
       formData.append('price', parseFloat(formValues.price || '0').toString());
@@ -381,16 +407,27 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         formData.append('attributes', '{}');
       }
 
-      // Handle thumbnail
+      // Handle thumbnail - FIXED
+      console.log('Processing thumbnail for submission:');
+      console.log('- thumbnail type:', typeof thumbnail);
+      console.log('- thumbnail instanceof File:', thumbnail instanceof File);
+      console.log('- thumbnail value:', thumbnail);
+      
       if (thumbnail instanceof File) {
         console.log('Appending new thumbnail file:', thumbnail.name);
         formData.append('thumbnail', thumbnail);
       } else if (thumbnail === null && product) {
         // Thumbnail was removed - send empty string
+        console.log('Thumbnail was removed, sending empty string');
         formData.append('thumbnail', '');
-      } else if (typeof thumbnail === 'string') {
+      } else if (typeof thumbnail === 'string' && thumbnail) {
         // Keep existing thumbnail path
+        console.log('Keeping existing thumbnail path:', thumbnail);
         formData.append('thumbnail', thumbnail);
+      } else if (!product) {
+        // This should not happen due to validation, but just in case
+        console.error('No thumbnail for new product!');
+        throw new Error('Thumbnail is required for new products');
       }
 
       // Handle gallery images - new files
@@ -419,8 +456,8 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         formData.append('_method', 'PUT');
       }
 
-      // Debug logging - VERBOSE
-      console.log('=== FINAL FormData from ProductForm ===');
+      // Debug logging
+      console.log('=== FINAL FormData Contents ===');
       for (let [key, value] of formData.entries()) {
         if (value instanceof File) {
           console.log(`${key}: File - ${value.name} (${value.size} bytes, ${value.type})`);
@@ -438,12 +475,12 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     } catch (error) {
       console.error('Form preparation error:', error);
       setErrors({ form: 'Failed to prepare form data' });
-    } finally {
       setLoading(false);
     }
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, type: 'thumbnail' | 'gallery') => {
+    console.log('Image error for', type);
     e.currentTarget.src = '/images/default-product.png';
     if (type === 'thumbnail') {
       setThumbnailPreview('/images/default-product.png');
@@ -764,8 +801,14 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                         </div>
                       )}
                       {errors.thumbnail && (
-                        <p className="mt-1 text-sm text-red-600">{errors.thumbnail}</p>
+                        <p className="mt-1 text-sm text-red-600 flex items-center">
+                          <AlertCircle className="w-4 h-4 mr-1" />
+                          {errors.thumbnail}
+                        </p>
                       )}
+                      <div className="mt-1 text-xs text-gray-500">
+                        {thumbnail instanceof File ? `Selected: ${thumbnail.name}` : ''}
+                      </div>
                     </div>
                   </div>
 
