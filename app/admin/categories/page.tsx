@@ -116,139 +116,151 @@ export default function CategoriesPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  if (isSubmitting) return;
+  
+  setIsSubmitting(true);
+  
+  console.log('Submitting form with:', {
+    editingCategoryId: editingCategory?.id,
+    formData,
+    hasImageFile: !!imageFile,
+    imageFileName: imageFile?.name,
+    imageFileSize: imageFile?.size,
+    removeImage,
+    isSubmitting,
+    apiUrl: process.env.NEXT_PUBLIC_API_URL
+  });
+  
+  try {
+    const formDataToSend = new FormData();
     
-    if (isSubmitting) return;
+    // Append all text fields
+    formDataToSend.append('name', formData.name);
     
-    setIsSubmitting(true);
+    if (formData.slug) {
+      formDataToSend.append('slug', formData.slug);
+    } else {
+      // Let backend auto-generate slug
+      formDataToSend.append('slug', '');
+    }
     
-    console.log('Submitting form with:', {
-      editingCategoryId: editingCategory?.id,
-      formData,
-      hasImageFile: !!imageFile,
-      imageFileName: imageFile?.name,
-      imageFileSize: imageFile?.size,
-      removeImage,
-      isSubmitting,
-      apiUrl: process.env.NEXT_PUBLIC_API_URL
+    if (formData.description) {
+      formDataToSend.append('description', formData.description);
+    }
+    
+    // FIX: Handle parent_id properly - don't send '0', send empty string or valid ID
+    const parentId = formData.parent_id;
+    if (parentId && parentId !== '') {
+      // Only append if it's a valid ID
+      formDataToSend.append('parent_id', parentId);
+    } else {
+      // For top-level categories, don't append parent_id or send empty
+      // Laravel will treat missing/null parent_id as top-level
+      // You can also append empty string if your backend expects it
+      formDataToSend.append('parent_id', '');
+    }
+    
+    formDataToSend.append('order', formData.order);
+    formDataToSend.append('is_active', formData.is_active ? '1' : '0');
+    
+    // Handle image
+    if (imageFile) {
+      console.log('Adding new image file to FormData:', {
+        name: imageFile.name,
+        size: imageFile.size,
+        type: imageFile.type
+      });
+      formDataToSend.append('image', imageFile);
+      // Don't set removeImage flag when adding new image
+    } else if (removeImage) {
+      console.log('Setting remove_image flag to 1');
+      formDataToSend.append('remove_image', '1');
+    }
+    
+    // Log FormData contents for debugging
+    console.log('FormData contents before sending:');
+    for (let [key, value] of formDataToSend.entries()) {
+      if (value instanceof File) {
+        console.log(`${key}: ${value.name} (${value.size} bytes, ${value.type})`);
+      } else {
+        console.log(`${key}: ${value}`);
+      }
+    }
+    
+    if (editingCategory) {
+      console.log('Updating category:', editingCategory.id);
+      // Use admin.updateCategory with FormData
+      const response = await api.admin.updateCategory(editingCategory.id, formDataToSend);
+      console.log('Update response:', response.data);
+      alert('Category updated successfully');
+    } else {
+      console.log('Creating new category');
+      // Use admin.createCategory with FormData
+      const response = await api.admin.createCategory(formDataToSend);
+      console.log('Create response:', response.data);
+      alert('Category created successfully');
+    }
+    
+    resetForm();
+    fetchCategories();
+  } catch (error: any) {
+    console.error('Full error details:', {
+      error: error,
+      message: error.message,
+      code: error.code,
+      response: error.response,
+      config: error.config,
+      request: error.request
     });
     
-    try {
-      const formDataToSend = new FormData();
-      
-      // Append all text fields
-      formDataToSend.append('name', formData.name);
-      
-      if (formData.slug) {
-        formDataToSend.append('slug', formData.slug);
-      } else {
-        // Let backend auto-generate slug
-        formDataToSend.append('slug', '');
-      }
-      
-      if (formData.description) {
-        formDataToSend.append('description', formData.description);
-      }
-      
-      formDataToSend.append('parent_id', formData.parent_id || '0');
-      formDataToSend.append('order', formData.order);
-      formDataToSend.append('is_active', formData.is_active ? '1' : '0');
-      
-      // Handle image
-      if (imageFile) {
-        console.log('Adding new image file to FormData:', {
-          name: imageFile.name,
-          size: imageFile.size,
-          type: imageFile.type
-        });
-        formDataToSend.append('image', imageFile);
-        // Don't set removeImage flag when adding new image
-      } else if (removeImage) {
-        console.log('Setting remove_image flag to 1');
-        formDataToSend.append('remove_image', '1');
-      }
-      
-      // Log FormData contents for debugging
-      console.log('FormData contents before sending:');
-      for (let [key, value] of formDataToSend.entries()) {
-        if (value instanceof File) {
-          console.log(`${key}: ${value.name} (${value.size} bytes, ${value.type})`);
-        } else {
-          console.log(`${key}: ${value}`);
-        }
-      }
-      
-      if (editingCategory) {
-        console.log('Updating category:', editingCategory.id);
-        // Use admin.updateCategory with FormData
-        const response = await api.admin.updateCategory(editingCategory.id, formDataToSend);
-        console.log('Update response:', response.data);
-        alert('Category updated successfully');
-      } else {
-        console.log('Creating new category');
-        // Use admin.createCategory with FormData
-        const response = await api.admin.createCategory(formDataToSend);
-        console.log('Create response:', response.data);
-        alert('Category created successfully');
-      }
-      
-      resetForm();
-      fetchCategories();
-    } catch (error: any) {
-      console.error('Full error details:', {
-        error: error,
-        message: error.message,
-        code: error.code,
-        response: error.response,
-        config: error.config,
-        request: error.request
-      });
-      
-      // More detailed error handling
-      if (error.code === 'ERR_NETWORK' || error.message.includes('Failed to fetch')) {
-        alert(`Network Error: Cannot connect to the server.\n\nPlease check:
+    // More detailed error handling
+    if (error.code === 'ERR_NETWORK' || error.message.includes('Failed to fetch')) {
+      alert(`Network Error: Cannot connect to the server.\n\nPlease check:
 1. Laravel API server is running at: ${process.env.NEXT_PUBLIC_API_URL}
 2. CORS is properly configured
 3. You have internet connection
 4. Server is accessible from your browser
 
 You can test the API directly by opening: ${process.env.NEXT_PUBLIC_API_URL}/sanctum/csrf-cookie`);
-      } else if (error.response) {
-        console.error('Server responded with error:', {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers
-        });
-        
-        if (error.response.status === 401) {
-          alert('Session expired. Please login again.');
-          // Redirect to login
-          window.location.href = '/admin/login';
-        } else if (error.response.status === 403) {
-          alert('You do not have permission to perform this action.');
-        } else if (error.response.status === 422) {
-          console.error('Validation errors:', error.response.data.errors);
-          const errorMessages = Object.entries(error.response.data.errors)
-            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
-            .join('\n');
-          alert(`Validation errors:\n${errorMessages}`);
-        } else if (error.response.data?.message) {
-          alert(`Server Error: ${error.response.data.message}`);
-        } else {
-          alert(`Server Error: ${error.response.status} ${error.response.statusText}`);
-        }
-      } else if (error.request) {
-        console.error('No response received:', error.request);
-        alert('No response from server. Please check if the server is running.');
+    } else if (error.response) {
+      console.error('Server responded with error:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+      
+      if (error.response.status === 401) {
+        alert('Session expired. Please login again.');
+        // Redirect to login
+        window.location.href = '/admin/login';
+      } else if (error.response.status === 403) {
+        alert('You do not have permission to perform this action.');
+      } else if (error.response.status === 422) {
+        console.error('Validation errors:', error.response.data.errors);
+        const errorMessages = Object.entries(error.response.data.errors)
+          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+          .join('\n');
+        alert(`Validation errors:\n${errorMessages}`);
+      } else if (error.response.data?.message) {
+        alert(`Server Error: ${error.response.data.message}`);
       } else {
-        console.error('Error setting up request:', error.message);
-        alert(`Error: ${error.message}`);
+        alert(`Server Error: ${error.response.status} ${error.response.statusText}`);
       }
-    } finally {
-      setIsSubmitting(false);
+    } else if (error.request) {
+      console.error('No response received:', error.request);
+      alert('No response from server. Please check if the server is running.');
+    } else {
+      console.error('Error setting up request:', error.message);
+      alert(`Error: ${error.message}`);
     }
-  };
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this category?')) return;
