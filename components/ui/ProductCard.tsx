@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Product } from '@/types';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { ShoppingCart, Heart, Eye, Star, Truck, CheckCircle, Tag, Percent, Sparkles } from 'lucide-react';
+import { ShoppingCart, Heart, Star, Eye, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReviewModal from '../ReviewModal';
 
@@ -16,19 +16,6 @@ interface ProductCardProps {
   onViewTrack?: (productId: number) => void;
 }
 
-// Debounce function to prevent rapid API calls
-const debounce = <T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): ((...args: Parameters<T>) => void) => {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-};
-
-// Cache for wishlist checks to prevent duplicate calls
 const wishlistCheckCache = new Map<number, {
   timestamp: number;
   result: boolean;
@@ -58,16 +45,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   }, [product.id, onViewTrack]);
 
   // Safely extract values with fallbacks
-  const hasPersonalizedOffer = showPersonalizedPrice && 
-    product.relevance_score && 
-    product.relevance_score > 70; // Show personalized badge if relevance > 70%
-  
-  // Use personalized price if available, otherwise use regular pricing
   const finalPrice = product.final_price || product.discounted_price || product.price || 0;
-  
-  // Safely convert prices to numbers with proper type checking
   const price = product.price ? parseFloat(String(product.price)) : 0;
-  
   const finalPriceNum = finalPrice ? parseFloat(String(finalPrice)) : 0;
   
   // Calculate discount percentage
@@ -106,7 +85,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const checkUserReviewStatus = async () => {
     try {
-      // Check if user has already reviewed this product
       const myReviewsResponse = await api.reviews.getMyReviews();
       const myReviews = myReviewsResponse.data || [];
       
@@ -118,13 +96,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
         setUserReview(existingReview);
       }
 
-      // Check if user has purchased this product
       const ordersResponse = await api.orders.getAll({
         per_page: 100,
         status: 'delivered,completed',
       });
       
-      // Handle different response structures
       let ordersData = [];
       if (ordersResponse.data && ordersResponse.data.data && Array.isArray(ordersResponse.data.data)) {
         ordersData = ordersResponse.data.data;
@@ -151,81 +127,70 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  // Debounced check for wishlist status
-  const checkWishlistStatus = useCallback(
-    debounce(async (productId: number) => {
-      if (!isAuthenticated || hasCheckedWishlist) return;
-      
-      // Check cache first
-      const cached = wishlistCheckCache.get(productId);
-      const now = Date.now();
-      
-      // Use cached result if less than 30 seconds old
-      if (cached && (now - cached.timestamp) < 30000) {
-        setInWishlist(cached.result);
+  // Check wishlist status
+  const checkWishlistStatus = useCallback(async (productId: number) => {
+    if (!isAuthenticated || hasCheckedWishlist) return;
+    
+    const cached = wishlistCheckCache.get(productId);
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp) < 30000) {
+      setInWishlist(cached.result);
+      setHasCheckedWishlist(true);
+      return;
+    }
+    
+    try {
+      if (cached?.promise) {
+        const result = await cached.promise;
+        setInWishlist(result);
         setHasCheckedWishlist(true);
         return;
       }
       
-      try {
-        // If there's an ongoing promise for this product, wait for it
-        if (cached?.promise) {
-          const result = await cached.promise;
-          setInWishlist(result);
-          setHasCheckedWishlist(true);
-          return;
-        }
-        
-        // Create new promise for checking
-        const checkPromise = (async () => {
-          try {
-            const checkResponse = await api.wishlist.check(productId);
-            const isInWishlist = checkResponse.data?.in_wishlist || 
-                                checkResponse.data?.is_in_wishlist || 
-                                false;
-            
-            // Cache the result
-            wishlistCheckCache.set(productId, {
-              timestamp: Date.now(),
-              result: isInWishlist,
-              promise: undefined
-            });
-            
-            return isInWishlist;
-          } catch (error: any) {
-            // Don't show error for 429 (rate limit) - it's expected
-            if (error.response?.status !== 429) {
-              console.error('Failed to check wishlist status:', error);
-            }
-            return false;
+      const checkPromise = (async () => {
+        try {
+          const checkResponse = await api.wishlist.check(productId);
+          const isInWishlist = checkResponse.data?.in_wishlist || 
+                              checkResponse.data?.is_in_wishlist || 
+                              false;
+          
+          wishlistCheckCache.set(productId, {
+            timestamp: Date.now(),
+            result: isInWishlist,
+            promise: undefined
+          });
+          
+          return isInWishlist;
+        } catch (error: any) {
+          if (error.response?.status !== 429) {
+            console.error('Failed to check wishlist status:', error);
           }
-        })();
-        
-        // Store the promise in cache
-        wishlistCheckCache.set(productId, {
-          timestamp: now,
-          result: false, // temporary
-          promise: checkPromise
-        });
-        
-        const result = await checkPromise;
-        setInWishlist(result);
-        setHasCheckedWishlist(true);
-      } catch (error) {
-        console.error('Error in wishlist check:', error);
-        setInWishlist(false);
-      }
-    }, 500), // Wait 500ms before checking
-    [isAuthenticated, hasCheckedWishlist]
-  );
+          return false;
+        }
+      })();
+      
+      wishlistCheckCache.set(productId, {
+        timestamp: now,
+        result: false,
+        promise: checkPromise
+      });
+      
+      const result = await checkPromise;
+      setInWishlist(result);
+      setHasCheckedWishlist(true);
+    } catch (error) {
+      console.error('Error in wishlist check:', error);
+      setInWishlist(false);
+    }
+  }, [isAuthenticated, hasCheckedWishlist]);
 
   // Check wishlist status on mount
   useEffect(() => {
     if (isAuthenticated && product.id && !hasCheckedWishlist) {
-      // Check after a short delay to prevent rapid calls when multiple cards load
       const timer = setTimeout(() => {
         checkWishlistStatus(product.id);
-      }, Math.random() * 300); // Random delay between 0-300ms to spread out requests
+      }, Math.random() * 300);
       
       return () => clearTimeout(timer);
     }
@@ -247,15 +212,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }).format(numAmount);
   };
 
-  // Get image URL with cache busting
+  // Get image URL
   const getImageUrl = () => {
-    // Base URL for all images
     const baseUrl = 'https://api.hypermarket.co.ke';
-    
-    // Add cache busting timestamp
     const timestamp = product.updated_at ? new Date(product.updated_at).getTime() : Date.now();
     
-    // First, try main_image attribute (from Laravel model)
     if (product.main_image) {
       const url = product.main_image.startsWith('http') 
         ? product.main_image 
@@ -264,7 +225,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
       return `${url}${url.includes('?') ? '&' : '?'}t=${timestamp}`;
     }
     
-    // Then try thumbnail
     if (product.thumbnail) {
       let url = product.thumbnail;
       if (!url.startsWith('http')) {
@@ -279,7 +239,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
       return `${url}${url.includes('?') ? '&' : '?'}t=${timestamp}`;
     }
     
-    // Fallback to default product image
     return `https://api.hypermarket.co.ke/storage/default-product.jpg?t=${timestamp}`;
   };
 
@@ -321,14 +280,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
       if (inWishlist) {
         await api.wishlist.remove(product.id);
         setInWishlist(false);
-        // Clear cache for this product
         wishlistCheckCache.delete(product.id);
         setHasCheckedWishlist(false);
         toast.success('Removed from wishlist');
       } else {
         await api.wishlist.add(product.id);
         setInWishlist(true);
-        // Update cache for this product
         wishlistCheckCache.set(product.id, {
           timestamp: Date.now(),
           result: true
@@ -336,7 +293,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
         toast.success('Added to wishlist!');
       }
     } catch (error: any) {
-      // Handle rate limit error specifically
       if (error.response?.status === 429) {
         toast.error('Please wait a moment before trying again');
       } else {
@@ -366,7 +322,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     setShowReviewModal(true);
   };
 
-  // Enhanced Star Rating Display with half stars
+  // Star Rating Display
   const renderStarRating = () => {
     const stars = [];
     const fullStars = Math.floor(displayRating);
@@ -377,21 +333,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
         stars.push(
           <Star
             key={i}
-            size={14}
-            className="text-yellow-400 fill-yellow-400"
+            size={16}
+            className="text-amber-500 fill-amber-500"
           />
         );
       } else if (i === fullStars + 1 && hasHalfStar) {
         stars.push(
           <div key={i} className="relative">
             <Star
-              size={14}
+              size={16}
               className="text-gray-300"
             />
             <div className="absolute top-0 left-0 overflow-hidden" style={{ width: '50%' }}>
               <Star
-                size={14}
-                className="text-yellow-400 fill-yellow-400"
+                size={16}
+                className="text-amber-500 fill-amber-500"
               />
             </div>
           </div>
@@ -400,7 +356,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         stars.push(
           <Star
             key={i}
-            size={14}
+            size={16}
             className="text-gray-300"
           />
         );
@@ -411,9 +367,36 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   return (
-    <div className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-200 overflow-hidden h-full flex flex-col transform hover:-translate-y-1 w-full">
+    <div className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 overflow-hidden h-full flex flex-col">
+      {/* Product Badge - Top Left */}
+      {product.is_featured && (
+        <div className="absolute top-3 left-3 z-10">
+          <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+            Featured
+          </span>
+        </div>
+      )}
+      
+      {/* Discount Badge */}
+      {discountPercentage > 0 && (
+        <div className="absolute top-3 left-3 z-10">
+          <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+            -{discountPercentage}% OFF
+          </span>
+        </div>
+      )}
+
+      {/* New Arrival Badge */}
+      {product.is_new && (
+        <div className="absolute top-3 left-3 z-10">
+          <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+            NEW
+          </span>
+        </div>
+      )}
+
       {/* Product Image Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="relative overflow-hidden bg-gray-100">
         <Link 
           href={`/products/${product.id}`} 
           className="block"
@@ -423,110 +406,50 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <img
               src={imageUrl}
               alt={product.name || 'Product image'}
-              className="absolute inset-0 object-cover w-full h-full group-hover:scale-110 transition-transform duration-500"
+              className="absolute inset-0 object-cover w-full h-full group-hover:scale-110 transition-transform duration-700"
               onError={(e) => {
                 e.currentTarget.src = `https://api.hypermarket.co.ke/storage/default-product.jpg?t=${Date.now()}`;
               }}
             />
             
-            {/* Personalized Offer Badge */}
-            {hasPersonalizedOffer && (
-              <div className="absolute top-3 left-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-xl z-10 flex items-center gap-1">
-                <Sparkles size={12} />
-                AI Recommended
-                {product.relevance_score && (
-                  <span className="ml-1">{Math.round(product.relevance_score)}%</span>
-                )}
-              </div>
-            )}
-            
-            {/* Regular Discount Badge */}
-            {!hasPersonalizedOffer && discountPercentage > 0 && (
-              <div className="absolute top-3 left-3 bg-gradient-to-r from-red-500 to-orange-500 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-xl z-10">
-                -{discountPercentage}% OFF
-              </div>
-            )}
-
-            {/* Out of Stock Badge */}
+            {/* Out of Stock Overlay */}
             {!isInStock && (
-              <div className="absolute top-3 right-3 bg-gray-900/90 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-xl z-10">
-                Out of Stock
-              </div>
-            )}
-
-            {/* User Review Badge */}
-            {userReview && (
-              <div className="absolute bottom-3 left-3 bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-xl z-10">
-                Reviewed
-              </div>
-            )}
-          </div>
-        </Link>
-
-        {/* Floating Action Button */}
-        {showActions && (
-          <div className="absolute bottom-0 left-0 right-0">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent h-24"></div>
-              
-              <div className="relative px-4 pb-4 pt-10">
-                <div className="flex justify-center space-x-2">
-                  <button
-                    onClick={handleAddToCart}
-                    disabled={isAddingToCart || !isInStock}
-                    className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-full font-semibold text-sm transition-all duration-200 shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
-                      isInStock 
-                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white' 
-                        : 'bg-gray-600 text-white'
-                    }`}
-                  >
-                    {isAddingToCart ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Adding...
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart size={16} />
-                        {!isInStock ? 'Out of Stock' : 'Add to Cart'}
-                      </>
-                    )}
-                  </button>
-                  
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={handleAddToWishlist}
-                      disabled={isAddingToWishlist}
-                      className={`p-2.5 rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 ${
-                        inWishlist 
-                          ? 'bg-red-50 text-red-500 hover:bg-red-100' 
-                          : 'bg-white text-gray-700 hover:bg-gray-50'
-                      }`}
-                      title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-                    >
-                      <Heart
-                        size={16}
-                        className={inWishlist ? 'fill-red-500' : ''}
-                      />
-                    </button>
-                    
-                    <Link
-                      href={`/products/${product.id}`}
-                      className="p-2.5 bg-white text-gray-700 hover:bg-gray-50 rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
-                      title="View details"
-                      onClick={() => onViewTrack && onViewTrack(product.id)}
-                    >
-                      <Eye size={16} />
-                    </Link>
-                  </div>
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <div className="bg-white/90 text-gray-800 text-sm font-bold px-4 py-2 rounded-full shadow-lg">
+                  Out of Stock
                 </div>
               </div>
+            )}
+
+            {/* Quick Action Buttons */}
+            <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleAddToWishlist();
+                }}
+                disabled={isAddingToWishlist}
+                className="bg-white p-2 rounded-full shadow-lg hover:bg-gray-50 transition-colors"
+                title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+              >
+                <Heart
+                  size={18}
+                  className={inWishlist ? 'fill-red-500 text-red-500' : 'text-gray-600'}
+                />
+              </button>
+              
+              <Link
+                href={`/products/${product.id}`}
+                onClick={() => onViewTrack && onViewTrack(product.id)}
+                className="bg-white p-2 rounded-full shadow-lg hover:bg-gray-50 transition-colors"
+                title="Quick View"
+              >
+                <Eye size={18} className="text-gray-600" />
+              </Link>
             </div>
           </div>
-        )}
+        </Link>
       </div>
 
       {/* Product Info Section */}
@@ -534,8 +457,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         {/* Category Badge */}
         {product.category?.name && (
           <div className="mb-2">
-            <span className="inline-flex items-center gap-1 bg-orange-50 text-orange-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-              <Tag size={12} />
+            <span className="inline-flex items-center gap-1 bg-gradient-to-r from-gray-100 to-gray-50 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-full border border-gray-200">
               {product.category.name}
             </span>
           </div>
@@ -544,89 +466,52 @@ const ProductCard: React.FC<ProductCardProps> = ({
         {/* Product Title */}
         <Link 
           href={`/products/${product.id}`} 
-          className="group/title mb-2"
+          className="mb-2"
           onClick={() => onViewTrack && onViewTrack(product.id)}
         >
-          <h3 className="font-bold text-gray-900 text-base leading-tight group-hover/title:text-primary-600 line-clamp-2 min-h-[48px]">
+          <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 min-h-[40px] hover:text-orange-500 transition-colors group-hover:text-orange-500">
             {product.name || 'Unnamed Product'}
           </h3>
         </Link>
 
-        {/* Rating & Reviews */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center">
-            <div className="flex">
-              {renderStarRating()}
-            </div>
-            <span className="text-sm font-medium text-gray-700 ml-1.5">
-              {displayRating.toFixed(1)}
-            </span>
+        {/* Rating */}
+        <div className="flex items-center mb-3">
+          <div className="flex mr-2">
+            {renderStarRating()}
           </div>
-          <Link 
-            href={`/products/${product.id}#reviews`}
-            className="text-xs text-primary-600 hover:text-primary-800 hover:underline"
-          >
-            ({product.review_count || 0} reviews)
-          </Link>
+          <span className="text-sm font-medium text-gray-700">
+            {displayRating.toFixed(1)}
+          </span>
+          <span className="text-sm text-gray-500 ml-1">
+            ({product.review_count || 0})
+          </span>
         </div>
 
-        {/* User Review Status */}
-        {isAuthenticated && (
-          <div className="mb-2">
-            {userReview ? (
-              <div className="flex items-center text-xs text-green-600">
-                <CheckCircle size={12} className="mr-1" />
-                <span>You reviewed this product</span>
-                {userReview.rating && (
-                  <span className="ml-1 font-medium">
-                    ({userReview.rating}/5)
-                  </span>
-                )}
-              </div>
-            ) : canReview ? (
-              <button
-                onClick={handleReviewClick}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center"
-              >
-                <Star size={12} className="mr-1" />
-                Write a review
-              </button>
-            ) : (
-              <div className="text-xs text-gray-500">
-                Purchase to review this product
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Product Description */}
-        {product.description && (
-          <p className="text-xs text-gray-600 mb-3 line-clamp-2 flex-1">
-            {product.description}
+        {/* Description (Brief) */}
+        {product.short_description && (
+          <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+            {product.short_description}
           </p>
         )}
 
         {/* Price Section */}
         <div className="mt-auto pt-3 border-t border-gray-100">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex flex-col">
-              {/* Regular Price Display */}
-              <div className="flex items-baseline">
-                <span className="text-xl font-bold text-gray-900">
-                  {formatKSH(finalPriceNum)}
-                </span>
-                {finalPriceNum < price && price > 0 && (
-                  <span className="text-sm text-gray-500 line-through ml-2">
-                    {formatKSH(price)}
-                  </span>
-                )}
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              {/* Final Price */}
+              <div className="text-xl font-bold text-gray-900">
+                {formatKSH(finalPriceNum)}
               </div>
               
-              {/* Personalized Recommendation Note */}
-              {hasPersonalizedOffer && (
-                <div className="text-xs text-purple-600 font-medium mt-1 flex items-center gap-1">
-                  <Sparkles size={10} />
-                  Recommended for you
+              {/* Original Price if on discount */}
+              {finalPriceNum < price && price > 0 && (
+                <div className="flex items-center mt-1">
+                  <span className="text-sm text-gray-500 line-through mr-2">
+                    {formatKSH(price)}
+                  </span>
+                  <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full">
+                    Save {discountPercentage}%
+                  </span>
                 </div>
               )}
             </div>
@@ -634,44 +519,34 @@ const ProductCard: React.FC<ProductCardProps> = ({
             {/* Stock Status */}
             <div className="text-xs">
               {isInStock ? (
-                <div className="flex items-center text-green-600 font-medium">
-                  <CheckCircle size={12} className="mr-1" />
-                  {stockQuantity > 10 ? 'In Stock' : `${stockQuantity} left`}
+                <div className="flex items-center text-green-600 font-bold">
+                  {stockQuantity > 10 ? (
+                    <span className="flex items-center">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></div>
+                      In Stock
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1.5 animate-pulse"></div>
+                      {stockQuantity} left
+                    </span>
+                  )}
                 </div>
               ) : (
-                <div className="text-red-600 font-medium">Out of Stock</div>
+                <div className="text-red-600 font-bold flex items-center">
+                  <div className="w-2 h-2 bg-red-500 rounded-full mr-1.5"></div>
+                  Out of Stock
+                </div>
               )}
             </div>
           </div>
 
-          {/* Features */}
-          <div className="flex items-center gap-2 mb-3">
-            {product.is_free_shipping && (
-              <div className="flex items-center text-green-600 bg-green-50 px-2 py-1 rounded text-xs">
-                <Truck size={12} className="mr-1" />
-                <span>Free Shipping</span>
-              </div>
-            )}
-            {product.is_featured && (
-              <div className="flex items-center text-orange-600 bg-orange-50 px-2 py-1 rounded text-xs">
-                <Star size={12} className="mr-1" />
-                <span>Featured</span>
-              </div>
-            )}
-            {hasPersonalizedOffer && (
-              <div className="flex items-center text-purple-600 bg-purple-50 px-2 py-1 rounded text-xs">
-                <Sparkles size={12} className="mr-1" />
-                <span>AI Recommended</span>
-              </div>
-            )}
-          </div>
-          
-          {/* Bottom "Add to Cart" Button for mobile */}
+          {/* Add to Cart Button */}
           {showActions && (
             <button
               onClick={handleAddToCart}
               disabled={isAddingToCart || !isInStock}
-              className="md:hidden w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-2.5 px-4 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02] flex items-center justify-center"
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 px-4 rounded-xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-lg flex items-center justify-center group/button"
             >
               {isAddingToCart ? (
                 <span className="flex items-center justify-center">
@@ -683,14 +558,49 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 </span>
               ) : (
                 <>
-                  <ShoppingCart size={16} className="mr-2" />
+                  <ShoppingCart size={18} className="mr-2 group-hover/button:scale-110 transition-transform duration-300" />
                   {!isInStock ? 'Out of Stock' : 'Add to Cart'}
                 </>
               )}
             </button>
           )}
+
+          {/* Additional Info */}
+          {showActions && (
+            <div className="flex justify-between mt-3 text-xs">
+              {product.is_free_shipping ? (
+                <span className="text-green-600 font-bold flex items-center">
+                  <Truck size={12} className="mr-1" />
+                  Free Shipping
+                </span>
+              ) : (
+                <span className="text-gray-500">Shipping extra</span>
+              )}
+              
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleReviewClick();
+                }}
+                className="text-gray-600 hover:text-blue-600 font-medium hover:underline"
+                disabled={!isAuthenticated}
+              >
+                {userReview ? 'Reviewed ✓' : 'Write Review'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Special Badge - Bottom Right */}
+      {product.is_bestseller && (
+        <div className="absolute bottom-3 right-3 z-10">
+          <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+            <Zap size={10} />
+            Best Seller
+          </span>
+        </div>
+      )}
 
       {/* Review Modal */}
       <ReviewModal

@@ -48,7 +48,17 @@ import {
   Bell,
   ShoppingBasket,
   TrendingUp as TrendingUpIcon,
-  Eye
+  Eye,
+  Search,
+  Menu,
+  X,
+  Instagram,
+  Facebook,
+  Twitter,
+  Youtube,
+  MapPin,
+  Mail,
+  Phone as PhoneIcon
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -161,21 +171,34 @@ const HomePage: React.FC = () => {
   const whatsappMessage = encodeURIComponent('Hello! I have a question about your products.');
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 300);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
+  // Add scroll to top function
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
   };
+
+  const getImageUrl = useCallback((path: string | null | undefined, defaultImage = '/default-banner.jpg'): string => {
+    if (!path) return defaultImage;
+    
+    if (path.startsWith('http')) {
+      return path;
+    }
+    
+    let cleanPath = path;
+    if (cleanPath.startsWith('/')) {
+      cleanPath = cleanPath.substring(1);
+    }
+    
+    if (cleanPath.startsWith('storage/')) {
+      cleanPath = cleanPath.replace('storage/', '');
+    }
+    
+    const baseUrl = 'https://api.hypermarket.co.ke';
+    
+    return `${baseUrl}/storage/${cleanPath}`;
+  }, []);
 
   const getBannerImageUrl = useCallback((banner: Banner, isMobile = false): string => {
     const imagePath = isMobile ? banner.mobile_image || banner.image : banner.image;
@@ -305,7 +328,6 @@ const HomePage: React.FC = () => {
           console.error('Failed to load shopping analytics:', error);
         }
         
-        // Load real-time offers for featured products
         if (featuredProducts.length > 0) {
           loadRealTimeOffers();
         }
@@ -325,7 +347,6 @@ const HomePage: React.FC = () => {
       setIsRealTimeOffersLoading(true);
       const offers: PersonalizedOffer[] = [];
       
-      // Get real-time offers for first 3 featured products
       for (const product of featuredProducts.slice(0, 3)) {
         try {
           const res = await api.products.getRealTimeOffers({ 
@@ -347,6 +368,15 @@ const HomePage: React.FC = () => {
       setIsRealTimeOffersLoading(false);
     }
   };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     if (banners.length > 0) {
@@ -449,7 +479,6 @@ const HomePage: React.FC = () => {
         console.error('Failed to fetch new arrivals:', error);
       }
       
-      // Load personalized data after initial data is loaded
       await loadPersonalizedData();
     } catch (error) {
       console.error('Failed to fetch homepage data:', error);
@@ -573,10 +602,9 @@ const HomePage: React.FC = () => {
               <img
                 src={imageUrl}
                 alt={banner.title}
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-10000 ease-linear group-hover:scale-105"
                 loading={isActive ? "eager" : "lazy"}
                 onError={() => handleImageError(banner.id)}
-                onLoad={() => console.log(`✅ Banner ${banner.id} loaded`)}
               />
             )}
           </>
@@ -648,7 +676,7 @@ const HomePage: React.FC = () => {
                 {banner.button_text && (
                   <a
                     href={banner.button_link || '#'}
-                    className="inline-flex items-center bg-white text-orange-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-50 transition-all duration-300 text-sm"
+                    className="inline-flex items-center bg-white text-orange-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-50 transition-all duration-300 text-sm hover:scale-105"
                     onClick={() => handleBannerClick(banner.id)}
                   >
                     {banner.button_text}
@@ -667,141 +695,33 @@ const HomePage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <LoadingSpinner size="lg" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-orange-50">
+        <div className="text-center">
+          <div className="relative">
+            <LoadingSpinner size="lg" className="text-orange-500" />
+            <Leaf className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-orange-500 animate-pulse" size={24} />
+          </div>
+          <p className="mt-4 text-gray-600 font-medium">Loading fresh products...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Customer Support Floating Buttons */}
-      <div className="fixed right-6 z-50 flex flex-col gap-4" style={{ bottom: '40px' }}>
-        <div className="relative">
-          <button
-            onClick={() => setShowCustomerSupport(!showCustomerSupport)}
-            className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 hover:scale-110 hover:shadow-xl"
-            aria-label="Customer Support"
-          >
-            <HelpCircle size={28} />
-            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
-              <span className="inline-block">?</span>
-            </span>
-          </button>
-          
-          {showCustomerSupport && (
-            <div className="absolute right-0 bottom-full mb-4 bg-white rounded-xl shadow-2xl border border-gray-200 min-w-64 overflow-hidden animate-slide-up">
-              <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                <h3 className="font-bold text-lg">Customer Support</h3>
-                <p className="text-sm opacity-90">We're here to help!</p>
-              </div>
-              
-              <div className="p-3 space-y-2">
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    console.log('Open chat support');
-                  }}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-blue-50 transition-colors group"
-                >
-                  <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
-                    <MessageCircle size={20} className="text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">Chat Support</div>
-                    <div className="text-xs text-gray-500 flex items-center gap-1">
-                      <Bot size={12} />
-                      Live chat or chatbot
-                    </div>
-                  </div>
-                </a>
-                
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-green-50 transition-colors group"
-                >
-                  <div className="bg-green-100 p-2 rounded-lg group-hover:bg-green-200 transition-colors">
-                    <MessageCircle size={20} className="text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">WhatsApp</div>
-                    <div className="text-xs text-gray-500">Instant messaging support</div>
-                  </div>
-                </a>
-                
-                <a
-                  href="tel:+254716354589"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 transition-colors group"
-                >
-                  <div className="bg-orange-100 p-2 rounded-lg group-hover:bg-orange-200 transition-colors">
-                    <Phone size={20} className="text-orange-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">Call Support</div>
-                    <div className="text-xs text-gray-500">+254 716 354 589</div>
-                  </div>
-                </a>
-                
-                <a
-                  href="/help"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-purple-50 transition-colors group"
-                >
-                  <div className="bg-purple-100 p-2 rounded-lg group-hover:bg-purple-200 transition-colors">
-                    <HelpCircle size={20} className="text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">Help Center</div>
-                    <div className="text-xs text-gray-500">FAQs & guides</div>
-                  </div>
-                </a>
-              </div>
-              
-              <div className="border-t border-gray-100 p-3 bg-gray-50">
-                <div className="text-xs text-gray-500 text-center">
-                  Typically replies in 2 minutes
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-        
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-all duration-300 hover:scale-110 hover:shadow-xl"
-          aria-label="Chat on WhatsApp"
-        >
-          <MessageCircle size={28} />
-        </a>
-        
-        <button
-          onClick={scrollToTop}
-          className={`bg-orange-500 text-white p-4 rounded-full shadow-lg hover:bg-orange-600 transition-all duration-300 hover:scale-110 hover:shadow-xl ${
-            showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
-          }`}
-          aria-label="Scroll to top"
-        >
-          <ArrowUp size={28} />
-        </button>
-      </div>
-
-      {/* Banners Section */}
+      {/* Hero Banner - Removed pt-24 since header is already in layout */}
       <section className="relative">
         {banners.length > 0 ? (
           <>
-            <div className="hidden md:block relative h-[450px] overflow-hidden">
+            <div className="hidden md:block relative h-[600px] overflow-hidden group">
               {banners.map((banner, index) => {
                 const isActive = index === activeBannerIndex;
                 
                 return (
                   <div
                     key={banner.id}
-                    className={`absolute inset-0 transition-opacity duration-700 ${
-                      isActive ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                    className={`absolute inset-0 transition-all duration-1000 ${
+                      isActive ? 'opacity-100 z-10 scale-100' : 'opacity-0 z-0 scale-105'
                     }`}
                   >
                     <BannerImage 
@@ -810,23 +730,27 @@ const HomePage: React.FC = () => {
                       isActive={isActive}
                     />
                     
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent" />
                     
                     <div className="relative h-full flex items-center">
                       <div className="container mx-auto px-8">
                         <div className="max-w-2xl">
-                          <h1 className="text-4xl font-bold mb-4 text-white">
+                          <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full mb-6 animate-fade-in">
+                            <Sparkles size={16} />
+                            <span className="text-sm font-semibold">Fresh & Organic</span>
+                          </div>
+                          <h1 className="text-5xl md:text-6xl font-bold mb-6 text-white leading-tight animate-slide-up">
                             {banner.title}
                           </h1>
                           {banner.subtitle && (
-                            <p className="text-xl mb-8 text-white">
+                            <p className="text-xl mb-8 text-white/90 animate-slide-up delay-150">
                               {banner.subtitle}
                             </p>
                           )}
                           {banner.button_text && (
                             <a
                               href={banner.button_link || '#'}
-                              className="inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 text-base"
+                              className="inline-flex items-center bg-white text-orange-600 px-8 py-4 rounded-full font-bold hover:bg-gray-50 transition-all duration-300 text-lg hover:scale-105 hover:shadow-xl animate-slide-up delay-300"
                               onClick={() => handleBannerClick(banner.id)}
                             >
                               {banner.button_text}
@@ -844,26 +768,28 @@ const HomePage: React.FC = () => {
                 <>
                   <button
                     onClick={prevBanner}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white text-orange-600 p-2 rounded-full shadow-lg z-20"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-3 rounded-full shadow-lg z-20 hover:bg-white/30 transition-all duration-300 hover:scale-110"
                     aria-label="Previous banner"
                   >
-                    <ChevronLeft size={20} />
+                    <ChevronLeft size={24} />
                   </button>
                   <button
                     onClick={nextBanner}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white text-orange-600 p-2 rounded-full shadow-lg z-20"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-3 rounded-full shadow-lg z-20 hover:bg-white/30 transition-all duration-300 hover:scale-110"
                     aria-label="Next banner"
                   >
-                    <ChevronRight size={20} />
+                    <ChevronRight size={24} />
                   </button>
                   
-                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
+                  <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
                     {banners.map((_, index) => (
                       <button
                         key={index}
                         onClick={() => setActiveBannerIndex(index)}
-                        className={`w-2.5 h-2.5 rounded-full ${
-                          index === activeBannerIndex ? 'bg-white' : 'bg-white/50'
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                          index === activeBannerIndex 
+                            ? 'bg-white scale-125' 
+                            : 'bg-white/50 hover:bg-white/70'
                         }`}
                         aria-label={`Go to banner ${index + 1}`}
                       />
@@ -871,20 +797,10 @@ const HomePage: React.FC = () => {
                   </div>
                 </>
               )}
-              
-              {banners.length > visibleBanners.length && (
-                <div className="absolute bottom-4 right-4 z-20">
-                  <button
-                    onClick={loadMoreBanners}
-                    className="bg-white/80 backdrop-blur-sm text-gray-800 text-sm font-medium px-3 py-1.5 rounded-full hover:bg-white transition-all duration-300"
-                  >
-                    Load more banners ({banners.length - visibleBanners.length} more)
-                  </button>
-                </div>
-              )}
             </div>
             
-            <div className="md:hidden relative h-[300px] overflow-hidden">
+            {/* Mobile Banner */}
+            <div className="md:hidden relative h-[400px] overflow-hidden">
               {banners.map((banner, index) => (
                 <MobileBannerItem 
                   key={banner.id}
@@ -892,36 +808,32 @@ const HomePage: React.FC = () => {
                   index={index}
                 />
               ))}
-              
-              {banners.length > 1 && (
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-1.5 z-20">
-                  {banners.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setActiveBannerIndex(index)}
-                      className={`w-2 h-2 rounded-full ${
-                        index === activeBannerIndex ? 'bg-white' : 'bg-white/50'
-                      }`}
-                      aria-label={`Go to banner ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
             </div>
           </>
         ) : (
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-            <div className="container mx-auto px-4 py-12 md:py-16">
-              <div className="max-w-3xl">
-                <h1 className="text-3xl md:text-5xl font-bold mb-4">
-                  Fresh Farm Produce Delivered Daily
+          <div className="relative h-[500px] bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 overflow-hidden">
+            <div className="absolute inset-0">
+              <img 
+                src="https://api.hypermarket.co.ke/storage/banners/default-homepage.jpg" 
+                alt="Fresh produce"
+                className="w-full h-full object-cover opacity-20"
+              />
+            </div>
+            <div className="relative h-full flex items-center">
+              <div className="container mx-auto px-4 text-center">
+                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full mb-6">
+                  <Sparkles size={16} />
+                  <span className="text-sm font-semibold">100% Organic</span>
+                </div>
+                <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white leading-tight">
+                  Fresh Farm Produce<br />Delivered Daily
                 </h1>
-                <p className="text-lg md:text-xl mb-8">
+                <p className="text-lg md:text-xl mb-8 text-white/90 max-w-2xl mx-auto">
                   Farm-fresh vegetables, fruits, and groceries harvested at peak ripeness
                 </p>
                 <a
                   href="/products"
-                  className="inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 text-base"
+                  className="inline-flex items-center bg-white text-green-600 px-8 py-4 rounded-full font-bold hover:bg-gray-50 transition-all duration-300 text-lg hover:scale-105 hover:shadow-xl"
                 >
                   Shop Now
                   <ArrowRight className="ml-3" size={20} />
@@ -932,654 +844,74 @@ const HomePage: React.FC = () => {
         )}
       </section>
 
-      {/* Personalized Recommendations Section */}
-      {showPersonalizedSection && (
-        <section className="py-16 bg-gradient-to-br from-purple-50 via-white to-blue-50">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col lg:flex-row justify-between items-center mb-12">
-              <div className="mb-8 lg:mb-0">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-2 rounded-xl">
-                    <Sparkles size={24} className="text-white" />
-                  </div>
-                  <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-                    <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                      Just For You
-                    </span>
-                  </h2>
-                </div>
-                <p className="text-xl text-gray-600 max-w-2xl">
-                  AI-powered recommendations based on your shopping behavior and preferences
-                </p>
-                
-                {userPreferences && (
-                  <div className="mt-6 flex items-center gap-4">
-                    <div className="w-48 bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500"
-                        style={{ width: `${calculateProfileCompletion()}%` }}
-                      />
-                    </div>
-                    <span className="text-sm text-gray-600">
-                      Profile: {calculateProfileCompletion()}% complete
-                    </span>
-                    {calculateProfileCompletion() < 100 && (
-                      <Link 
-                        href="/profile/preferences" 
-                        className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
-                      >
-                        <User size={14} />
-                        Update preferences
-                      </Link>
-                    )}
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-4">
-                <Link
-                  href="/profile/recommendations"
-                  className="group inline-flex items-center gap-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-xl font-bold hover:shadow-xl transition-all duration-300 shadow-md hover:shadow-lg"
-                >
-                  View All Recommendations
-                  <ArrowRight className="group-hover:translate-x-2 transition-transform duration-300" size={22} />
-                </Link>
-              </div>
-            </div>
-            
-            {isPersonalizationLoading ? (
-              <div className="flex justify-center py-12">
-                <LoadingSpinner size="md" />
-              </div>
-            ) : personalizedRecommendations.length > 0 ? (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {personalizedRecommendations.map((product) => (
-                    <div 
-                      key={product.id} 
-                      className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border border-gray-200 relative overflow-hidden group"
-                      onClick={() => trackProductView(product.id)}
-                    >
-                      <div className="absolute top-3 left-3 z-10">
-                        <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1">
-                          <Sparkles size={12} />
-                          <span>AI Recommended</span>
-                        </div>
-                      </div>
-                      
-                      {product.relevance_score && (
-                        <div className="absolute top-3 right-3 z-10">
-                          <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md flex items-center gap-1">
-                            <Target size={12} />
-                            <span>{Math.round(product.relevance_score)}% Match</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div onClick={() => trackProductView(product.id)}>
-                        <ProductCard 
-                          product={product} 
-                          showPersonalizedPrice={true}
-                          onViewTrack={() => trackProductView(product.id)}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="mt-12 bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 rounded-xl">
-                      <Bot size={24} className="text-white" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900">How these recommendations work</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {[
-                      {
-                        icon: <TrendingUp className="text-green-600" size={20} />,
-                        title: 'Purchase History',
-                        description: 'Based on what you\'ve bought before'
-                      },
-                      {
-                        icon: <ShoppingBag className="text-blue-600" size={20} />,
-                        title: 'Shopping Behavior',
-                        description: 'Your browsing and view patterns'
-                      },
-                      {
-                        icon: <Heart className="text-pink-600" size={20} />,
-                        title: 'User Preferences',
-                        description: 'Your saved preferences and likes'
-                      },
-                      {
-                        icon: <Users className="text-purple-600" size={20} />,
-                        title: 'Similar Shoppers',
-                        description: 'What people like you are buying'
-                      }
-                    ].map((item, index) => (
-                      <div key={index} className="flex items-start gap-4">
-                        <div className="bg-gray-100 p-3 rounded-xl">
-                          {item.icon}
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-gray-900 mb-1">{item.title}</h4>
-                          <p className="text-sm text-gray-600">{item.description}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-12 bg-white rounded-2xl shadow-lg border border-gray-200">
-                <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl mb-6">
-                  <Sparkles size={40} className="text-purple-600" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  Personalize Your Experience
-                </h3>
-                <p className="text-gray-600 mb-8 max-w-lg mx-auto">
-                  Sign in and update your preferences to get AI-powered recommendations tailored just for you
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link
-                    href="/auth/login"
-                    className="inline-flex items-center justify-center bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:shadow-lg transition-all duration-300"
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    href="/profile/preferences"
-                    className="inline-flex items-center justify-center bg-white text-purple-600 border border-purple-600 px-8 py-3 rounded-xl font-bold hover:bg-purple-50 transition-all duration-300"
-                  >
-                    Set Preferences
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Personalized Offers Section */}
-      {showPersonalizedSection && personalizedOffers.length > 0 && (
-        <section className="py-16 bg-gradient-to-br from-orange-50 via-white to-yellow-50">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col lg:flex-row justify-between items-center mb-12">
-              <div className="mb-8 lg:mb-0">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-gradient-to-r from-orange-600 to-red-600 p-2 rounded-xl">
-                    <Percent size={24} className="text-white" />
-                  </div>
-                  <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-                    <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                      Your Exclusive Offers
-                    </span>
-                  </h2>
-                </div>
-                <p className="text-xl text-gray-600 max-w-2xl">
-                  Special deals and discounts tailored just for you
-                </p>
-              </div>
-              
-              <div className="text-right">
-                <div className="text-3xl font-bold text-green-600 mb-2">
-                  {formatPrice(personalizedOffers.reduce((total, offer) => 
-                    total + (offer.original_price - offer.discounted_price), 0
-                  ))}
-                </div>
-                <p className="text-gray-600">Total potential savings</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {personalizedOffers.slice(0, 6).map((offer) => (
-                <div 
-                  key={offer.id}
-                  className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group"
-                  onClick={() => trackOfferInteraction(offer.id, 'click')}
-                >
-                  <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                        <Crown size={24} className="text-white" />
-                        <h3 className="text-xl font-bold text-white">{offer.offer_name}</h3>
-                      </div>
-                      <div className="bg-white/20 text-white text-sm font-bold px-3 py-1 rounded-full">
-                        {getTimeUntilExpiry(offer.valid_until)}
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4 flex items-center gap-4">
-                      <div className="text-white">
-                        <div className="text-sm opacity-90">Discount</div>
-                        <div className="text-3xl font-bold">
-                          {offer.discount_type === 'percentage' 
-                            ? `${offer.discount_value}% OFF`
-                            : `${formatPrice(offer.discount_value)} OFF`
-                          }
-                        </div>
-                      </div>
-                      
-                      <div className="h-12 w-px bg-white/30" />
-                      
-                      <div className="text-white">
-                        <div className="text-sm opacity-90">You Save</div>
-                        <div className="text-3xl font-bold">
-                          {formatPrice(offer.original_price - offer.discounted_price)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="p-6">
-                    {offer.product && (
-                      <>
-                        <div className="flex items-start gap-4 mb-6">
-                          <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
-                            <img 
-                              src={offer.product.thumbnail_url || '/default-product.jpg'}
-                              alt={offer.product.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = '/default-product.jpg';
-                              }}
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-bold text-gray-900 mb-2">{offer.product.name}</h4>
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-2">
-                                <div className="text-sm text-gray-500 line-through">
-                                  {formatPrice(offer.original_price)}
-                                </div>
-                                <div className="text-2xl font-bold text-green-600">
-                                  {formatPrice(offer.discounted_price)}
-                                </div>
-                              </div>
-                              <div className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded-full">
-                                Save {calculateDiscountPercentage(offer.original_price, offer.discounted_price)}%
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {offer.applied_rules && typeof offer.applied_rules === 'object' && (
-                          <div className="mb-6">
-                            <div className="text-sm font-medium text-gray-900 mb-2">Why you got this offer:</div>
-                            <div className="flex flex-wrap gap-2">
-                              {Object.entries(offer.applied_rules).map(([key, value]: [string, any]) => (
-                                <div 
-                                  key={key}
-                                  className="bg-gray-100 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full"
-                                >
-                                  {key.replace(/_/g, ' ')}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        <Link
-                          href={`/products/${offer.product_id}`}
-                          className="block w-full bg-gradient-to-r from-green-500 to-green-600 text-white text-center py-4 rounded-xl font-bold hover:shadow-lg transition-all duration-300 group-hover:from-green-600 group-hover:to-green-700"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            trackOfferInteraction(offer.id, 'click');
-                          }}
-                        >
-                          Claim Your Offer
-                          <ArrowRight className="inline ml-2 group-hover:translate-x-1 transition-transform duration-300" size={18} />
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                  
-                  <div className="px-6 pb-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <ClockIcon size={14} />
-                        <span>Expires {new Date(offer.valid_until).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${
-                          offer.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
-                        }`} />
-                        <span className="text-gray-600 capitalize">{offer.status}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            {personalizedOffers.length > 6 && (
-              <div className="text-center mt-12">
-                <Link
-                  href="/profile/offers"
-                  className="inline-flex items-center gap-3 bg-gradient-to-r from-orange-500 to-red-500 text-white px-10 py-4 rounded-xl font-bold hover:shadow-xl transition-all duration-300"
-                >
-                  View All Offers ({personalizedOffers.length})
-                  <ArrowRight className="group-hover:translate-x-2 transition-transform duration-300" size={22} />
-                </Link>
-              </div>
-            )}
-            
-            <div className="mt-16 bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
-              <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">
-                How We Create Your Personalized Offers
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                  {
-                    icon: <Crown className="text-yellow-600" size={24} />,
-                    title: 'Loyalty Rewards',
-                    description: 'Special discounts for our regular customers',
-                    color: 'from-yellow-100 to-yellow-50'
-                  },
-                  {
-                    icon: <TrendingDown className="text-green-600" size={24} />,
-                    title: 'Dynamic Pricing',
-                    description: 'Personalized prices based on your shopping patterns',
-                    color: 'from-green-100 to-green-50'
-                  },
-                  {
-                    icon: <Calendar className="text-blue-600" size={24} />,
-                    title: 'Seasonal Deals',
-                    description: 'Timely offers based on seasons and events',
-                    color: 'from-blue-100 to-blue-50'
-                  },
-                  {
-                    icon: <Zap className="text-purple-600" size={24} />,
-                    title: 'Real-time Offers',
-                    description: 'Context-aware deals as you browse',
-                    color: 'from-purple-100 to-purple-50'
-                  }
-                ].map((item, index) => (
-                  <div 
-                    key={index} 
-                    className={`bg-gradient-to-br ${item.color} p-6 rounded-2xl border border-gray-200 hover:shadow-lg transition-all duration-300`}
-                  >
-                    <div className="bg-white p-3 rounded-xl w-fit mb-4">
-                      {item.icon}
-                    </div>
-                    <h4 className="font-bold text-gray-900 text-lg mb-2">{item.title}</h4>
-                    <p className="text-gray-600 text-sm">{item.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Shopping Analytics Dashboard */}
-      {showPersonalizedSection && shoppingAnalytics && (
-        <section className="py-16 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col lg:flex-row justify-between items-center mb-12">
-              <div className="mb-8 lg:mb-0">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-2 rounded-xl">
-                    <BarChart3 size={24} className="text-white" />
-                  </div>
-                  <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-                    <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                      Your Shopping Dashboard
-                    </span>
-                  </h2>
-                </div>
-                <p className="text-xl text-gray-600 max-w-2xl">
-                  Track your shopping habits, savings, and preferences
-                </p>
-              </div>
-              
-              <Link
-                href="/profile/shopping-analytics"
-                className="group inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-xl font-bold hover:shadow-xl transition-all duration-300 shadow-md hover:shadow-lg"
+      {/* Features Grid */}
+      <section className="py-16 bg-gradient-to-b from-white to-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              {
+                icon: <Truck className="text-green-600" size={32} />,
+                title: 'Free Delivery',
+                description: 'On orders over KES 2,000',
+                color: 'bg-green-50'
+              },
+              {
+                icon: <ShieldCheck className="text-blue-600" size={32} />,
+                title: 'Quality Guarantee',
+                description: 'Freshness assured or refund',
+                color: 'bg-blue-50'
+              },
+              {
+                icon: <Clock4 className="text-orange-600" size={32} />,
+                title: 'Same Day Delivery',
+                description: 'Order by 2PM, get today',
+                color: 'bg-orange-50'
+              },
+              {
+                icon: <Award className="text-purple-600" size={32} />,
+                title: 'Organic Certified',
+                description: '100% natural products',
+                color: 'bg-purple-50'
+              }
+            ].map((feature, index) => (
+              <div 
+                key={index} 
+                className={`${feature.color} p-8 rounded-3xl border border-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group`}
               >
-                View Full Analytics
-                <ArrowRight className="group-hover:translate-x-2 transition-transform duration-300" size={22} />
-              </Link>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-green-100 p-3 rounded-xl">
-                    <ShoppingBasket className="text-green-600" size={24} />
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold text-gray-900">
-                      {shoppingAnalytics.statistics.total_orders}
-                    </div>
-                    <div className="text-sm text-gray-600">Total Orders</div>
-                  </div>
+                <div className="mb-6 transform group-hover:scale-110 transition-transform duration-300">
+                  {feature.icon}
                 </div>
-                <div className="text-sm text-gray-500">
-                  {shoppingAnalytics.statistics.completed_orders} completed
-                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
+                <p className="text-gray-600">{feature.description}</p>
               </div>
-              
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-blue-100 p-3 rounded-xl">
-                    <TrendingUpIcon className="text-blue-600" size={24} />
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold text-gray-900">
-                      {formatPrice(shoppingAnalytics.statistics.total_spent)}
-                    </div>
-                    <div className="text-sm text-gray-600">Total Spent</div>
-                  </div>
-                </div>
-                <div className="text-sm text-gray-500">
-                  Avg: {formatPrice(shoppingAnalytics.statistics.average_order_value)}
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-purple-100 p-3 rounded-xl">
-                    <Eye className="text-purple-600" size={24} />
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold text-gray-900">
-                      {shoppingAnalytics.interaction_count}
-                    </div>
-                    <div className="text-sm text-gray-600">Interactions</div>
-                  </div>
-                </div>
-                <div className="text-sm text-gray-500">
-                  Views, clicks, and purchases
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-orange-100 p-3 rounded-xl">
-                    <Bell className="text-orange-600" size={24} />
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold text-gray-900">
-                      {personalizedOffers.length}
-                    </div>
-                    <div className="text-sm text-gray-600">Active Offers</div>
-                  </div>
-                </div>
-                <div className="text-sm text-gray-500">
-                  Personalized deals for you
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Link
-                  href="/profile/preferences"
-                  className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all duration-300 group"
-                >
-                  <div className="bg-blue-100 p-3 rounded-lg group-hover:bg-blue-200 transition-colors">
-                    <User className="text-blue-600" size={24} />
-                  </div>
-                  <div>
-                    <div className="font-bold text-gray-900">Update Preferences</div>
-                    <div className="text-sm text-gray-600">Customize your shopping experience</div>
-                  </div>
-                </Link>
-                
-                <Link
-                  href="/profile/recommendations"
-                  className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all duration-300 group"
-                >
-                  <div className="bg-purple-100 p-3 rounded-lg group-hover:bg-purple-200 transition-colors">
-                    <Sparkles className="text-purple-600" size={24} />
-                  </div>
-                  <div>
-                    <div className="font-bold text-gray-900">View Recommendations</div>
-                    <div className="text-sm text-gray-600">See more personalized suggestions</div>
-                  </div>
-                </Link>
-                
-                <Link
-                  href="/profile/offers"
-                  className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-orange-500 hover:bg-orange-50 transition-all duration-300 group"
-                >
-                  <div className="bg-orange-100 p-3 rounded-lg group-hover:bg-orange-200 transition-colors">
-                    <Gift className="text-orange-600" size={24} />
-                  </div>
-                  <div>
-                    <div className="font-bold text-gray-900">Manage Offers</div>
-                    <div className="text-sm text-gray-600">View and claim your exclusive deals</div>
-                  </div>
-                </Link>
-              </div>
-            </div>
+            ))}
           </div>
-        </section>
-      )}
-
-      {/* Real-time Offers Section */}
-      {showPersonalizedSection && realTimeOffers.length > 0 && (
-        <section className="py-16 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col lg:flex-row justify-between items-center mb-12">
-              <div className="mb-8 lg:mb-0">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-2 rounded-xl">
-                    <Zap size={24} className="text-white" />
-                  </div>
-                  <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-                    <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                      Real-time Offers
-                    </span>
-                  </h2>
-                </div>
-                <p className="text-xl text-gray-600 max-w-2xl">
-                  Context-aware deals generated as you browse our products
-                </p>
-              </div>
-              
-              <div className="text-right">
-                <div className="text-sm text-gray-600">Updated in real-time</div>
-                <div className="text-lg font-bold text-emerald-600">Based on your current activity</div>
-              </div>
-            </div>
-            
-            {isRealTimeOffersLoading ? (
-              <div className="flex justify-center py-12">
-                <LoadingSpinner size="md" />
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {realTimeOffers.slice(0, 3).map((offer) => (
-                  <div 
-                    key={offer.id}
-                    className="bg-white rounded-2xl shadow-lg overflow-hidden border border-emerald-200 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                  >
-                    <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-6">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Zap size={20} className="text-white" />
-                          <span className="text-white text-sm font-bold">REAL-TIME</span>
-                        </div>
-                        <div className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded-full">
-                          Just for you
-                        </div>
-                      </div>
-                      <h3 className="text-xl font-bold text-white mt-4">{offer.offer_name}</h3>
-                    </div>
-                    
-                    <div className="p-6">
-                      {offer.product && (
-                        <>
-                          <div className="flex items-center gap-4 mb-4">
-                            <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
-                              <img 
-                                src={offer.product.thumbnail_url || '/default-product.jpg'}
-                                alt={offer.product.name}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-gray-900">{offer.product.name}</h4>
-                              <div className="flex items-center gap-2 mt-2">
-                                <div className="text-lg font-bold text-emerald-600">
-                                  {formatPrice(offer.discounted_price)}
-                                </div>
-                                <div className="text-sm text-gray-500 line-through">
-                                  {formatPrice(offer.original_price)}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <button
-                            onClick={() => {
-                              trackOfferInteraction(offer.id, 'click');
-                              window.location.href = `/products/${offer.product_id}`;
-                            }}
-                            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all duration-300"
-                          >
-                            Claim This Deal
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Why Lando Hypermarket Section */}
-      <section className="py-5 bg-gradient-to-br from-white via-orange-50/20 to-white">
-        {/* ... Keep the existing "Why Lando Hypermarket" section exactly as it is ... */}
-        {/* This section remains unchanged from your original code */}
+        </div>
       </section>
 
-      {/* Featured Products Section */}
-      <section className="py-16">
+      {/* Featured Products Section - UPDATED to use ProductCard */}
+      <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-12">
             <div className="mb-8 lg:mb-0">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-100 to-orange-50 text-orange-700 px-4 py-2 rounded-full mb-4">
+                <Star size={16} className="fill-orange-500" />
+                <span className="text-sm font-semibold">Top Picks</span>
+              </div>
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                Featured <span className="text-orange-600">Products</span>
+                Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">Products</span>
               </h2>
               <p className="text-xl text-gray-600 max-w-2xl">
-                Our most popular and best-selling items
+                Curated selection of our best-selling items
               </p>
             </div>
-            <a
+            <Link
               href="/products?featured=true"
-              className="group inline-flex items-center gap-3 bg-green-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-green-700 transition-all duration-300 shadow-md hover:shadow-lg"
+              className="group inline-flex items-center gap-3 bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all duration-300 shadow-lg hover:scale-105"
             >
               View All Featured
               <ArrowRight className="group-hover:translate-x-2 transition-transform duration-300" size={22} />
-            </a>
+            </Link>
           </div>
           
           {featuredProducts.length > 0 ? (
@@ -1587,69 +919,134 @@ const HomePage: React.FC = () => {
               {featuredProducts.map((product) => (
                 <div 
                   key={product.id} 
-                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-200"
-                  onClick={() => trackProductView(product.id)}
+                  className="group relative bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 overflow-hidden"
                 >
+                  <div className="absolute top-3 left-3 z-10">
+                    <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                      Featured
+                    </span>
+                  </div>
                   <ProductCard 
                     product={product} 
-                    onViewTrack={() => trackProductView(product.id)}
+                    onViewTrack={trackProductView}
                   />
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-center py-16">
+              <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl mb-6">
+                <Package size={48} className="text-gray-400" />
+              </div>
               <p className="text-gray-500 text-lg">No featured products available</p>
             </div>
           )}
         </div>
       </section>
 
-      {/* New Arrivals Section */}
-      <section className="py-16 bg-gray-50">
+      {/* Categories Section */}
+      {categories.length > 0 && (
+        <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                Shop by <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-teal-500">Category</span>
+              </h2>
+              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                Browse our wide range of fresh products
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+              {categories.slice(0, 12).map((category, index) => (
+                <Link
+                  key={category.id}
+                  href={`/categories/${category.slug}`}
+                  className="group relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 text-center"
+                >
+                  <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-green-50 to-teal-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                    {category.image ? (
+                      <img 
+                        src={getImageUrl(category.image)} 
+                        alt={category.name}
+                        className="w-full h-full object-cover rounded-2xl"
+                      />
+                    ) : (
+                      <Leaf size={32} className="text-green-600" />
+                    )}
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-2">{category.name}</h3>
+                  {category.products_count && (
+                    <p className="text-sm text-gray-500">{category.products_count} products</p>
+                  )}
+                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-green-500 rounded-2xl transition-colors duration-500" />
+                </Link>
+              ))}
+            </div>
+            
+            {categories.length > 12 && (
+              <div className="text-center mt-12">
+                <Link
+                  href="/categories"
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-800 to-gray-900 text-white px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all duration-300"
+                >
+                  View All Categories
+                  <ArrowRight size={20} />
+                </Link>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* New Arrivals Section - UPDATED to use ProductCard */}
+      <section className="py-16 bg-gradient-to-b from-white to-orange-50">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-12">
             <div className="mb-8 lg:mb-0">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-green-100 to-green-50 text-green-700 px-4 py-2 rounded-full mb-4">
+                <Sparkles size={16} />
+                <span className="text-sm font-semibold">Just In</span>
+              </div>
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                Fresh <span className="text-green-600">Arrivals</span>
+                Fresh <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-emerald-500">Arrivals</span>
               </h2>
               <p className="text-xl text-gray-600 max-w-2xl">
                 Newly added to our collection
               </p>
             </div>
-            <a
+            <Link
               href="/products?sort=created_at&order=desc"
-              className="group inline-flex items-center gap-3 bg-orange-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-orange-700 transition-all duration-300 shadow-md hover:shadow-lg"
+              className="group inline-flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all duration-300 shadow-lg hover:scale-105"
             >
               View All New
               <ArrowRight className="group-hover:translate-x-2 transition-transform duration-300" size={22} />
-            </a>
+            </Link>
           </div>
           
           {newArrivals.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {newArrivals.slice(0, 10).map((product, index) => (
+              {newArrivals.slice(0, 8).map((product, index) => (
                 <div 
                   key={product.id} 
-                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-200 relative overflow-hidden"
-                  onClick={() => trackProductView(product.id)}
+                  className="group relative bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 overflow-hidden"
                 >
-                  <ProductCard 
-                    product={product} 
-                    onViewTrack={() => trackProductView(product.id)}
-                  />
                   <div className="absolute top-3 left-3 z-10">
-                    <span className="bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-md">
-                      New
+                    <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                      NEW
                     </span>
                   </div>
+                  <ProductCard 
+                    product={product} 
+                    onViewTrack={trackProductView}
+                  />
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-center py-16">
-              <div className="inline-flex items-center justify-center w-24 h-24 bg-gray-100 rounded-2xl mb-6">
-                <Sprout size={48} className="text-gray-400" />
+              <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl mb-6">
+                <Sprout size={48} className="text-green-600" />
               </div>
               <p className="text-gray-500 text-lg">Check back soon for new arrivals!</p>
             </div>
@@ -1657,137 +1054,80 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Smart Shopping Experience Section */}
-      {showPersonalizedSection && (
-        <section className="py-16 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto text-center">
-              <div className="inline-flex items-center gap-3 bg-white/20 text-white px-6 py-3 rounded-full mb-8">
-                <Zap size={20} />
-                <span className="text-sm font-semibold">Real-time Personalization</span>
+      {/* Subscription Banner */}
+      <section className="py-20 bg-gradient-to-r from-orange-500 via-orange-600 to-red-500 text-white overflow-hidden">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+            <div className="lg:w-1/2">
+              <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full mb-6">
+                <Gift size={16} />
+                <span className="text-sm font-semibold">Limited Time Offer</span>
               </div>
               
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                Your <span className="text-yellow-300">Smart</span> Shopping Experience
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+                Subscribe & Save
+                <span className="block text-yellow-300">30% OFF</span>
               </h2>
               
-              <p className="text-2xl mb-10 text-white/95 max-w-3xl mx-auto font-normal">
-                Our AI learns from your shopping behavior to deliver personalized prices, recommendations, and offers in real-time.
+              <p className="text-xl mb-8 text-white/90 max-w-2xl">
+                Get your favorite farm-fresh products delivered regularly. Cancel anytime, skip deliveries when you want.
               </p>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                {[
-                  {
-                    icon: <Target className="text-blue-400" size={32} />,
-                    title: 'Personalized Pricing',
-                    description: 'Dynamic prices based on your shopping patterns and preferences'
-                  },
-                  {
-                    icon: <Sparkles className="text-purple-400" size={32} />,
-                    title: 'Smart Recommendations',
-                    description: 'AI-powered suggestions tailored just for you'
-                  },
-                  {
-                    icon: <Clock3 className="text-green-400" size={32} />,
-                    title: 'Real-time Offers',
-                    description: 'Context-aware deals as you browse the site'
-                  }
-                ].map((feature, index) => (
-                  <div key={index} className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
-                    <div className="mb-6">
-                      {feature.icon}
-                    </div>
-                    <h3 className="text-2xl font-bold mb-4">{feature.title}</h3>
-                    <p className="text-white/90">{feature.description}</p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link
+                  href="/subscriptions"
+                  className="group inline-flex items-center justify-center bg-white text-orange-600 px-8 py-4 rounded-full font-bold hover:bg-gray-50 transition-all duration-300 text-lg shadow-lg hover:scale-105"
+                >
+                  Start Your Subscription
+                  <ArrowRight className="ml-3 group-hover:translate-x-2 transition-transform duration-300" size={20} />
+                </Link>
+                <Link
+                  href="/subscriptions/plans"
+                  className="group inline-flex items-center justify-center bg-transparent border-2 border-white text-white px-8 py-4 rounded-full font-bold hover:bg-white/10 transition-all duration-300 text-lg"
+                >
+                  View Plans
+                </Link>
+              </div>
+            </div>
+            
+            <div className="lg:w-1/2 relative">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-red-400/20 rounded-3xl blur-3xl" />
+                <div className="relative bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-8">
+                  <div className="grid grid-cols-2 gap-6">
+                    {[
+                      { icon: '🔄', title: 'Flexible Schedule', desc: 'Change delivery dates' },
+                      { icon: '📦', title: 'Free Delivery', desc: 'On all subscription orders' },
+                      { icon: '🎁', title: 'Free Gifts', desc: 'Seasonal surprises included' },
+                      { icon: '⭐', title: 'Priority Support', desc: 'Dedicated customer care' }
+                    ].map((feature, index) => (
+                      <div key={index} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                        <div className="text-3xl mb-3">{feature.icon}</div>
+                        <h4 className="text-lg font-bold mb-2">{feature.title}</h4>
+                        <p className="text-white/80 text-sm">{feature.desc}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-6 justify-center">
-                <Link
-                  href="/profile/preferences"
-                  className="group inline-flex items-center justify-center bg-white text-blue-600 px-10 py-5 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 text-xl shadow-lg"
-                >
-                  Customize Your Experience
-                  <ArrowRight className="ml-4 group-hover:translate-x-3 transition-transform duration-300" size={24} />
-                </Link>
-                <Link
-                  href="/profile/shopping-analytics"
-                  className="group inline-flex items-center justify-center bg-transparent border-2 border-white text-white px-10 py-5 rounded-xl font-bold hover:bg-white/10 transition-all duration-300 text-xl"
-                >
-                  View Your Analytics
-                  <ArrowRight className="ml-4 group-hover:translate-x-2 transition-transform duration-300" size={24} />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Subscription Section */}
-      <section className="py-20 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-3 bg-white/20 text-white px-6 py-3 rounded-full mb-8">
-              <Heart size={20} />
-              <span className="text-sm font-semibold">Exclusive Offer</span>
-            </div>
-            
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-              Subscribe & Save <span className="text-yellow-300">25%</span>
-            </h2>
-            
-            <p className="text-2xl mb-10 text-white/95 max-w-3xl mx-auto font-normal">
-              Get your favorite farm-fresh products delivered regularly. Cancel anytime, skip deliveries when you want.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <a
-                href="/profile/subscriptions"
-                className="group inline-flex items-center justify-center bg-white text-orange-600 px-10 py-5 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 text-xl shadow-lg"
-              >
-                Start Your Subscription
-                <ArrowRight className="ml-4 group-hover:translate-x-3 transition-transform duration-300" size={24} />
-              </a>
-              <a
-                href="/subscriptions/plans"
-                className="group inline-flex items-center justify-center bg-transparent border-2 border-white text-white px-10 py-5 rounded-xl font-bold hover:bg-white/10 transition-all duration-300 text-xl"
-              >
-                View Plans
-                <ArrowRight className="ml-4 group-hover:translate-x-2 transition-transform duration-300" size={24} />
-              </a>
-            </div>
-            
-            <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-8">
-              {[
-                { icon: '🔄', title: 'Flexible Schedule', desc: 'Change delivery dates' },
-                { icon: '📦', title: 'Free Delivery', desc: 'On all subscription orders' },
-                { icon: '🎁', title: 'Free Gifts', desc: 'Seasonal surprises included' }
-              ].map((feature, index) => (
-                <div key={index} className="text-white">
-                  <div className="text-3xl mb-3">{feature.icon}</div>
-                  <h4 className="text-xl font-bold mb-2">{feature.title}</h4>
-                  <p className="text-white/90">{feature.desc}</p>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
+      {/* Testimonials */}
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-gray-100 text-gray-800 px-4 py-2 rounded-full mb-6">
-              <Star size={18} className="text-amber-500" />
-              <span className="text-sm font-semibold">Community Love</span>
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-100 to-amber-50 text-amber-700 px-4 py-2 rounded-full mb-6">
+              <Star size={16} className="fill-amber-500" />
+              <span className="text-sm font-semibold">4.8/5 Rating</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">
-              What Our <span className="text-orange-600">Farmily</span> Says
+              Loved by <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-500">Thousands</span>
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Join thousands of happy families enjoying fresh produce from our farm
+              Join our community of happy customers enjoying fresh produce
             </p>
           </div>
           
@@ -1798,34 +1138,33 @@ const HomePage: React.FC = () => {
                 role: 'Regular Customer • 2 years',
                 content: 'The quality of vegetables is exceptional! Everything arrives fresh and lasts longer than supermarket produce.',
                 rating: 5,
-                avatarColor: 'bg-orange-100'
+                avatar: 'S'
               },
               {
                 name: 'Michael Chen',
                 role: 'Subscription User • 1 year',
                 content: 'The subscription service has simplified my life. The seasonal variety keeps meals exciting!',
                 rating: 5,
-                avatarColor: 'bg-green-100'
+                avatar: 'M'
               },
               {
                 name: 'Priya Sharma',
                 role: 'Family of 4 • 6 months',
                 content: 'My kids now love vegetables! The freshness makes all the difference in taste and nutrition.',
                 rating: 5,
-                avatarColor: 'bg-amber-100'
+                avatar: 'P'
               }
             ].map((testimonial, index) => (
               <div 
                 key={index} 
-                className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-2 border border-gray-200"
+                className="bg-gradient-to-br from-white to-gray-50 p-8 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100"
               >
                 <div className="flex items-center mb-6">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
                       size={22}
-                      className={`${i < testimonial.rating ? 'text-amber-500' : 'text-gray-300'} mr-1`}
-                      fill={i < testimonial.rating ? "currentColor" : "none"}
+                      className={`${i < testimonial.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'} mr-1`}
                     />
                   ))}
                 </div>
@@ -1835,8 +1174,8 @@ const HomePage: React.FC = () => {
                 </p>
                 
                 <div className="flex items-center">
-                  <div className={`${testimonial.avatarColor} w-14 h-14 rounded-full flex items-center justify-center text-gray-800 font-bold text-xl mr-4`}>
-                    {testimonial.name.charAt(0)}
+                  <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center text-white font-bold text-xl mr-4">
+                    {testimonial.avatar}
                   </div>
                   <div>
                     <p className="font-bold text-gray-900 text-lg">{testimonial.name}</p>
@@ -1850,45 +1189,129 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-green-600 to-green-700 text-white">
+      <section className="py-20 bg-gradient-to-br from-gray-900 to-black text-white">
         <div className="container mx-auto px-4">
-          <div className="rounded-2xl shadow-xl overflow-hidden">
-            <div className="flex flex-col lg:flex-row items-center">
-              <div className="lg:w-1/2 p-12 lg:p-16">
-                <h2 className="text-4xl md:text-5xl font-bold mb-6">
-                  Ready to Taste the Difference?
-                </h2>
-                <p className="text-xl text-white/95 mb-8">
-                  Join our community of health-conscious families enjoying farm-fresh goodness.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <a
-                    href="/products"
-                    className="group inline-flex items-center justify-center bg-white text-green-700 px-8 py-4 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 text-lg shadow-md"
-                  >
-                    Start Shopping
-                    <ArrowRight className="ml-3 group-hover:translate-x-2 transition-transform duration-300" size={22} />
-                  </a>
-                  <a
-                    href="/auth/register"
-                    className="group inline-flex items-center justify-center bg-transparent border-2 border-white text-white px-8 py-4 rounded-xl font-bold hover:bg-white/10 transition-all duration-300 text-lg"
-                  >
-                    Create Account
-                    <ArrowRight className="ml-3 group-hover:translate-x-2 transition-transform duration-300" size={22} />
-                  </a>
-                </div>
-              </div>
-              <div className="lg:w-1/2 relative h-64 lg:h-auto bg-gradient-to-l from-green-500/20 to-green-600/20">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-white text-8xl opacity-20">
-                    <Leaf size={120} />
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-8 leading-tight">
+              Ready to Taste the
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-500">
+                Fresh Difference?
+              </span>
+            </h2>
+            
+            <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
+              Join thousands of health-conscious families enjoying farm-fresh goodness delivered to their door.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+              <Link
+                href="/products"
+                className="group inline-flex items-center justify-center bg-gradient-to-r from-green-500 to-emerald-600 text-white px-10 py-5 rounded-full font-bold hover:shadow-2xl transition-all duration-300 text-lg shadow-lg hover:scale-105"
+              >
+                Start Shopping
+                <ArrowRight className="ml-3 group-hover:translate-x-2 transition-transform duration-300" size={22} />
+              </Link>
+              <Link
+                href="/auth/register"
+                className="group inline-flex items-center justify-center bg-transparent border-2 border-white/30 text-white px-10 py-5 rounded-full font-bold hover:bg-white/10 transition-all duration-300 text-lg"
+              >
+                Create Free Account
+              </Link>
+            </div>
+            
+            <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8">
+              {[
+                { value: '10,000+', label: 'Happy Customers' },
+                { value: '24/7', label: 'Support Available' },
+                { value: '100%', label: 'Organic Products' },
+                { value: '30-min', label: 'Delivery Promise' }
+              ].map((stat, index) => (
+                <div key={index} className="text-center">
+                  <div className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+                    {stat.value}
                   </div>
+                  <div className="text-gray-400">{stat.label}</div>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
+
+    
+      {/* Customer Support Floating Button */}
+      <div className="fixed right-6 bottom-6 z-50">
+        <button
+          onClick={() => setShowCustomerSupport(!showCustomerSupport)}
+          className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110"
+          aria-label="Customer Support"
+        >
+          <HelpCircle size={28} />
+        </button>
+        
+        {showCustomerSupport && (
+          <div className="absolute right-0 bottom-full mb-4 bg-white rounded-2xl shadow-2xl border border-gray-200 w-72 overflow-hidden animate-slide-up">
+            <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <h3 className="font-bold text-lg">Need Help?</h3>
+              <p className="text-sm opacity-90">We're here 24/7</p>
+            </div>
+            
+            <div className="p-3 space-y-2">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-green-50 transition-colors group"
+              >
+                <div className="bg-green-100 p-2 rounded-lg group-hover:bg-green-200 transition-colors">
+                  <MessageCircle size={20} className="text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">WhatsApp</div>
+                  <div className="text-xs text-gray-500">Instant reply</div>
+                </div>
+              </a>
+              
+              <a
+                href="tel:+254716354589"
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-blue-50 transition-colors group"
+              >
+                <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
+                  <Phone size={20} className="text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">Call Us</div>
+                  <div className="text-xs text-gray-500">+254 716 354 589</div>
+                </div>
+              </a>
+              
+              <a
+                href="/help"
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-purple-50 transition-colors group"
+              >
+                <div className="bg-purple-100 p-2 rounded-lg group-hover:bg-purple-200 transition-colors">
+                  <HelpCircle size={20} className="text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">Help Center</div>
+                  <div className="text-xs text-gray-500">FAQs & guides</div>
+                </div>
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Scroll to Top Button */}
+      <button
+        onClick={scrollToTop}
+        className={`fixed right-6 bottom-24 bg-gradient-to-r from-orange-500 to-red-500 text-white p-3 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 ${
+          showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
+        }`}
+        aria-label="Scroll to top"
+      >
+        <ArrowUp size={24} />
+      </button>
     </div>
   );
 };
