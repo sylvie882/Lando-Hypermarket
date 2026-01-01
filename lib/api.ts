@@ -130,6 +130,12 @@ class ApiService {
           // For FormData, let browser set Content-Type with boundary
           // Remove Content-Type header to let browser set it automatically
           delete config.headers['Content-Type'];
+          
+          // Check if FormData already has _method=PUT (for Laravel file uploads)
+          if (config.data.has('_method')) {
+            // If it's a FormData with _method=PUT, change method to POST
+            config.method = 'post';
+          }
         } else if (config.data && typeof config.data === 'object' && !(config.data instanceof FormData)) {
           // For JSON data, set Content-Type
           config.headers['Content-Type'] = 'application/json';
@@ -363,7 +369,6 @@ class ApiService {
         });
       }
     },
-    // In your api.ts file, update the updateProduct method:
     updateProduct: (id: number, data: any) => {
       if (data instanceof FormData) {
         // For FormData, let browser set Content-Type with boundary
@@ -384,7 +389,7 @@ class ApiService {
     bulkUpdateStock: (data: any) => this.api.post('/admin/products/bulk-stock', data),
     exportProducts: () => this.api.get('/admin/products/export'),
     
-    // Category Management
+    // Category Management - FIXED updateCategory method
     getCategories: (params?: any) => this.api.get('/admin/categories', { params }),
     createCategory: (data: any) => {
       if (data instanceof FormData) {
@@ -397,7 +402,9 @@ class ApiService {
     },
     updateCategory: (id: number, data: any) => {
       if (data instanceof FormData) {
-        return this.api.put(`/admin/categories/${id}`, data);
+        // For Laravel file uploads with PUT, use POST with _method=PUT
+        data.append('_method', 'PUT');
+        return this.api.post(`/admin/categories/${id}`, data);
       } else {
         return this.api.put(`/admin/categories/${id}`, data, {
           headers: { 'Content-Type': 'application/json' }
