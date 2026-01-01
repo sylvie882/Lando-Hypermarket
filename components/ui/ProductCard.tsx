@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Product } from '@/types';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { ShoppingCart, Heart, Star, Eye, Zap, Truck, Info, Check, Tag } from 'lucide-react';
+import { ShoppingCart, Heart, Star, Eye, Zap, Truck, Info, Check, Tag, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReviewModal from '../ReviewModal';
 
@@ -77,20 +77,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
     );
   }, [product]);
 
-  // Safely handle rating
-  const rating = product.rating 
-    ? (typeof product.rating === 'string' 
-        ? parseFloat(product.rating) 
-        : typeof product.rating === 'number' 
-          ? product.rating 
-          : 0)
-    : 0;
-  
-  const displayRating = isNaN(rating) ? 0 : Math.min(Math.max(rating, 0), 5);
+  // Safely handle short_description - check multiple possible property names
+  const shortDescription = React.useMemo(() => {
+    return (
+      (product as any).short_description ||
+      (product as any).shortDescription ||
+      (product as any).description_short ||
+      (product as any).brief_description ||
+      product.description?.substring(0, 100) || // Fallback to first 100 chars of description
+      ''
+    );
+  }, [product]);
 
   // Enhanced description handling with highlights
   const getDescriptionHighlights = () => {
-    const shortDesc = product.short_description || '';
+    const shortDesc = shortDescription || '';
     
     // Extract key features or create highlights from description
     const highlights = [];
@@ -121,6 +122,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const descriptionHighlights = getDescriptionHighlights();
+
+  // Safely handle rating
+  const rating = product.rating 
+    ? (typeof product.rating === 'string' 
+        ? parseFloat(product.rating) 
+        : typeof product.rating === 'number' 
+          ? product.rating 
+          : 0)
+    : 0;
+  
+  const displayRating = isNaN(rating) ? 0 : Math.min(Math.max(rating, 0), 5);
 
   // Check if user can review this product
   useEffect(() => {
@@ -543,7 +555,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* HIGHLIGHTED DESCRIPTION SECTION */}
-        {product.short_description && (
+        {shortDescription && (
           <div className="mb-4 relative">
             {/* Description Header with Info Icon */}
             <div className="flex items-center gap-2 mb-2">
@@ -558,13 +570,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
               <div className={`transition-all duration-300 ${showFullDescription ? 'max-h-40' : 'max-h-16'} overflow-hidden`}>
                 <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-3 border border-emerald-100">
                   <p className="text-xs text-gray-700 leading-relaxed">
-                    {product.short_description}
+                    {shortDescription}
                   </p>
                 </div>
               </div>
               
               {/* Read More/Less Toggle */}
-              {product.short_description.length > 80 && (
+              {shortDescription.length > 80 && (
                 <button
                   onClick={() => setShowFullDescription(!showFullDescription)}
                   className="text-xs font-medium text-emerald-600 hover:text-emerald-700 mt-1 flex items-center gap-1"
