@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Product } from '@/types';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { ShoppingCart, Heart, Star, Eye, Zap } from 'lucide-react';
+import { ShoppingCart, Heart, Star, Eye, Zap, Truck, Info, Check, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReviewModal from '../ReviewModal';
 
@@ -36,6 +36,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [canReview, setCanReview] = useState(false);
   const [userReview, setUserReview] = useState<any>(null);
   const [hasCheckedWishlist, setHasCheckedWishlist] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
   // Track product view when component mounts or product changes
   useEffect(() => {
@@ -65,6 +66,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
     ? Boolean(product.is_in_stock)
     : stockQuantity > 0;
 
+  // Safely handle is_new property
+  const isNewProduct = React.useMemo(() => {
+    return Boolean(
+      (product as any).is_new || 
+      (product as any).isNew || 
+      (product as any).new_arrival ||
+      (product as any).new_arrival === true ||
+      (product as any).new === true
+    );
+  }, [product]);
+
   // Safely handle rating
   const rating = product.rating 
     ? (typeof product.rating === 'string' 
@@ -75,6 +87,40 @@ const ProductCard: React.FC<ProductCardProps> = ({
     : 0;
   
   const displayRating = isNaN(rating) ? 0 : Math.min(Math.max(rating, 0), 5);
+
+  // Enhanced description handling with highlights
+  const getDescriptionHighlights = () => {
+    const shortDesc = product.short_description || '';
+    
+    // Extract key features or create highlights from description
+    const highlights = [];
+    
+    // Check for common product features
+    if (shortDesc.toLowerCase().includes('organic') || shortDesc.toLowerCase().includes('natural')) {
+      highlights.push({ icon: '🌿', text: '100% Organic' });
+    }
+    if (shortDesc.toLowerCase().includes('fresh') || shortDesc.toLowerCase().includes('farm')) {
+      highlights.push({ icon: '🚜', text: 'Farm Fresh' });
+    }
+    if (shortDesc.toLowerCase().includes('premium') || shortDesc.toLowerCase().includes('quality')) {
+      highlights.push({ icon: '⭐', text: 'Premium Quality' });
+    }
+    if (shortDesc.toLowerCase().includes('healthy') || shortDesc.toLowerCase().includes('nutritious')) {
+      highlights.push({ icon: '💪', text: 'Highly Nutritious' });
+    }
+    
+    // Add default highlights if none found
+    if (highlights.length === 0) {
+      highlights.push(
+        { icon: '✅', text: 'High Quality' },
+        { icon: '🚚', text: 'Fast Delivery' }
+      );
+    }
+    
+    return highlights.slice(0, 2); // Limit to 2 highlights
+  };
+
+  const descriptionHighlights = getDescriptionHighlights();
 
   // Check if user can review this product
   useEffect(() => {
@@ -366,32 +412,40 @@ const ProductCard: React.FC<ProductCardProps> = ({
     return stars;
   };
 
+  // Handle badge positioning
+  const getBadgePosition = () => {
+    const badges = [];
+    
+    if (isNewProduct) {
+      badges.push({ type: 'new', content: 'NEW', className: 'bg-gradient-to-r from-green-500 to-emerald-600' });
+    }
+    
+    if (product.is_featured) {
+      badges.push({ type: 'featured', content: 'Featured', className: 'bg-gradient-to-r from-orange-500 to-red-500' });
+    }
+    
+    if (discountPercentage > 0) {
+      badges.push({ type: 'discount', content: `-${discountPercentage}% OFF`, className: 'bg-gradient-to-r from-red-500 to-pink-500' });
+    }
+    
+    return badges.slice(0, 2);
+  };
+
+  const badges = getBadgePosition();
+
   return (
     <div className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 overflow-hidden h-full flex flex-col">
-      {/* Product Badge - Top Left */}
-      {product.is_featured && (
-        <div className="absolute top-3 left-3 z-10">
-          <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-            Featured
-          </span>
-        </div>
-      )}
-      
-      {/* Discount Badge */}
-      {discountPercentage > 0 && (
-        <div className="absolute top-3 left-3 z-10">
-          <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-            -{discountPercentage}% OFF
-          </span>
-        </div>
-      )}
-
-      {/* New Arrival Badge */}
-      {product.is_new && (
-        <div className="absolute top-3 left-3 z-10">
-          <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-            NEW
-          </span>
+      {/* Badges - Top Left */}
+      {badges.length > 0 && (
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
+          {badges.map((badge, index) => (
+            <span 
+              key={`${badge.type}-${index}`}
+              className={`text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ${badge.className}`}
+            >
+              {badge.content}
+            </span>
+          ))}
         </div>
       )}
 
@@ -458,6 +512,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         {product.category?.name && (
           <div className="mb-2">
             <span className="inline-flex items-center gap-1 bg-gradient-to-r from-gray-100 to-gray-50 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-full border border-gray-200">
+              <Tag size={10} />
               {product.category.name}
             </span>
           </div>
@@ -469,7 +524,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           className="mb-2"
           onClick={() => onViewTrack && onViewTrack(product.id)}
         >
-          <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 min-h-[40px] hover:text-orange-500 transition-colors group-hover:text-orange-500">
+          <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 min-h-[40px] hover:text-emerald-600 transition-colors group-hover:text-emerald-600">
             {product.name || 'Unnamed Product'}
           </h3>
         </Link>
@@ -487,11 +542,55 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </span>
         </div>
 
-        {/* Description (Brief) */}
+        {/* HIGHLIGHTED DESCRIPTION SECTION */}
         {product.short_description && (
-          <p className="text-xs text-gray-600 mb-3 line-clamp-2">
-            {product.short_description}
-          </p>
+          <div className="mb-4 relative">
+            {/* Description Header with Info Icon */}
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1 bg-emerald-50 rounded-lg">
+                <Info size={12} className="text-emerald-600" />
+              </div>
+              <span className="text-xs font-semibold text-gray-700">Key Features</span>
+            </div>
+            
+            {/* Description Content - Modern Highlighted Design */}
+            <div className="relative">
+              <div className={`transition-all duration-300 ${showFullDescription ? 'max-h-40' : 'max-h-16'} overflow-hidden`}>
+                <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-3 border border-emerald-100">
+                  <p className="text-xs text-gray-700 leading-relaxed">
+                    {product.short_description}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Read More/Less Toggle */}
+              {product.short_description.length > 80 && (
+                <button
+                  onClick={() => setShowFullDescription(!showFullDescription)}
+                  className="text-xs font-medium text-emerald-600 hover:text-emerald-700 mt-1 flex items-center gap-1"
+                >
+                  {showFullDescription ? 'Show less' : 'Read more'}
+                  <ChevronDown 
+                    size={12} 
+                    className={`transition-transform duration-300 ${showFullDescription ? 'rotate-180' : ''}`}
+                  />
+                </button>
+              )}
+            </div>
+            
+            {/* Quick Highlights */}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {descriptionHighlights.map((highlight, index) => (
+                <div 
+                  key={index}
+                  className="flex items-center gap-1.5 bg-white border border-green-100 rounded-lg px-2 py-1.5"
+                >
+                  <span className="text-sm">{highlight.icon}</span>
+                  <span className="text-xs text-gray-700 font-medium">{highlight.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Price Section */}
@@ -499,8 +598,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex items-center justify-between mb-3">
             <div>
               {/* Final Price */}
-              <div className="text-xl font-bold text-gray-900">
+              <div className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 {formatKSH(finalPriceNum)}
+                {discountPercentage > 0 && (
+                  <span className="text-xs bg-gradient-to-r from-red-100 to-pink-100 text-red-600 font-bold px-2 py-1 rounded-full">
+                    -{discountPercentage}% OFF
+                  </span>
+                )}
               </div>
               
               {/* Original Price if on discount */}
@@ -509,9 +613,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   <span className="text-sm text-gray-500 line-through mr-2">
                     {formatKSH(price)}
                   </span>
-                  <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full">
-                    Save {discountPercentage}%
-                  </span>
                 </div>
               )}
             </div>
@@ -519,21 +620,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
             {/* Stock Status */}
             <div className="text-xs">
               {isInStock ? (
-                <div className="flex items-center text-green-600 font-bold">
-                  {stockQuantity > 10 ? (
-                    <span className="flex items-center">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></div>
-                      In Stock
-                    </span>
-                  ) : (
-                    <span className="flex items-center">
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1.5 animate-pulse"></div>
-                      {stockQuantity} left
-                    </span>
-                  )}
+                <div className="flex items-center text-green-600 font-bold bg-green-50 px-2 py-1 rounded-full">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></div>
+                  {stockQuantity > 10 ? 'In Stock' : `${stockQuantity} left`}
                 </div>
               ) : (
-                <div className="text-red-600 font-bold flex items-center">
+                <div className="flex items-center text-red-600 font-bold bg-red-50 px-2 py-1 rounded-full">
                   <div className="w-2 h-2 bg-red-500 rounded-full mr-1.5"></div>
                   Out of Stock
                 </div>
@@ -546,7 +638,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <button
               onClick={handleAddToCart}
               disabled={isAddingToCart || !isInStock}
-              className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 px-4 rounded-xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-lg flex items-center justify-center group/button"
+              className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white py-3 px-4 rounded-xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-lg flex items-center justify-center group/button"
             >
               {isAddingToCart ? (
                 <span className="flex items-center justify-center">
@@ -568,32 +660,45 @@ const ProductCard: React.FC<ProductCardProps> = ({
           {/* Additional Info */}
           {showActions && (
             <div className="flex justify-between mt-3 text-xs">
-              {product.is_free_shipping ? (
-                <span className="text-green-600 font-bold flex items-center">
-                  <Truck size={12} className="mr-1" />
+              {/* Free Shipping */}
+              {(product as any).is_free_shipping ? (
+                <span className="text-green-600 font-bold flex items-center gap-1">
+                  <Truck size={12} />
                   Free Shipping
                 </span>
               ) : (
                 <span className="text-gray-500">Shipping extra</span>
               )}
               
+              {/* Review Button */}
               <button
                 onClick={(e) => {
                   e.preventDefault();
                   handleReviewClick();
                 }}
-                className="text-gray-600 hover:text-blue-600 font-medium hover:underline"
+                className={`flex items-center gap-1 font-medium ${
+                  userReview 
+                    ? 'text-green-600' 
+                    : 'text-gray-600 hover:text-blue-600'
+                }`}
                 disabled={!isAuthenticated}
               >
-                {userReview ? 'Reviewed ✓' : 'Write Review'}
+                {userReview ? (
+                  <>
+                    <Check size={12} />
+                    Reviewed
+                  </>
+                ) : (
+                  'Write Review'
+                )}
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Special Badge - Bottom Right */}
-      {product.is_bestseller && (
+      {/* Best Seller Badge - Bottom Right */}
+      {(product as any).is_bestseller && (
         <div className="absolute bottom-3 right-3 z-10">
           <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
             <Zap size={10} />
