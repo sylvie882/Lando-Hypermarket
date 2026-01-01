@@ -77,37 +77,36 @@ const ProductCard: React.FC<ProductCardProps> = ({
     );
   }, [product]);
 
-  // Safely handle short_description - check multiple possible property names
-  const shortDescription = React.useMemo(() => {
-    return (
-      (product as any).short_description ||
-      (product as any).shortDescription ||
-      (product as any).description_short ||
-      (product as any).brief_description ||
-      product.description?.substring(0, 100) || // Fallback to first 100 chars of description
-      ''
-    );
-  }, [product]);
+  // Safely handle description - use the actual description field from API
+  const description = React.useMemo(() => {
+    return product.description || '';
+  }, [product.description]);
 
   // Enhanced description handling with highlights
   const getDescriptionHighlights = () => {
-    const shortDesc = shortDescription || '';
+    const desc = description || '';
     
     // Extract key features or create highlights from description
     const highlights = [];
     
     // Check for common product features
-    if (shortDesc.toLowerCase().includes('organic') || shortDesc.toLowerCase().includes('natural')) {
+    if (desc.toLowerCase().includes('organic') || desc.toLowerCase().includes('natural')) {
       highlights.push({ icon: '🌿', text: '100% Organic' });
     }
-    if (shortDesc.toLowerCase().includes('fresh') || shortDesc.toLowerCase().includes('farm')) {
+    if (desc.toLowerCase().includes('fresh') || desc.toLowerCase().includes('farm')) {
       highlights.push({ icon: '🚜', text: 'Farm Fresh' });
     }
-    if (shortDesc.toLowerCase().includes('premium') || shortDesc.toLowerCase().includes('quality')) {
+    if (desc.toLowerCase().includes('premium') || desc.toLowerCase().includes('quality')) {
       highlights.push({ icon: '⭐', text: 'Premium Quality' });
     }
-    if (shortDesc.toLowerCase().includes('healthy') || shortDesc.toLowerCase().includes('nutritious')) {
+    if (desc.toLowerCase().includes('healthy') || desc.toLowerCase().includes('nutritious')) {
       highlights.push({ icon: '💪', text: 'Highly Nutritious' });
+    }
+    if (desc.toLowerCase().includes('crisp') || desc.toLowerCase().includes('crunchy')) {
+      highlights.push({ icon: '🥬', text: 'Crisp & Fresh' });
+    }
+    if (desc.toLowerCase().includes('vitamin') || desc.toLowerCase().includes('mineral')) {
+      highlights.push({ icon: '🔬', text: 'Rich in Nutrients' });
     }
     
     // Add default highlights if none found
@@ -118,7 +117,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       );
     }
     
-    return highlights.slice(0, 2); // Limit to 2 highlights
+    return highlights.slice(0, 3); // Limit to 3 highlights
   };
 
   const descriptionHighlights = getDescriptionHighlights();
@@ -555,14 +554,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* HIGHLIGHTED DESCRIPTION SECTION */}
-        {shortDescription && (
+        {description && (
           <div className="mb-4 relative">
             {/* Description Header with Info Icon */}
             <div className="flex items-center gap-2 mb-2">
               <div className="p-1 bg-emerald-50 rounded-lg">
                 <Info size={12} className="text-emerald-600" />
               </div>
-              <span className="text-xs font-semibold text-gray-700">Key Features</span>
+              <span className="text-xs font-semibold text-gray-700">Product Details</span>
             </div>
             
             {/* Description Content - Modern Highlighted Design */}
@@ -570,13 +569,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
               <div className={`transition-all duration-300 ${showFullDescription ? 'max-h-40' : 'max-h-16'} overflow-hidden`}>
                 <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-3 border border-emerald-100">
                   <p className="text-xs text-gray-700 leading-relaxed">
-                    {shortDescription}
+                    {description}
                   </p>
                 </div>
               </div>
               
               {/* Read More/Less Toggle */}
-              {shortDescription.length > 80 && (
+              {description.length > 100 && (
                 <button
                   onClick={() => setShowFullDescription(!showFullDescription)}
                   className="text-xs font-medium text-emerald-600 hover:text-emerald-700 mt-1 flex items-center gap-1"
@@ -591,17 +590,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </div>
             
             {/* Quick Highlights */}
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {descriptionHighlights.map((highlight, index) => (
-                <div 
-                  key={index}
-                  className="flex items-center gap-1.5 bg-white border border-green-100 rounded-lg px-2 py-1.5"
-                >
-                  <span className="text-sm">{highlight.icon}</span>
-                  <span className="text-xs text-gray-700 font-medium">{highlight.text}</span>
-                </div>
-              ))}
-            </div>
+            {descriptionHighlights.length > 0 && (
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {descriptionHighlights.map((highlight, index) => (
+                  <div 
+                    key={index}
+                    className="flex items-center gap-1 bg-white border border-green-100 rounded-lg px-2 py-1"
+                  >
+                    <span className="text-sm">{highlight.icon}</span>
+                    <span className="text-xs text-gray-700 truncate">{highlight.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
