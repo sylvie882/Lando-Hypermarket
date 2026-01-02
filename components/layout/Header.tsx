@@ -296,9 +296,9 @@ const Header: React.FC = () => {
                   
                   <div className="ml-3">
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                      Lando<span className="text-emerald-600">Mart</span>
+                      LANDO RANCH<span className="text-emerald-600">LTD</span>
                     </h1>
-                    <p className="text-xs text-gray-500 mt-0.5">Hypermarket & Grocery</p>
+                    <p className="text-xs text-gray-500 mt-0.5">LANDO HYPERMARKET</p>
                   </div>
                 </Link>
 

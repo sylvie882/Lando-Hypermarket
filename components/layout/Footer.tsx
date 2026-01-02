@@ -13,10 +13,10 @@ export default function Footer() {
           <div className="space-y-4 md:space-y-6">
             <div className="flex items-center space-x-2">
               <Leaf className="text-green-400" size={28} />
-              <span className="text-xl md:text-2xl font-bold">LandoMart</span>
+              <span className="text-xl md:text-2xl font-bold">LANDO RANCH LTD</span>
             </div>
             <p className="text-gray-400 text-sm md:text-base leading-relaxed">
-              Bringing farm-fresh goodness to your doorstep since 2015. Quality produce, delivered fresh.
+              LANDO HYPERMARKET
             </p>
             <div className="flex space-x-3 pt-2">
               <a href="#" className="bg-gray-800 p-2 rounded-lg hover:bg-gray-700 transition-colors duration-300" aria-label="Facebook">
