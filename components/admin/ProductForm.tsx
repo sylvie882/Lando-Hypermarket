@@ -39,6 +39,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
   const [galleryToDelete, setGalleryToDelete] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [hasThumbnailFile, setHasThumbnailFile] = useState(false);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   
@@ -74,9 +75,11 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         const thumbUrl = generateImageUrl(product.thumbnail);
         setThumbnail(product.thumbnail);
         setThumbnailPreview(thumbUrl);
+        setHasThumbnailFile(true);
       } else {
         // Set default image for NULL thumbnails
         setThumbnailPreview('/images/default-product.png');
+        setHasThumbnailFile(false);
       }
 
       // Set gallery if it exists
@@ -93,6 +96,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     } else {
       // For new products, set default preview
       setThumbnailPreview('/images/default-product.png');
+      setHasThumbnailFile(false);
     }
   }, [product]);
 
@@ -172,16 +176,23 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
   };
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('Thumbnail change triggered');
+    console.log('Files available:', e.target.files);
+    
     const file = e.target.files?.[0];
     if (file) {
-      console.log('New thumbnail selected:', file.name, file.type, file.size);
+      console.log('File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
       
       // Create a preview URL
       const previewUrl = URL.createObjectURL(file);
+      console.log('Preview URL created:', previewUrl.substring(0, 50) + '...');
+      
+      // Set preview first (immediate visual feedback)
       setThumbnailPreview(previewUrl);
       
       // Set the file in state
       setThumbnail(file);
+      setHasThumbnailFile(true);
       
       // Clear thumbnail error
       if (errors.thumbnail) {
@@ -191,8 +202,11 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
           return newErrors;
         });
       }
+      
+      console.log('Thumbnail state updated with file:', file.name);
     } else {
-      console.log('No file selected for thumbnail');
+      console.log('No file selected or file selection cancelled');
+      setHasThumbnailFile(false);
     }
     
     // Reset the input so same file can be selected again
@@ -202,6 +216,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
   };
 
   const triggerThumbnailUpload = () => {
+    console.log('Triggering thumbnail upload click');
     if (thumbnailInputRef.current) {
       thumbnailInputRef.current.click();
     }
@@ -237,27 +252,16 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
   };
 
   const removeThumbnail = () => {
-    console.log('Removing thumbnail, current thumbnail:', thumbnail);
+    console.log('Removing thumbnail');
     
     // Revoke object URL if it's a blob URL
     if (thumbnailPreview && thumbnailPreview.startsWith('blob:')) {
       URL.revokeObjectURL(thumbnailPreview);
     }
     
-    if (thumbnail instanceof File) {
-      // If it's a new file that hasn't been uploaded yet, just remove it
-      setThumbnail(null);
-      setThumbnailPreview('/images/default-product.png');
-    } else if (typeof thumbnail === 'string' && product) {
-      // For existing thumbnails, we need to handle deletion
-      // Set thumbnail to null and the backend will handle it
-      setThumbnail(null);
-      setThumbnailPreview('/images/default-product.png');
-    } else {
-      // No thumbnail exists
-      setThumbnail(null);
-      setThumbnailPreview('/images/default-product.png');
-    }
+    setThumbnail(null);
+    setThumbnailPreview('/images/default-product.png');
+    setHasThumbnailFile(false);
     
     // Clear thumbnail error
     if (errors.thumbnail) {
@@ -298,24 +302,27 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     console.log('=== Validating Form ===');
     console.log('Product (editing?):', product ? 'YES' : 'NO');
     console.log('Thumbnail state:', thumbnail);
+    console.log('Has thumbnail file?', hasThumbnailFile);
     console.log('Thumbnail preview exists:', !!thumbnailPreview);
-    console.log('Is thumbnail a File?', thumbnail instanceof File);
-    console.log('Is thumbnail a string?', typeof thumbnail === 'string');
+    console.log('Thumbnail is File?', thumbnail instanceof File);
+    console.log('Thumbnail is string?', typeof thumbnail === 'string');
+    console.log('Thumbnail value:', thumbnail);
     
     const newErrors: {[key: string]: string} = {};
     
     // For new products, thumbnail is required
     if (!product) {
       console.log('Checking thumbnail for new product...');
-      console.log('- thumbnail state:', thumbnail);
+      console.log('- hasThumbnailFile:', hasThumbnailFile);
+      console.log('- thumbnail instanceof File:', thumbnail instanceof File);
       console.log('- thumbnailPreview:', thumbnailPreview);
       console.log('- thumbnailPreview is default?', thumbnailPreview === '/images/default-product.png');
       
-      if (!thumbnail) {
-        console.log('ERROR: No thumbnail found for new product');
+      if (!hasThumbnailFile && thumbnailPreview === '/images/default-product.png') {
+        console.log('ERROR: No thumbnail selected for new product');
         newErrors.thumbnail = 'Main image is required for new products';
-      } else if (thumbnailPreview === '/images/default-product.png') {
-        console.log('ERROR: Only default preview exists, no actual thumbnail');
+      } else if (!thumbnail) {
+        console.log('ERROR: Thumbnail state is null/undefined');
         newErrors.thumbnail = 'Main image is required for new products';
       }
     }
@@ -344,6 +351,8 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('=== Form Submit Started ===');
+    console.log('Current thumbnail state:', thumbnail);
+    console.log('hasThumbnailFile:', hasThumbnailFile);
     
     setLoading(true);
     setErrors({});
@@ -407,27 +416,29 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
         formData.append('attributes', '{}');
       }
 
-      // Handle thumbnail - FIXED
-      console.log('Processing thumbnail for submission:');
-      console.log('- thumbnail type:', typeof thumbnail);
-      console.log('- thumbnail instanceof File:', thumbnail instanceof File);
-      console.log('- thumbnail value:', thumbnail);
+      // Handle thumbnail - SIMPLIFIED APPROACH
+      console.log('=== Processing thumbnail for submission ===');
+      console.log('thumbnail type:', typeof thumbnail);
+      console.log('thumbnail instanceof File:', thumbnail instanceof File);
+      console.log('thumbnail value:', thumbnail);
       
       if (thumbnail instanceof File) {
         console.log('Appending new thumbnail file:', thumbnail.name);
         formData.append('thumbnail', thumbnail);
-      } else if (thumbnail === null && product) {
-        // Thumbnail was removed - send empty string
-        console.log('Thumbnail was removed, sending empty string');
-        formData.append('thumbnail', '');
       } else if (typeof thumbnail === 'string' && thumbnail) {
         // Keep existing thumbnail path
         console.log('Keeping existing thumbnail path:', thumbnail);
         formData.append('thumbnail', thumbnail);
-      } else if (!product) {
-        // This should not happen due to validation, but just in case
-        console.error('No thumbnail for new product!');
-        throw new Error('Thumbnail is required for new products');
+      } else if (thumbnail === null && product) {
+        // Thumbnail was removed
+        console.log('Thumbnail was removed, sending empty string');
+        formData.append('thumbnail', '');
+      } else if (!product && !thumbnail) {
+        // This should not happen due to validation
+        console.error('No thumbnail for new product - validation should have caught this');
+        setErrors({ thumbnail: 'Main image is required for new products' });
+        setLoading(false);
+        return;
       }
 
       // Handle gallery images - new files
@@ -485,10 +496,6 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
     if (type === 'thumbnail') {
       setThumbnailPreview('/images/default-product.png');
     }
-  };
-
-  const replaceThumbnail = () => {
-    triggerThumbnailUpload();
   };
 
   return (
@@ -743,14 +750,14 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                         className="relative flex items-center justify-center w-full px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
                         onClick={triggerThumbnailUpload}
                       >
-                        {/* Hidden file input */}
+                        {/* Hidden file input - REMOVE required attribute to avoid browser validation */}
                         <input
                           ref={thumbnailInputRef}
                           type="file"
                           accept="image/*"
                           onChange={handleThumbnailChange}
                           className="sr-only"
-                          required={!product}
+                          // Removed required={!product} to handle validation manually
                         />
                         
                         <div className="space-y-1 text-center">
@@ -795,7 +802,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                           )}
                         </div>
                       </div>
-                      {thumbnailPreview && (
+                      {thumbnailPreview && thumbnailPreview !== '/images/default-product.png' && (
                         <div className="mt-2 text-xs text-gray-500">
                           Click on the image to replace it
                         </div>
@@ -808,6 +815,7 @@ export default function ProductForm({ product, onClose, onSubmit, isSubmitting }
                       )}
                       <div className="mt-1 text-xs text-gray-500">
                         {thumbnail instanceof File ? `Selected: ${thumbnail.name}` : ''}
+                        {!thumbnail && !product && 'No image selected'}
                       </div>
                     </div>
                   </div>
