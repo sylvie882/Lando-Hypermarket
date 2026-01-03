@@ -262,6 +262,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // ADD THIS updateUser FUNCTION RIGHT HERE:
+const updateUser = async (userData: Partial<User>): Promise<boolean> => {
+  try {
+    // Update local state
+    setUser(prev => prev ? { ...prev, ...userData } : userData as User);
+    
+    // Update localStorage
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const currentUser = JSON.parse(storedUser);
+      const updatedUser = { ...currentUser, ...userData };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      // Sync to cookies
+      const currentToken = localStorage.getItem('token');
+      if (currentToken) {
+        syncAuthToCookies(currentToken, updatedUser);
+      }
+    }
+    
+    return true;
+  } catch (error: any) {
+    console.error('Failed to update user data:', error);
+    return false;
+  }
+};
+
   const forgotPassword = async (email: string): Promise<boolean> => {
     try {
       await api.auth.forgotPassword(email);
@@ -352,6 +379,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     updateProfile,
+    updateUser,
     refreshUser,
     forgotPassword,
     resetPassword,
