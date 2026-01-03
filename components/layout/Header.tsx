@@ -356,10 +356,11 @@ const Header: React.FC = () => {
                   </div>
                   
                   <div className="ml-3">
-                    <h1 className="text-2xl font-bold">
-                      <span style={{ color: logoColors.greenMedium }}>LAND</span>
-                      <span style={{ color: logoColors.gold }}>O</span>
-                      <span style={{ color: logoColors.red }}>HYPERMARKET</span>
+                    <h1 className="text-md font-bold">
+                      <span style={{ color: logoColors.greenMedium }}>Land</span>
+                      <span style={{ color: logoColors.gold }}>o</span>
+                      <br />
+                      <span style={{ color: logoColors.red }}>Hypermarket</span>
                     </h1>
                     <div 
                       className="w-16 h-0.5 mt-1"
