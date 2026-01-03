@@ -12,6 +12,7 @@ export interface User {
   country?: string; // Add this
   loyalty_points: number;
   email_verified_at?: string | null; // Add this
+  info?: string; // Add this
   is_active: boolean;
   created_at: string;
   updated_at: string;

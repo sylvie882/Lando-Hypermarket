@@ -135,7 +135,14 @@ export default function EditProfilePage() {
             if (authUser.avatar) {
               setAvatarPreview(authUser.avatar);
             }
-            toast.warning('Using cached user data. Some features may be limited.');
+            toast('Using cached user data. Some features may be limited.', {
+                icon: '⚠️', // Optional warning icon
+                style: {
+                    background: '#fef3c7',
+                    color: '#92400e',
+                    border: '1px solid #f59e0b'
+                }
+                });
           } else {
             throw new Error('API server error. Please try again later.');
           }
