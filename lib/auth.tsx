@@ -19,6 +19,7 @@ interface AuthContextType {
   register: (data: any) => Promise<boolean>;
   logout: () => Promise<void>;
   updateProfile: (data: any) => Promise<boolean>;
+  updateUser: (userData: Partial<User>) => Promise<boolean>; // Add this line
   refreshUser: () => Promise<boolean>;
   forgotPassword: (email: string) => Promise<boolean>;
   resetPassword: (token: string, data: { password: string; password_confirmation: string }) => Promise<boolean>;
@@ -47,6 +48,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
 
   useEffect(() => {
     initializeAuth();
