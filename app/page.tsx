@@ -724,14 +724,20 @@ const HomePage: React.FC = () => {
           background: `linear-gradient(135deg, white, ${logoColors.lightGreenLine}20)`
         }}
       >
-        <div className="text-center">
-          <div className="relative">
-            <LoadingSpinner size="lg" style={{ color: logoColors.orange }} />
-            <Leaf className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" 
-              style={{ color: logoColors.orange }} size={24} />
-          </div>
-          <p className="mt-4" style={{ color: logoColors.dark }}>Loading fresh products...</p>
-        </div>
+    
+<div className="text-center">
+  <div className="relative">
+    <div style={{ color: logoColors.orange }}>
+      <LoadingSpinner size="lg" />
+    </div>
+    <Leaf 
+      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" 
+      style={{ color: logoColors.orange }} 
+      size={24} 
+    />
+  </div>
+  <p className="mt-4" style={{ color: logoColors.dark }}>Loading fresh products...</p>
+</div>
       </div>
     );
   }
