@@ -177,6 +177,7 @@ const HomePage: React.FC = () => {
     yellowGold: '#f1c40f', // yellow-gold highlight
     red: '#c0392b', // red
     lightGreenLine: '#a3d977', // light green line
+    blue: '#3498db', // Add this - a nice blue color
   };
 
   const whatsappNumber = '+254716354589';
