@@ -38,6 +38,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [hasCheckedWishlist, setHasCheckedWishlist] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
+  // Logo colors
+  const logoColors = {
+    dark: '#1a1a1a',
+    greenLight: '#9dcc5e',
+    greenMedium: '#6a9c3d',
+    gold: '#d4af37',
+    orange: '#e67e22',
+    yellowGold: '#f1c40f',
+    red: '#c0392b',
+    lightGreenLine: '#a3d977',
+  };
+
   // Track product view when component mounts or product changes
   useEffect(() => {
     if (onViewTrack && product.id) {
@@ -391,7 +403,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <Star
             key={i}
             size={16}
-            className="text-amber-500 fill-amber-500"
+            style={{ color: logoColors.gold }}
+            className="fill-current"
           />
         );
       } else if (i === fullStars + 1 && hasHalfStar) {
@@ -404,7 +417,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <div className="absolute top-0 left-0 overflow-hidden" style={{ width: '50%' }}>
               <Star
                 size={16}
-                className="text-amber-500 fill-amber-500"
+                style={{ color: logoColors.gold }}
+                className="fill-current"
               />
             </div>
           </div>
@@ -428,15 +442,36 @@ const ProductCard: React.FC<ProductCardProps> = ({
     const badges = [];
     
     if (isNewProduct) {
-      badges.push({ type: 'new', content: 'NEW', className: 'bg-gradient-to-r from-green-500 to-emerald-600' });
+      badges.push({ 
+        type: 'new', 
+        content: 'NEW', 
+        className: 'text-white',
+        style: {
+          background: `linear-gradient(135deg, ${logoColors.greenMedium}, ${logoColors.greenLight})`
+        }
+      });
     }
     
     if (product.is_featured) {
-      badges.push({ type: 'featured', content: 'Featured', className: 'bg-gradient-to-r from-orange-500 to-red-500' });
+      badges.push({ 
+        type: 'featured', 
+        content: 'Featured', 
+        className: 'text-white',
+        style: {
+          background: `linear-gradient(135deg, ${logoColors.orange}, ${logoColors.red})`
+        }
+      });
     }
     
     if (discountPercentage > 0) {
-      badges.push({ type: 'discount', content: `-${discountPercentage}% OFF`, className: 'bg-gradient-to-r from-red-500 to-pink-500' });
+      badges.push({ 
+        type: 'discount', 
+        content: `-${discountPercentage}% OFF`, 
+        className: 'text-white',
+        style: {
+          background: `linear-gradient(135deg, ${logoColors.red}, ${logoColors.orange})`
+        }
+      });
     }
     
     return badges.slice(0, 2);
@@ -452,7 +487,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
           {badges.map((badge, index) => (
             <span 
               key={`${badge.type}-${index}`}
-              className={`text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ${badge.className}`}
+              className={`text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ${badge.className}`}
+              style={badge.style}
             >
               {badge.content}
             </span>
@@ -496,11 +532,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 }}
                 disabled={isAddingToWishlist}
                 className="bg-white p-2 rounded-full shadow-lg hover:bg-gray-50 transition-colors"
+                style={{ color: logoColors.dark }}
                 title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
               >
                 <Heart
                   size={18}
-                  className={inWishlist ? 'fill-red-500 text-red-500' : 'text-gray-600'}
+                  className={inWishlist ? 'fill-current' : ''}
+                  style={inWishlist ? { color: logoColors.red } : undefined}
                 />
               </button>
               
@@ -508,9 +546,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 href={`/products/${product.id}`}
                 onClick={() => onViewTrack && onViewTrack(product.id)}
                 className="bg-white p-2 rounded-full shadow-lg hover:bg-gray-50 transition-colors"
+                style={{ color: logoColors.dark }}
                 title="Quick View"
               >
-                <Eye size={18} className="text-gray-600" />
+                <Eye size={18} />
               </Link>
             </div>
           </div>
@@ -522,8 +561,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
         {/* Category Badge */}
         {product.category?.name && (
           <div className="mb-2">
-            <span className="inline-flex items-center gap-1 bg-gradient-to-r from-gray-100 to-gray-50 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-full border border-gray-200">
-              <Tag size={10} />
+            <span 
+              className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border"
+              style={{
+                background: `linear-gradient(135deg, ${logoColors.lightGreenLine}20, ${logoColors.greenLight}15)`,
+                color: logoColors.greenMedium,
+                borderColor: `${logoColors.greenLight}40`
+              }}
+            >
+              <Tag size={10} style={{ color: logoColors.greenMedium }} />
               {product.category.name}
             </span>
           </div>
@@ -535,7 +581,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
           className="mb-2"
           onClick={() => onViewTrack && onViewTrack(product.id)}
         >
-          <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 min-h-[40px] hover:text-emerald-600 transition-colors group-hover:text-emerald-600">
+          <h3 
+            className="font-bold text-sm leading-tight line-clamp-2 min-h-[40px] transition-colors"
+            style={{ color: logoColors.dark }}
+          >
             {product.name || 'Unnamed Product'}
           </h3>
         </Link>
@@ -545,10 +594,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex mr-2">
             {renderStarRating()}
           </div>
-          <span className="text-sm font-medium text-gray-700">
+          <span 
+            className="text-sm font-medium"
+            style={{ color: logoColors.dark }}
+          >
             {displayRating.toFixed(1)}
           </span>
-          <span className="text-sm text-gray-500 ml-1">
+          <span 
+            className="text-sm ml-1"
+            style={{ color: logoColors.greenMedium }}
+          >
             ({product.review_count || 0})
           </span>
         </div>
@@ -558,17 +613,34 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <div className="mb-4 relative">
             {/* Description Header with Info Icon */}
             <div className="flex items-center gap-2 mb-2">
-              <div className="p-1 bg-emerald-50 rounded-lg">
-                <Info size={12} className="text-emerald-600" />
+              <div 
+                className="p-1 rounded-lg"
+                style={{ backgroundColor: `${logoColors.lightGreenLine}20` }}
+              >
+                <Info size={12} style={{ color: logoColors.greenMedium }} />
               </div>
-              <span className="text-xs font-semibold text-gray-700">Product Details</span>
+              <span 
+                className="text-xs font-semibold"
+                style={{ color: logoColors.dark }}
+              >
+                Product Details
+              </span>
             </div>
             
             {/* Description Content - Modern Highlighted Design */}
             <div className="relative">
               <div className={`transition-all duration-300 ${showFullDescription ? 'max-h-40' : 'max-h-16'} overflow-hidden`}>
-                <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-3 border border-emerald-100">
-                  <p className="text-xs text-gray-700 leading-relaxed">
+                <div 
+                  className="rounded-xl p-3 border"
+                  style={{
+                    background: `linear-gradient(135deg, ${logoColors.lightGreenLine}15, ${logoColors.greenLight}10)`,
+                    borderColor: `${logoColors.lightGreenLine}40`
+                  }}
+                >
+                  <p 
+                    className="text-xs leading-relaxed"
+                    style={{ color: logoColors.dark }}
+                  >
                     {description}
                   </p>
                 </div>
@@ -578,12 +650,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
               {description.length > 100 && (
                 <button
                   onClick={() => setShowFullDescription(!showFullDescription)}
-                  className="text-xs font-medium text-emerald-600 hover:text-emerald-700 mt-1 flex items-center gap-1"
+                  className="text-xs font-medium mt-1 flex items-center gap-1"
+                  style={{ color: logoColors.greenMedium }}
                 >
                   {showFullDescription ? 'Show less' : 'Read more'}
                   <ChevronDown 
                     size={12} 
                     className={`transition-transform duration-300 ${showFullDescription ? 'rotate-180' : ''}`}
+                    style={{ color: logoColors.greenMedium }}
                   />
                 </button>
               )}
@@ -595,10 +669,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 {descriptionHighlights.map((highlight, index) => (
                   <div 
                     key={index}
-                    className="flex items-center gap-1 bg-white border border-green-100 rounded-lg px-2 py-1"
+                    className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border"
+                    style={{ 
+                      borderColor: `${logoColors.greenLight}40`,
+                      color: logoColors.dark
+                    }}
                   >
                     <span className="text-sm">{highlight.icon}</span>
-                    <span className="text-xs text-gray-700 truncate">{highlight.text}</span>
+                    <span className="text-xs truncate">{highlight.text}</span>
                   </div>
                 ))}
               </div>
@@ -611,10 +689,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex items-center justify-between mb-3">
             <div>
               {/* Final Price */}
-              <div className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <div 
+                className="text-xl font-bold flex items-center gap-2"
+                style={{ color: logoColors.dark }}
+              >
                 {formatKSH(finalPriceNum)}
                 {discountPercentage > 0 && (
-                  <span className="text-xs bg-gradient-to-r from-red-100 to-pink-100 text-red-600 font-bold px-2 py-1 rounded-full">
+                  <span 
+                    className="text-xs font-bold px-2 py-1 rounded-full"
+                    style={{
+                      background: `linear-gradient(135deg, ${logoColors.red}15, ${logoColors.orange}15)`,
+                      color: logoColors.red
+                    }}
+                  >
                     -{discountPercentage}% OFF
                   </span>
                 )}
@@ -623,7 +710,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
               {/* Original Price if on discount */}
               {finalPriceNum < price && price > 0 && (
                 <div className="flex items-center mt-1">
-                  <span className="text-sm text-gray-500 line-through mr-2">
+                  <span 
+                    className="text-sm line-through mr-2"
+                    style={{ color: logoColors.greenMedium }}
+                  >
                     {formatKSH(price)}
                   </span>
                 </div>
@@ -633,13 +723,31 @@ const ProductCard: React.FC<ProductCardProps> = ({
             {/* Stock Status */}
             <div className="text-xs">
               {isInStock ? (
-                <div className="flex items-center text-green-600 font-bold bg-green-50 px-2 py-1 rounded-full">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></div>
+                <div 
+                  className="flex items-center font-bold px-2 py-1 rounded-full"
+                  style={{
+                    color: logoColors.greenMedium,
+                    backgroundColor: `${logoColors.greenLight}20`
+                  }}
+                >
+                  <div 
+                    className="w-2 h-2 rounded-full mr-1.5"
+                    style={{ backgroundColor: logoColors.greenMedium }}
+                  ></div>
                   {stockQuantity > 10 ? 'In Stock' : `${stockQuantity} left`}
                 </div>
               ) : (
-                <div className="flex items-center text-red-600 font-bold bg-red-50 px-2 py-1 rounded-full">
-                  <div className="w-2 h-2 bg-red-500 rounded-full mr-1.5"></div>
+                <div 
+                  className="flex items-center font-bold px-2 py-1 rounded-full"
+                  style={{
+                    color: logoColors.red,
+                    backgroundColor: `${logoColors.red}15`
+                  }}
+                >
+                  <div 
+                    className="w-2 h-2 rounded-full mr-1.5"
+                    style={{ backgroundColor: logoColors.red }}
+                  ></div>
                   Out of Stock
                 </div>
               )}
@@ -651,7 +759,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <button
               onClick={handleAddToCart}
               disabled={isAddingToCart || !isInStock}
-              className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white py-3 px-4 rounded-xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-lg flex items-center justify-center group/button"
+              className="w-full text-white py-3 px-4 rounded-xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-lg flex items-center justify-center group/button"
+              style={{
+                background: `linear-gradient(135deg, ${logoColors.greenMedium}, ${logoColors.greenLight})`
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = `linear-gradient(135deg, ${logoColors.greenMedium}dd, ${logoColors.greenLight}dd)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = `linear-gradient(135deg, ${logoColors.greenMedium}, ${logoColors.greenLight})`;
+              }}
             >
               {isAddingToCart ? (
                 <span className="flex items-center justify-center">
@@ -675,12 +792,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <div className="flex justify-between mt-3 text-xs">
               {/* Free Shipping */}
               {(product as any).is_free_shipping ? (
-                <span className="text-green-600 font-bold flex items-center gap-1">
+                <span 
+                  className="font-bold flex items-center gap-1"
+                  style={{ color: logoColors.greenMedium }}
+                >
                   <Truck size={12} />
                   Free Shipping
                 </span>
               ) : (
-                <span className="text-gray-500">Shipping extra</span>
+                <span style={{ color: logoColors.greenMedium }}>Shipping extra</span>
               )}
               
               {/* Review Button */}
@@ -689,12 +809,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   e.preventDefault();
                   handleReviewClick();
                 }}
-                className={`flex items-center gap-1 font-medium ${
-                  userReview 
-                    ? 'text-green-600' 
-                    : 'text-gray-600 hover:text-blue-600'
-                }`}
+                className={`flex items-center gap-1 font-medium ${userReview ? '' : 'hover:text-blue-600'}`}
                 disabled={!isAuthenticated}
+                style={{ color: userReview ? logoColors.greenMedium : logoColors.dark }}
               >
                 {userReview ? (
                   <>
@@ -713,7 +830,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
       {/* Best Seller Badge - Bottom Right */}
       {(product as any).is_bestseller && (
         <div className="absolute bottom-3 right-3 z-10">
-          <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+          <span 
+            className="text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1"
+            style={{
+              background: `linear-gradient(135deg, ${logoColors.gold}, ${logoColors.orange})`
+            }}
+          >
             <Zap size={10} />
             Best Seller
           </span>

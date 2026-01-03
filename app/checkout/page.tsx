@@ -6,8 +6,13 @@ import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { Address, Cart } from '@/types';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
-import { Check, CreditCard, Truck, Lock, Plus, Edit, Trash2, Tag } from 'lucide-react';
+import { 
+  Check, CreditCard, Truck, Lock, Plus, Edit, Trash2, Tag, 
+  Smartphone, Building, Wallet, DollarSign, SmartphoneIcon,
+  ShieldCheck, Banknote, Globe, Smartphone as MobilePhone
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+import PaymentMethodDetails from '@/components/payments/PaymentMethodDetails';
 
 const CheckoutPage: React.FC = () => {
   const router = useRouter();
@@ -19,6 +24,7 @@ const CheckoutPage: React.FC = () => {
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   
   // Form data
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
@@ -29,6 +35,29 @@ const CheckoutPage: React.FC = () => {
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
+  
+  // Payment method details
+  const [paymentDetails, setPaymentDetails] = useState<any>({
+    card_number: '',
+    card_expiry: '',
+    card_cvc: '',
+    card_name: '',
+    save_card: false,
+    mpesa_phone: '',
+    mpesa_till: '',
+    stripe_token: '',
+    paypal_order_id: '',
+    google_pay_token: '',
+    apple_pay_token: '',
+    bank_name: '',
+    account_number: '',
+    routing_number: ''
+  });
+
+  // Payment processing
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [paymentIntent, setPaymentIntent] = useState<any>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
   
   // New address form
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
@@ -56,15 +85,13 @@ const CheckoutPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [cartRes, addressesRes, paymentMethodsRes] = await Promise.all([
+      const [cartRes, addressesRes] = await Promise.all([
         api.cart.get(),
-        api.addresses.getAll(),
-        api.payments.getMethods()
+        api.addresses.getAll()
       ]);
 
       setCart(cartRes.data.cart);
       setAddresses(addressesRes.data);
-      setPaymentMethods(paymentMethodsRes.data || []);
 
       // Set default address if available
       const defaultAddress = addressesRes.data.find((addr: Address) => addr.is_default);
@@ -72,20 +99,60 @@ const CheckoutPage: React.FC = () => {
         setSelectedAddressId(defaultAddress.id);
       }
 
-      // Default to COD if available
-      if (paymentMethodsRes.data?.length > 0) {
-        const codMethod = paymentMethodsRes.data.find((method: any) => 
-          method.id === 'cod' || method.name.toLowerCase().includes('cash')
-        );
-        if (codMethod) {
-          setSelectedPaymentMethod(codMethod.id);
-        }
-      }
+      // Load payment methods
+      await loadPaymentMethods();
     } catch (error) {
       console.error('Failed to fetch checkout data:', error);
       toast.error('Failed to load checkout data');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadPaymentMethods = async () => {
+    try {
+      setLoadingPaymentMethods(true);
+      const paymentMethodsRes = await api.payments.getMethods();
+      const methods = paymentMethodsRes.data || [];
+      
+      // Filter methods based on user's country
+      const userCountry = user?.country || 'US';
+      const filteredMethods = methods.filter((method: any) => {
+        if (!method.available) return false;
+        
+        // Check country restrictions
+        if (method.supported_countries && method.supported_countries.length > 0) {
+          // Convert country codes to match
+          const userCountryCode = userCountry.toUpperCase();
+          const supportedCountries = method.supported_countries.map((c: string) => 
+            c.toUpperCase()
+          );
+          
+          // Check if user's country is in supported countries
+          return supportedCountries.includes(userCountryCode);
+        }
+        
+        return true;
+      });
+
+      setPaymentMethods(filteredMethods);
+
+      // Set default payment method
+      if (filteredMethods.length > 0) {
+        const codMethod = filteredMethods.find((method: any) => 
+          method.id === 'cod' || method.name.toLowerCase().includes('cash')
+        );
+        if (codMethod) {
+          setSelectedPaymentMethod(codMethod.id);
+        } else {
+          setSelectedPaymentMethod(filteredMethods[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load payment methods:', error);
+      toast.error('Failed to load payment methods');
+    } finally {
+      setLoadingPaymentMethods(false);
     }
   };
 
@@ -140,65 +207,135 @@ const CheckoutPage: React.FC = () => {
   };
 
   const handleApplyPromo = async () => {
-  if (!promoCode.trim()) {
-    toast.error('Please enter a promo code');
-    return;
-  }
-  
-  try {
-    console.log('Applying promo code:', promoCode);
+    if (!promoCode.trim()) {
+      toast.error('Please enter a promo code');
+      return;
+    }
     
-    // Calculate subtotal
-    const subtotal = cart ? cart.items.reduce((sum, item) => {
-      const price = typeof item.price === 'string' ? parseFloat(item.price) : Number(item.price);
-      const quantity = Number(item.quantity);
-      return sum + (price * quantity);
-    }, 0) : 0;
-    
-    // CORRECTED: Pass as a single object with code and order_amount
-    const response = await api.promotions.validate({
-      code: promoCode,
-      order_amount: subtotal
-    });
-    
-    console.log('Promotion validation response:', response.data);
-    
-    if (response.data.valid) {
-      setAppliedPromo(response.data.promotion);
+    try {
+      const subtotal = cart ? cart.items.reduce((sum, item) => {
+        const price = typeof item.price === 'string' ? parseFloat(item.price) : Number(item.price);
+        const quantity = Number(item.quantity);
+        return sum + (price * quantity);
+      }, 0) : 0;
       
-      // Calculate actual discount amount
-      let discount = 0;
-      const promo = response.data.promotion;
-      if (promo.type === 'percentage') {
-        discount = subtotal * (promo.discount_value / 100);
-        // Apply max discount if set
-        if (promo.max_discount_amount && discount > promo.max_discount_amount) {
-          discount = promo.max_discount_amount;
+      const response = await api.promotions.validate({
+        code: promoCode,
+        order_amount: subtotal
+      });
+      
+      if (response.data.valid) {
+        setAppliedPromo(response.data.promotion);
+        
+        let discount = 0;
+        const promo = response.data.promotion;
+        if (promo.type === 'percentage') {
+          discount = subtotal * (promo.discount_value / 100);
+          if (promo.max_discount_amount && discount > promo.max_discount_amount) {
+            discount = promo.max_discount_amount;
+          }
+        } else if (promo.type === 'fixed_amount') {
+          discount = promo.discount_value;
         }
-      } else if (promo.type === 'fixed_amount') {
-        discount = promo.discount_value;
+        
+        setAppliedDiscount(discount);
+        toast.success(`Promo code applied! Discount: $${discount.toFixed(2)}`);
+      } else {
+        toast.error(response.data.message || 'Invalid promo code');
+        setAppliedPromo(null);
+        setAppliedDiscount(0);
       }
-      
-      setAppliedDiscount(discount);
-      toast.success(`Promo code applied! Discount: $${discount.toFixed(2)}`);
-    } else {
-      toast.error(response.data.message || 'Invalid promo code');
+    } catch (error: any) {
+      console.error('Promo code error:', error);
+      toast.error(error.response?.data?.message || 'Failed to apply promo code');
       setAppliedPromo(null);
       setAppliedDiscount(0);
     }
-  } catch (error: any) {
-    console.error('Promo code error:', error);
-    toast.error(error.response?.data?.message || 'Failed to apply promo code');
-    setAppliedPromo(null);
-    setAppliedDiscount(0);
-  }
-};
+  };
 
   const removePromoCode = () => {
     setAppliedPromo(null);
     setAppliedDiscount(0);
     setPromoCode('');
     toast.success('Promo code removed');
+  };
+
+  const initializeStripePayment = async () => {
+    try {
+      if (!cart) return;
+      
+      const { total } = calculateTotals();
+      
+      const response = await api.payments.createPaymentIntent({
+        order_id: cart.id,
+        amount: total,
+        currency: 'USD',
+        payment_method_types: ['card']
+      });
+      
+      setPaymentIntent(response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to initialize Stripe:', error);
+      toast.error('Failed to initialize payment');
+      throw error;
+    }
+  };
+
+  const processPayment = async (orderId: number) => {
+    if (!selectedPaymentMethod) {
+      throw new Error('Please select a payment method');
+    }
+
+    const selectedMethod = paymentMethods.find(m => m.id === selectedPaymentMethod);
+    if (!selectedMethod) {
+      throw new Error('Invalid payment method');
+    }
+
+    // Validate payment details based on method
+    switch (selectedPaymentMethod) {
+      case 'mpesa_till':
+        if (!paymentDetails.mpesa_phone || !paymentDetails.mpesa_till) {
+          throw new Error('Please enter M-Pesa phone and Till number');
+        }
+        break;
+      case 'credit_card':
+      case 'debit_card':
+        if (!paymentDetails.card_number || !paymentDetails.card_expiry || !paymentDetails.card_cvc || !paymentDetails.card_name) {
+          throw new Error('Please enter all card details');
+        }
+        break;
+      case 'bank_transfer':
+        if (!paymentDetails.bank_name || !paymentDetails.account_number) {
+          throw new Error('Please enter bank details');
+        }
+        break;
+    }
+
+    // Prepare payment details
+    const paymentDetailsPayload: any = { ...paymentDetails };
+    
+    // Add method-specific details
+    if (selectedPaymentMethod === 'mpesa_till') {
+      paymentDetailsPayload.phone_number = paymentDetails.mpesa_phone;
+      paymentDetailsPayload.till_number = paymentDetails.mpesa_till;
+    }
+
+    if (selectedPaymentMethod === 'credit_card' || selectedPaymentMethod === 'debit_card') {
+      paymentDetailsPayload.payment_method_id = paymentIntent?.payment_intent_id;
+    }
+
+    try {
+      const response = await api.payments.processPayment(orderId, {
+        payment_method: selectedPaymentMethod,
+        payment_details: paymentDetailsPayload
+      });
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Payment processing error:', error);
+      throw new Error(error.response?.data?.message || 'Payment processing failed');
+    }
   };
 
   const handlePlaceOrder = async () => {
@@ -213,7 +350,10 @@ const CheckoutPage: React.FC = () => {
     }
 
     setIsSubmitting(true);
+    setProcessingPayment(true);
+
     try {
+      // First, create the order
       const orderData = {
         address_id: selectedAddressId,
         payment_method: selectedPaymentMethod,
@@ -226,19 +366,37 @@ const CheckoutPage: React.FC = () => {
 
       console.log('Placing order with data:', orderData);
       
-      const response = await api.orders.create(orderData);
-      console.log('Order response:', response.data);
-      
-      toast.success('Order placed successfully!');
-      
-      // Redirect to order confirmation
-      router.push(`/orders/${response.data.order.id}`);
+      const orderResponse = await api.orders.create(orderData);
+      const orderId = orderResponse.data.order.id;
+      console.log('Order created:', orderResponse.data);
+
+      // Process payment if not COD
+      if (selectedPaymentMethod !== 'cod') {
+        try {
+          const paymentResult = await processPayment(orderId);
+          console.log('Payment result:', paymentResult);
+          
+          toast.success('Order placed successfully! Payment completed.');
+          
+          // Redirect to order confirmation
+          router.push(`/orders/${orderId}`);
+        } catch (paymentError: any) {
+          // Payment failed but order was created
+          console.error('Payment failed:', paymentError);
+          toast.error(`Order placed but payment failed: ${paymentError.message}`);
+          
+          // Still redirect to order page (order will show as pending payment)
+          router.push(`/orders/${orderId}`);
+        }
+      } else {
+        // COD - just redirect to order confirmation
+        toast.success('Order placed successfully! Pay on delivery.');
+        router.push(`/orders/${orderId}`);
+      }
     } catch (error: any) {
       console.error('Place order error:', error);
       
-      // Better error handling to see what the backend is complaining about
       if (error.response?.data?.errors) {
-        // Laravel validation errors
         const errors = error.response.data.errors;
         const errorMessages = Object.values(errors).flat().join(', ');
         toast.error(`Validation error: ${errorMessages}`);
@@ -250,6 +408,67 @@ const CheckoutPage: React.FC = () => {
       }
     } finally {
       setIsSubmitting(false);
+      setProcessingPayment(false);
+    }
+  };
+
+  const handlePaymentMethodChange = (methodId: string) => {
+    setSelectedPaymentMethod(methodId);
+    setShowPaymentForm(true);
+    
+    // Initialize payment if needed
+    const method = paymentMethods.find(m => m.id === methodId);
+    if (method && (method.id === 'credit_card' || method.id === 'debit_card' || method.id === 'stripe')) {
+      initializeStripePayment();
+    }
+  };
+
+  const getPaymentMethodIcon = (methodId: string) => {
+    switch (methodId) {
+      case 'credit_card':
+      case 'debit_card':
+        return <CreditCard size={24} className="text-blue-600" />;
+      case 'paypal':
+        return <Globe size={24} className="text-blue-500" />;
+      case 'google_pay':
+        return <SmartphoneIcon size={24} className="text-blue-400" />;
+      case 'apple_pay':
+        return <MobilePhone size={24} className="text-gray-800" />;
+      case 'mpesa_till':
+        return <Smartphone size={24} className="text-green-600" />;
+      case 'stripe':
+        return <ShieldCheck size={24} className="text-purple-600" />;
+      case 'bank_transfer':
+        return <Building size={24} className="text-indigo-600" />;
+      case 'cod':
+        return <Banknote size={24} className="text-orange-600" />;
+      default:
+        return <CreditCard size={24} className="text-gray-600" />;
+    }
+  };
+
+  const getPaymentMethodDescription = (methodId: string) => {
+    switch (methodId) {
+      case 'credit_card':
+        return 'Pay with Visa, MasterCard, American Express';
+      case 'debit_card':
+        return 'Pay directly from your bank account';
+      case 'paypal':
+        return 'Secure payment with PayPal';
+      case 'google_pay':
+        return 'Fast checkout with Google Pay';
+      case 'apple_pay':
+        return 'Secure payment with Apple Pay';
+      case 'mpesa_till':
+        return 'Pay via M-Pesa Till number';
+      case 'stripe':
+        return 'Secure payment via Stripe';
+      case 'bank_transfer':
+        return 'Direct bank transfer (1-3 business days)';
+      case 'cod':
+        return 'Pay when you receive your order';
+      default:
+        return 'Select to view payment details';
     }
   };
 
@@ -262,7 +481,6 @@ const CheckoutPage: React.FC = () => {
       return sum + (price * quantity);
     }, 0);
     
-    // Calculate shipping based on selected method
     let shipping = 0;
     switch (selectedShippingMethod) {
       case 'standard':
@@ -413,6 +631,7 @@ const CheckoutPage: React.FC = () => {
                   <div className="mt-6 p-6 border-2 rounded-xl bg-gray-50">
                     <h3 className="font-bold text-lg mb-4">Add New Address</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* ... existing address form fields ... */}
                       <div>
                         <label className="block text-sm font-medium mb-1">Label</label>
                         <select
@@ -623,55 +842,84 @@ const CheckoutPage: React.FC = () => {
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h2 className="text-2xl font-bold mb-6">Payment Method</h2>
                 
-                <div className="space-y-4 mb-8">
-                  {paymentMethods.length > 0 ? paymentMethods.map((method) => (
-                    <div
-                      key={method.id}
-                      onClick={() => setSelectedPaymentMethod(method.id)}
-                      className={`p-6 border-2 rounded-xl cursor-pointer transition-all ${
-                        selectedPaymentMethod === method.id
-                          ? 'border-orange-500 bg-orange-50'
-                          : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mr-4">
-                            <CreditCard size={24} className="text-gray-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-lg">{method.name}</h3>
-                            <p className="text-gray-600">{method.description}</p>
+                {loadingPaymentMethods ? (
+                  <div className="flex justify-center py-12">
+                    <LoadingSpinner size="md" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-4 mb-8">
+                      {paymentMethods.length > 0 ? paymentMethods.map((method) => (
+                        <div
+                          key={method.id}
+                          onClick={() => handlePaymentMethodChange(method.id)}
+                          className={`p-6 border-2 rounded-xl cursor-pointer transition-all group ${
+                            selectedPaymentMethod === method.id
+                              ? 'border-orange-500 bg-orange-50'
+                              : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mr-4 group-hover:bg-gray-200 transition-colors">
+                                {getPaymentMethodIcon(method.id)}
+                              </div>
+                              <div>
+                                <h3 className="font-bold text-lg">{method.name}</h3>
+                                <p className="text-gray-600">{getPaymentMethodDescription(method.id)}</p>
+                                {method.instructions && (
+                                  <p className="text-sm text-gray-500 mt-1">{method.instructions}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {selectedPaymentMethod === method.id && (
+                                <Check className="text-orange-500" size={24} />
+                              )}
+                            </div>
                           </div>
                         </div>
-                        {selectedPaymentMethod === method.id && (
-                          <Check className="text-orange-500" size={24} />
-                        )}
-                      </div>
+                      )) : (
+                        <div className="p-6 border-2 border-gray-200 rounded-xl">
+                          <p className="text-gray-500">No payment methods available</p>
+                        </div>
+                      )}
                     </div>
-                  )) : (
-                    <div className="p-6 border-2 border-gray-200 rounded-xl">
-                      <p className="text-gray-500">No payment methods available</p>
-                    </div>
-                  )}
-                </div>
 
-                {/* Navigation */}
-                <div className="mt-8 flex justify-between">
-                  <button
-                    onClick={() => setStep(1)}
-                    className="px-6 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
-                  >
-                    ← Back
-                  </button>
-                  <button
-                    onClick={() => setStep(3)}
-                    disabled={!selectedPaymentMethod}
-                    className="px-8 py-4 bg-orange-500 text-white rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-xl"
-                  >
-                    Review Order →
-                  </button>
-                </div>
+                    {/* Payment Details Form */}
+                    {showPaymentForm && selectedPaymentMethod && (
+                      <div className="mb-8">
+                        <PaymentMethodDetails
+                          methodId={selectedPaymentMethod}
+                          paymentDetails={paymentDetails}
+                          onPaymentDetailsChange={setPaymentDetails}
+                          totalAmount={total}
+                          currency="USD"
+                          paymentIntent={paymentIntent}
+                          userCountry={user?.country}
+                          onSubmit={() => setStep(3)}
+                        />
+                      </div>
+                    )}
+
+                    {/* Navigation */}
+                    <div className="mt-8 flex justify-between">
+                      <button
+                        onClick={() => setStep(1)}
+                        className="px-6 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                      >
+                        ← Back
+                      </button>
+                      <button
+                        onClick={() => setStep(3)}
+                        disabled={!selectedPaymentMethod}
+                        className="px-8 py-4 bg-orange-500 text-white rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+                      >
+                        Review Order →
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -729,13 +977,22 @@ const CheckoutPage: React.FC = () => {
                     <div className="p-6 border-2 border-gray-200 rounded-xl">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                          <CreditCard size={24} className="mr-3 text-gray-600" />
-                          <div>
+                          {getPaymentMethodIcon(selectedPaymentMethod)}
+                          <div className="ml-3">
                             <p className="font-bold text-lg">
-                              {paymentMethods.find(m => m.id === selectedPaymentMethod)?.name || 'Cash on Delivery'}
+                              {paymentMethods.find(m => m.id === selectedPaymentMethod)?.name || 
+                                (selectedPaymentMethod === 'credit_card' ? 'Credit Card' :
+                                 selectedPaymentMethod === 'debit_card' ? 'Debit Card' :
+                                 selectedPaymentMethod === 'paypal' ? 'PayPal' :
+                                 selectedPaymentMethod === 'google_pay' ? 'Google Pay' :
+                                 selectedPaymentMethod === 'apple_pay' ? 'Apple Pay' :
+                                 selectedPaymentMethod === 'mpesa_till' ? 'M-Pesa Till' :
+                                 selectedPaymentMethod === 'stripe' ? 'Stripe' :
+                                 selectedPaymentMethod === 'bank_transfer' ? 'Bank Transfer' :
+                                 'Cash on Delivery')}
                             </p>
                             <p className="text-gray-600">
-                              {paymentMethods.find(m => m.id === selectedPaymentMethod)?.description || 'Pay when you receive your order'}
+                              {getPaymentMethodDescription(selectedPaymentMethod)}
                             </p>
                           </div>
                         </div>
@@ -746,6 +1003,18 @@ const CheckoutPage: React.FC = () => {
                           Change
                         </button>
                       </div>
+                      
+                      {/* Show payment details summary */}
+                      {selectedPaymentMethod === 'mpesa_till' && paymentDetails.mpesa_phone && (
+                        <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                          <p className="text-sm text-green-800">
+                            <span className="font-semibold">Phone:</span> {paymentDetails.mpesa_phone}
+                            {paymentDetails.mpesa_till && (
+                              <> • <span className="font-semibold">Till:</span> {paymentDetails.mpesa_till}</>
+                            )}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -871,11 +1140,16 @@ const CheckoutPage: React.FC = () => {
                   </button>
                   <button
                     onClick={handlePlaceOrder}
-                    disabled={isSubmitting || !selectedAddressId || !selectedPaymentMethod}
+                    disabled={isSubmitting || !selectedAddressId || !selectedPaymentMethod || processingPayment}
                     className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center"
                   >
                     <Lock size={20} className="mr-2" />
-                    {isSubmitting ? 'Placing Order...' : 'Place Order'}
+                    {processingPayment ? (
+                      <span className="flex items-center">
+                        <LoadingSpinner size="sm" className="mr-2" />
+                        Processing Payment...
+                      </span>
+                    ) : isSubmitting ? 'Placing Order...' : 'Place Order'}
                   </button>
                 </div>
               </div>
@@ -928,7 +1202,7 @@ const CheckoutPage: React.FC = () => {
               {/* Security Note */}
               <div className="p-4 bg-gray-50 rounded-lg border">
                 <div className="flex items-center mb-2">
-                  <Lock size={16} className="text-gray-500 mr-2" />
+                  <ShieldCheck size={16} className="text-gray-500 mr-2" />
                   <span className="text-sm font-medium text-gray-700">Secure SSL Encryption</span>
                 </div>
                 <p className="text-xs text-gray-500">

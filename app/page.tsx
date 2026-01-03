@@ -167,6 +167,18 @@ const HomePage: React.FC = () => {
   const [visibleBanners, setVisibleBanners] = useState<Banner[]>([]);
   const [displayCount, setDisplayCount] = useState(5);
 
+  // Logo colors from header component
+  const logoColors = {
+    dark: '#1a1a1a', // very dark charcoal
+    greenLight: '#9dcc5e', // light green
+    greenMedium: '#6a9c3d', // medium green
+    gold: '#d4af37', // gold/beige
+    orange: '#e67e22', // orange
+    yellowGold: '#f1c40f', // yellow-gold highlight
+    red: '#c0392b', // red
+    lightGreenLine: '#a3d977', // light green line
+  };
+
   const whatsappNumber = '+254716354589';
   const whatsappMessage = encodeURIComponent('Hello! I have a question about your products.');
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
@@ -590,7 +602,12 @@ const HomePage: React.FC = () => {
     return (
       <>
         {hasError ? (
-          <div className={`absolute inset-0 bg-gradient-to-r from-orange-500 to-orange-600 flex items-center justify-center ${!isActive ? 'hidden' : ''}`}>
+          <div 
+            className={`absolute inset-0 flex items-center justify-center ${!isActive ? 'hidden' : ''}`}
+            style={{
+              background: `linear-gradient(135deg, ${logoColors.orange}, ${logoColors.red})`
+            }}
+          >
             <div className="text-center text-white p-8">
               <h2 className="text-3xl font-bold mb-4">{banner.title}</h2>
               <p className="text-xl">Image failed to load</p>
@@ -644,7 +661,12 @@ const HomePage: React.FC = () => {
         }`}
       >
         {hasError ? (
-          <div className="absolute inset-0 bg-gradient-to-b from-orange-500 to-orange-600 flex items-end pb-4">
+          <div 
+            className="absolute inset-0 flex items-end pb-4"
+            style={{
+              background: `linear-gradient(135deg, ${logoColors.orange}, ${logoColors.red})`
+            }}
+          >
             <div className="text-white p-4">
               <h2 className="text-xl font-bold mb-1">{banner.title}</h2>
             </div>
@@ -676,7 +698,8 @@ const HomePage: React.FC = () => {
                 {banner.button_text && (
                   <a
                     href={banner.button_link || '#'}
-                    className="inline-flex items-center bg-white text-orange-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-50 transition-all duration-300 text-sm hover:scale-105"
+                    className="inline-flex items-center bg-white px-4 py-2 rounded-lg font-bold hover:bg-gray-50 transition-all duration-300 text-sm hover:scale-105"
+                    style={{ color: logoColors.orange }}
                     onClick={() => handleBannerClick(banner.id)}
                   >
                     {banner.button_text}
@@ -695,13 +718,19 @@ const HomePage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-orange-50">
+      <div 
+        className="min-h-screen flex items-center justify-center"
+        style={{
+          background: `linear-gradient(135deg, white, ${logoColors.lightGreenLine}20)`
+        }}
+      >
         <div className="text-center">
           <div className="relative">
-            <LoadingSpinner size="lg" className="text-orange-500" />
-            <Leaf className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-orange-500 animate-pulse" size={24} />
+            <LoadingSpinner size="lg" style={{ color: logoColors.orange }} />
+            <Leaf className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" 
+              style={{ color: logoColors.orange }} size={24} />
           </div>
-          <p className="mt-4 text-gray-600 font-medium">Loading fresh products...</p>
+          <p className="mt-4" style={{ color: logoColors.dark }}>Loading fresh products...</p>
         </div>
       </div>
     );
@@ -709,7 +738,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Banner - Removed pt-24 since header is already in layout */}
+      {/* Hero Banner */}
       <section className="relative">
         {banners.length > 0 ? (
           <>
@@ -735,7 +764,10 @@ const HomePage: React.FC = () => {
                     <div className="relative h-full flex items-center">
                       <div className="container mx-auto px-8">
                         <div className="max-w-2xl">
-                          <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full mb-6 animate-fade-in">
+                          <div 
+                            className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full mb-6 animate-fade-in"
+                            style={{ color: 'white' }}
+                          >
                             <Sparkles size={16} />
                             <span className="text-sm font-semibold">Fresh & Organic</span>
                           </div>
@@ -750,7 +782,8 @@ const HomePage: React.FC = () => {
                           {banner.button_text && (
                             <a
                               href={banner.button_link || '#'}
-                              className="inline-flex items-center bg-white text-orange-600 px-8 py-4 rounded-full font-bold hover:bg-gray-50 transition-all duration-300 text-lg hover:scale-105 hover:shadow-xl animate-slide-up delay-300"
+                              className="inline-flex items-center bg-white px-8 py-4 rounded-full font-bold hover:bg-gray-50 transition-all duration-300 text-lg hover:scale-105 hover:shadow-xl animate-slide-up delay-300"
+                              style={{ color: logoColors.orange }}
                               onClick={() => handleBannerClick(banner.id)}
                             >
                               {banner.button_text}
@@ -811,7 +844,12 @@ const HomePage: React.FC = () => {
             </div>
           </>
         ) : (
-          <div className="relative h-[500px] bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 overflow-hidden">
+          <div 
+            className="relative h-[500px] overflow-hidden"
+            style={{
+              background: `linear-gradient(135deg, ${logoColors.greenLight}, ${logoColors.greenMedium}, ${logoColors.gold})`
+            }}
+          >
             <div className="absolute inset-0">
               <img 
                 src="https://api.hypermarket.co.ke/storage/banners/default-homepage.jpg" 
@@ -821,7 +859,10 @@ const HomePage: React.FC = () => {
             </div>
             <div className="relative h-full flex items-center">
               <div className="container mx-auto px-4 text-center">
-                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full mb-6">
+                <div 
+                  className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full mb-6"
+                  style={{ color: 'white' }}
+                >
                   <Sparkles size={16} />
                   <span className="text-sm font-semibold">100% Organic</span>
                 </div>
@@ -833,7 +874,8 @@ const HomePage: React.FC = () => {
                 </p>
                 <a
                   href="/products"
-                  className="inline-flex items-center bg-white text-green-600 px-8 py-4 rounded-full font-bold hover:bg-gray-50 transition-all duration-300 text-lg hover:scale-105 hover:shadow-xl"
+                  className="inline-flex items-center bg-white px-8 py-4 rounded-full font-bold hover:bg-gray-50 transition-all duration-300 text-lg hover:scale-105 hover:shadow-xl"
+                  style={{ color: logoColors.greenMedium }}
                 >
                   Shop Now
                   <ArrowRight className="ml-3" size={20} />
@@ -845,69 +887,94 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* Features Grid */}
-      <section className="py-16 bg-gradient-to-b from-white to-gray-50">
+      <section 
+        className="py-16"
+        style={{
+          background: `linear-gradient(to bottom, white, ${logoColors.lightGreenLine}20)`
+        }}
+      >
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
-                icon: <Truck className="text-green-600" size={32} />,
+                icon: <Truck size={32} />,
                 title: 'Free Delivery',
                 description: 'On orders over KES 2,000',
-                color: 'bg-green-50'
+                color: logoColors.greenLight,
+                bgColor: `${logoColors.greenLight}20`
               },
               {
-                icon: <ShieldCheck className="text-blue-600" size={32} />,
+                icon: <ShieldCheck size={32} />,
                 title: 'Quality Guarantee',
                 description: 'Freshness assured or refund',
-                color: 'bg-blue-50'
+                color: logoColors.gold,
+                bgColor: `${logoColors.gold}20`
               },
               {
-                icon: <Clock4 className="text-orange-600" size={32} />,
+                icon: <Clock4 size={32} />,
                 title: 'Same Day Delivery',
                 description: 'Order by 2PM, get today',
-                color: 'bg-orange-50'
+                color: logoColors.orange,
+                bgColor: `${logoColors.orange}20`
               },
               {
-                icon: <Award className="text-purple-600" size={32} />,
+                icon: <Award size={32} />,
                 title: 'Organic Certified',
                 description: '100% natural products',
-                color: 'bg-purple-50'
+                color: logoColors.red,
+                bgColor: `${logoColors.red}15`
               }
             ].map((feature, index) => (
               <div 
                 key={index} 
-                className={`${feature.color} p-8 rounded-3xl border border-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group`}
+                className="p-8 rounded-3xl border border-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group"
+                style={{ 
+                  backgroundColor: feature.bgColor,
+                  borderColor: `${feature.color}40`
+                }}
               >
-                <div className="mb-6 transform group-hover:scale-110 transition-transform duration-300">
+                <div 
+                  className="mb-6 transform group-hover:scale-110 transition-transform duration-300"
+                  style={{ color: feature.color }}
+                >
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
+                <h3 className="text-xl font-bold mb-3" style={{ color: logoColors.dark }}>{feature.title}</h3>
+                <p style={{ color: logoColors.greenMedium }}>{feature.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Featured Products Section - UPDATED to use ProductCard */}
+      {/* Featured Products Section */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-12">
             <div className="mb-8 lg:mb-0">
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-100 to-orange-50 text-orange-700 px-4 py-2 rounded-full mb-4">
-                <Star size={16} className="fill-orange-500" />
+              <div 
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4"
+                style={{
+                  background: `linear-gradient(135deg, ${logoColors.orange}20, ${logoColors.red}15)`,
+                  color: logoColors.orange
+                }}
+              >
+                <Star size={16} />
                 <span className="text-sm font-semibold">Top Picks</span>
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">Products</span>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: logoColors.dark }}>
+                Featured <span style={{ color: logoColors.orange }}>Products</span>
               </h2>
-              <p className="text-xl text-gray-600 max-w-2xl">
+              <p className="text-xl max-w-2xl" style={{ color: logoColors.greenMedium }}>
                 Curated selection of our best-selling items
               </p>
             </div>
             <Link
               href="/products?featured=true"
-              className="group inline-flex items-center gap-3 bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all duration-300 shadow-lg hover:scale-105"
+              className="group inline-flex items-center gap-3 text-white px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all duration-300 shadow-lg hover:scale-105"
+              style={{
+                background: `linear-gradient(135deg, ${logoColors.orange}, ${logoColors.red})`
+              }}
             >
               View All Featured
               <ArrowRight className="group-hover:translate-x-2 transition-transform duration-300" size={22} />
@@ -922,7 +989,12 @@ const HomePage: React.FC = () => {
                   className="group relative bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 overflow-hidden"
                 >
                   <div className="absolute top-3 left-3 z-10">
-                    <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                    <span 
+                      className="text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg"
+                      style={{
+                        background: `linear-gradient(135deg, ${logoColors.orange}, ${logoColors.red})`
+                      }}
+                    >
                       Featured
                     </span>
                   </div>
@@ -935,10 +1007,15 @@ const HomePage: React.FC = () => {
             </div>
           ) : (
             <div className="text-center py-16">
-              <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl mb-6">
-                <Package size={48} className="text-gray-400" />
+              <div 
+                className="inline-flex items-center justify-center w-24 h-24 rounded-3xl mb-6"
+                style={{
+                  background: `linear-gradient(135deg, ${logoColors.lightGreenLine}30, ${logoColors.greenLight}20)`
+                }}
+              >
+                <Package size={48} style={{ color: logoColors.greenMedium }} />
               </div>
-              <p className="text-gray-500 text-lg">No featured products available</p>
+              <p className="text-lg" style={{ color: logoColors.greenMedium }}>No featured products available</p>
             </div>
           )}
         </div>
@@ -946,13 +1023,18 @@ const HomePage: React.FC = () => {
 
       {/* Categories Section */}
       {categories.length > 0 && (
-        <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+        <section 
+          className="py-16"
+          style={{
+            background: `linear-gradient(to bottom, ${logoColors.lightGreenLine}10, white)`
+          }}
+        >
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                Shop by <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-teal-500">Category</span>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: logoColors.dark }}>
+                Shop by <span style={{ color: logoColors.greenMedium }}>Category</span>
               </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              <p className="text-xl max-w-2xl mx-auto" style={{ color: logoColors.greenMedium }}>
                 Browse our wide range of fresh products
               </p>
             </div>
@@ -964,7 +1046,12 @@ const HomePage: React.FC = () => {
                   href={`/categories/${category.slug}`}
                   className="group relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 text-center"
                 >
-                  <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-green-50 to-teal-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                  <div 
+                    className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500"
+                    style={{
+                      background: `linear-gradient(135deg, ${logoColors.greenLight}20, ${logoColors.gold}15)`
+                    }}
+                  >
                     {category.image ? (
                       <img 
                         src={getImageUrl(category.image)} 
@@ -972,14 +1059,17 @@ const HomePage: React.FC = () => {
                         className="w-full h-full object-cover rounded-2xl"
                       />
                     ) : (
-                      <Leaf size={32} className="text-green-600" />
+                      <Leaf size={32} style={{ color: logoColors.greenMedium }} />
                     )}
                   </div>
-                  <h3 className="font-bold text-gray-900 mb-2">{category.name}</h3>
+                  <h3 className="font-bold mb-2" style={{ color: logoColors.dark }}>{category.name}</h3>
                   {category.products_count && (
-                    <p className="text-sm text-gray-500">{category.products_count} products</p>
+                    <p className="text-sm" style={{ color: logoColors.greenMedium }}>{category.products_count} products</p>
                   )}
-                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-green-500 rounded-2xl transition-colors duration-500" />
+                  <div 
+                    className="absolute inset-0 border-2 border-transparent group-hover:border-green-500 rounded-2xl transition-colors duration-500" 
+                    style={{ borderColor: logoColors.greenLight }}
+                  />
                 </Link>
               ))}
             </div>
@@ -988,7 +1078,10 @@ const HomePage: React.FC = () => {
               <div className="text-center mt-12">
                 <Link
                   href="/categories"
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-800 to-gray-900 text-white px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all duration-300"
+                  className="inline-flex items-center gap-2 text-white px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all duration-300"
+                  style={{
+                    background: `linear-gradient(135deg, ${logoColors.dark}, ${logoColors.greenMedium})`
+                  }}
                 >
                   View All Categories
                   <ArrowRight size={20} />
@@ -999,25 +1092,39 @@ const HomePage: React.FC = () => {
         </section>
       )}
 
-      {/* New Arrivals Section - UPDATED to use ProductCard */}
-      <section className="py-16 bg-gradient-to-b from-white to-orange-50">
+      {/* New Arrivals Section */}
+      <section 
+        className="py-16"
+        style={{
+          background: `linear-gradient(to bottom, white, ${logoColors.orange}10)`
+        }}
+      >
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row justify-between items-center mb-12">
             <div className="mb-8 lg:mb-0">
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-green-100 to-green-50 text-green-700 px-4 py-2 rounded-full mb-4">
+              <div 
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4"
+                style={{
+                  background: `linear-gradient(135deg, ${logoColors.greenLight}20, ${logoColors.greenMedium}15)`,
+                  color: logoColors.greenMedium
+                }}
+              >
                 <Sparkles size={16} />
                 <span className="text-sm font-semibold">Just In</span>
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                Fresh <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-emerald-500">Arrivals</span>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: logoColors.dark }}>
+                Fresh <span style={{ color: logoColors.greenMedium }}>Arrivals</span>
               </h2>
-              <p className="text-xl text-gray-600 max-w-2xl">
+              <p className="text-xl max-w-2xl" style={{ color: logoColors.greenMedium }}>
                 Newly added to our collection
               </p>
             </div>
             <Link
               href="/products?sort=created_at&order=desc"
-              className="group inline-flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all duration-300 shadow-lg hover:scale-105"
+              className="group inline-flex items-center gap-3 text-white px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all duration-300 shadow-lg hover:scale-105"
+              style={{
+                background: `linear-gradient(135deg, ${logoColors.greenMedium}, ${logoColors.greenLight})`
+              }}
             >
               View All New
               <ArrowRight className="group-hover:translate-x-2 transition-transform duration-300" size={22} />
@@ -1032,7 +1139,12 @@ const HomePage: React.FC = () => {
                   className="group relative bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-gray-100 overflow-hidden"
                 >
                   <div className="absolute top-3 left-3 z-10">
-                    <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                    <span 
+                      className="text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg"
+                      style={{
+                        background: `linear-gradient(135deg, ${logoColors.greenMedium}, ${logoColors.greenLight})`
+                      }}
+                    >
                       NEW
                     </span>
                   </div>
@@ -1045,17 +1157,27 @@ const HomePage: React.FC = () => {
             </div>
           ) : (
             <div className="text-center py-16">
-              <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl mb-6">
-                <Sprout size={48} className="text-green-600" />
+              <div 
+                className="inline-flex items-center justify-center w-24 h-24 rounded-3xl mb-6"
+                style={{
+                  background: `linear-gradient(135deg, ${logoColors.greenLight}20, ${logoColors.greenMedium}15)`
+                }}
+              >
+                <Sprout size={48} style={{ color: logoColors.greenMedium }} />
               </div>
-              <p className="text-gray-500 text-lg">Check back soon for new arrivals!</p>
+              <p className="text-lg" style={{ color: logoColors.greenMedium }}>Check back soon for new arrivals!</p>
             </div>
           )}
         </div>
       </section>
 
       {/* Subscription Banner */}
-      <section className="py-20 bg-gradient-to-r from-orange-500 via-orange-600 to-red-500 text-white overflow-hidden">
+      <section 
+        className="py-20 text-white overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, ${logoColors.orange}, ${logoColors.red})`
+        }}
+      >
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
             <div className="lg:w-1/2">
@@ -1066,7 +1188,7 @@ const HomePage: React.FC = () => {
               
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
                 Subscribe & Save
-                <span className="block text-yellow-300">30% OFF</span>
+                <span className="block" style={{ color: logoColors.yellowGold }}>30% OFF</span>
               </h2>
               
               <p className="text-xl mb-8 text-white/90 max-w-2xl">
@@ -1076,7 +1198,8 @@ const HomePage: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
                   href="/subscriptions"
-                  className="group inline-flex items-center justify-center bg-white text-orange-600 px-8 py-4 rounded-full font-bold hover:bg-gray-50 transition-all duration-300 text-lg shadow-lg hover:scale-105"
+                  className="group inline-flex items-center justify-center bg-white px-8 py-4 rounded-full font-bold hover:bg-gray-50 transition-all duration-300 text-lg shadow-lg hover:scale-105"
+                  style={{ color: logoColors.orange }}
                 >
                   Start Your Subscription
                   <ArrowRight className="ml-3 group-hover:translate-x-2 transition-transform duration-300" size={20} />
@@ -1092,7 +1215,12 @@ const HomePage: React.FC = () => {
             
             <div className="lg:w-1/2 relative">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-red-400/20 rounded-3xl blur-3xl" />
+                <div 
+                  className="absolute inset-0 rounded-3xl blur-3xl"
+                  style={{
+                    background: `linear-gradient(135deg, ${logoColors.orange}40, ${logoColors.red}40)`
+                  }}
+                />
                 <div className="relative bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-8">
                   <div className="grid grid-cols-2 gap-6">
                     {[
@@ -1101,7 +1229,10 @@ const HomePage: React.FC = () => {
                       { icon: '🎁', title: 'Free Gifts', desc: 'Seasonal surprises included' },
                       { icon: '⭐', title: 'Priority Support', desc: 'Dedicated customer care' }
                     ].map((feature, index) => (
-                      <div key={index} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                      <div 
+                        key={index} 
+                        className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10"
+                      >
                         <div className="text-3xl mb-3">{feature.icon}</div>
                         <h4 className="text-lg font-bold mb-2">{feature.title}</h4>
                         <p className="text-white/80 text-sm">{feature.desc}</p>
@@ -1119,14 +1250,20 @@ const HomePage: React.FC = () => {
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-100 to-amber-50 text-amber-700 px-4 py-2 rounded-full mb-6">
-              <Star size={16} className="fill-amber-500" />
+            <div 
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6"
+              style={{
+                background: `linear-gradient(135deg, ${logoColors.yellowGold}20, ${logoColors.gold}15)`,
+                color: logoColors.gold
+              }}
+            >
+              <Star size={16} />
               <span className="text-sm font-semibold">4.8/5 Rating</span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">
-              Loved by <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-500">Thousands</span>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6" style={{ color: logoColors.dark }}>
+              Loved by <span style={{ color: logoColors.orange }}>Thousands</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl max-w-3xl mx-auto" style={{ color: logoColors.greenMedium }}>
               Join our community of happy customers enjoying fresh produce
             </p>
           </div>
@@ -1164,22 +1301,28 @@ const HomePage: React.FC = () => {
                     <Star
                       key={i}
                       size={22}
-                      className={`${i < testimonial.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'} mr-1`}
+                      className={`mr-1 ${i < testimonial.rating ? 'fill-amber-500' : 'text-gray-300'}`}
+                      style={{ color: i < testimonial.rating ? logoColors.gold : '#d1d5db' }}
                     />
                   ))}
                 </div>
                 
-                <p className="text-gray-600 text-lg mb-8 leading-relaxed italic">
+                <p className="text-lg mb-8 leading-relaxed italic" style={{ color: logoColors.dark }}>
                   "{testimonial.content}"
                 </p>
                 
                 <div className="flex items-center">
-                  <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center text-white font-bold text-xl mr-4">
+                  <div 
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl mr-4"
+                    style={{
+                      background: `linear-gradient(135deg, ${logoColors.orange}, ${logoColors.red})`
+                    }}
+                  >
                     {testimonial.avatar}
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900 text-lg">{testimonial.name}</p>
-                    <p className="text-gray-500">{testimonial.role}</p>
+                    <p className="font-bold text-lg" style={{ color: logoColors.dark }}>{testimonial.name}</p>
+                    <p style={{ color: logoColors.greenMedium }}>{testimonial.role}</p>
                   </div>
                 </div>
               </div>
@@ -1189,12 +1332,17 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-gray-900 to-black text-white">
+      <section 
+        className="py-20 text-white"
+        style={{
+          background: `linear-gradient(135deg, ${logoColors.dark}, ${logoColors.greenMedium})`
+        }}
+      >
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-8 leading-tight">
               Ready to Taste the
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-500">
+              <span className="block" style={{ color: logoColors.greenLight }}>
                 Fresh Difference?
               </span>
             </h2>
@@ -1206,7 +1354,10 @@ const HomePage: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
               <Link
                 href="/products"
-                className="group inline-flex items-center justify-center bg-gradient-to-r from-green-500 to-emerald-600 text-white px-10 py-5 rounded-full font-bold hover:shadow-2xl transition-all duration-300 text-lg shadow-lg hover:scale-105"
+                className="group inline-flex items-center justify-center text-white px-10 py-5 rounded-full font-bold hover:shadow-2xl transition-all duration-300 text-lg shadow-lg hover:scale-105"
+                style={{
+                  background: `linear-gradient(135deg, ${logoColors.greenMedium}, ${logoColors.greenLight})`
+                }}
               >
                 Start Shopping
                 <ArrowRight className="ml-3 group-hover:translate-x-2 transition-transform duration-300" size={22} />
@@ -1227,7 +1378,7 @@ const HomePage: React.FC = () => {
                 { value: '30-min', label: 'Delivery Promise' }
               ].map((stat, index) => (
                 <div key={index} className="text-center">
-                  <div className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+                  <div className="text-3xl md:text-4xl font-bold mb-2" style={{ color: logoColors.greenLight }}>
                     {stat.value}
                   </div>
                   <div className="text-gray-400">{stat.label}</div>
@@ -1238,12 +1389,14 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-    
       {/* Customer Support Floating Button */}
       <div className="fixed right-6 bottom-6 z-50">
         <button
           onClick={() => setShowCustomerSupport(!showCustomerSupport)}
-          className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110"
+          className="text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110"
+          style={{
+            background: `linear-gradient(135deg, ${logoColors.greenMedium}, ${logoColors.greenLight})`
+          }}
           aria-label="Customer Support"
         >
           <HelpCircle size={28} />
@@ -1251,7 +1404,12 @@ const HomePage: React.FC = () => {
         
         {showCustomerSupport && (
           <div className="absolute right-0 bottom-full mb-4 bg-white rounded-2xl shadow-2xl border border-gray-200 w-72 overflow-hidden animate-slide-up">
-            <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <div 
+              className="p-4 text-white"
+              style={{
+                background: `linear-gradient(135deg, ${logoColors.greenMedium}, ${logoColors.greenLight})`
+              }}
+            >
               <h3 className="font-bold text-lg">Need Help?</h3>
               <p className="text-sm opacity-90">We're here 24/7</p>
             </div>
@@ -1261,40 +1419,49 @@ const HomePage: React.FC = () => {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-green-50 transition-colors group"
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
               >
-                <div className="bg-green-100 p-2 rounded-lg group-hover:bg-green-200 transition-colors">
-                  <MessageCircle size={20} className="text-green-600" />
+                <div 
+                  className="p-2 rounded-lg group-hover:bg-green-200 transition-colors"
+                  style={{ backgroundColor: `${logoColors.greenLight}20` }}
+                >
+                  <MessageCircle size={20} style={{ color: logoColors.greenMedium }} />
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">WhatsApp</div>
-                  <div className="text-xs text-gray-500">Instant reply</div>
+                  <div className="font-medium" style={{ color: logoColors.dark }}>WhatsApp</div>
+                  <div className="text-xs" style={{ color: logoColors.greenMedium }}>Instant reply</div>
                 </div>
               </a>
               
               <a
                 href="tel:+254716354589"
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-blue-50 transition-colors group"
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
               >
-                <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
-                  <Phone size={20} className="text-blue-600" />
+                <div 
+                  className="p-2 rounded-lg group-hover:bg-blue-200 transition-colors"
+                  style={{ backgroundColor: `${logoColors.blue}20` }}
+                >
+                  <Phone size={20} style={{ color: logoColors.greenMedium }} />
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">Call Us</div>
-                  <div className="text-xs text-gray-500">+254 716 354 589</div>
+                  <div className="font-medium" style={{ color: logoColors.dark }}>Call Us</div>
+                  <div className="text-xs" style={{ color: logoColors.greenMedium }}>+254 716 354 589</div>
                 </div>
               </a>
               
               <a
                 href="/help"
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-purple-50 transition-colors group"
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
               >
-                <div className="bg-purple-100 p-2 rounded-lg group-hover:bg-purple-200 transition-colors">
-                  <HelpCircle size={20} className="text-purple-600" />
+                <div 
+                  className="p-2 rounded-lg group-hover:bg-purple-200 transition-colors"
+                  style={{ backgroundColor: `${logoColors.gold}20` }}
+                >
+                  <HelpCircle size={20} style={{ color: logoColors.greenMedium }} />
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">Help Center</div>
-                  <div className="text-xs text-gray-500">FAQs & guides</div>
+                  <div className="font-medium" style={{ color: logoColors.dark }}>Help Center</div>
+                  <div className="text-xs" style={{ color: logoColors.greenMedium }}>FAQs & guides</div>
                 </div>
               </a>
             </div>
@@ -1305,9 +1472,12 @@ const HomePage: React.FC = () => {
       {/* Scroll to Top Button */}
       <button
         onClick={scrollToTop}
-        className={`fixed right-6 bottom-24 bg-gradient-to-r from-orange-500 to-red-500 text-white p-3 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 ${
+        className={`fixed right-6 bottom-24 text-white p-3 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 ${
           showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
         }`}
+        style={{
+          background: `linear-gradient(135deg, ${logoColors.orange}, ${logoColors.red})`
+        }}
         aria-label="Scroll to top"
       >
         <ArrowUp size={24} />

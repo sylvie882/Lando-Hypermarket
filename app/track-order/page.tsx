@@ -8,8 +8,8 @@ import Link from 'next/link';
 interface TrackingResponse {
   success: boolean;
   message: string;
-  data: {
-    order_summary: {
+  data?: {
+    order_summary?: {
       order_number: string;
       tracking_number: string;
       status: string;
@@ -17,7 +17,7 @@ interface TrackingResponse {
       created_at: string;
       total: string;
     };
-    tracking_info: {
+    tracking_info?: {
       current_status: string;
       status_description: string;
       timeline: Array<{
@@ -34,19 +34,27 @@ interface TrackingResponse {
       carrier: string | null;
       shipping_method: string;
     };
-    items: Array<{
+    items?: Array<{
       name: string;
       quantity: number;
       price: string;
     }>;
-    delivery_details: {
+    delivery_details?: {
       delivery_address: string;
       estimated_delivery_time: string | null;
       driver: {
         name: string;
         phone: string;
       } | null;
-    } | null;
+    };
+    order?: {
+      order_number: string;
+      tracking_number: string;
+      status: string;
+      created_at: string;
+      total: string;
+      status_label?: string;
+    };
   };
 }
 
@@ -68,24 +76,34 @@ export default function TrackOrderPage() {
     setTrackingData(null);
 
     try {
+      console.log('Tracking request:', formData);
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/track-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify(formData),
       });
 
+      console.log('Response status:', response.status);
+      
       const data = await response.json();
+      console.log('Tracking response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      }
 
       if (data.success) {
         setTrackingData(data);
       } else {
         setError(data.message || 'Failed to track order');
       }
-    } catch (err) {
-      setError('Failed to connect to tracking service');
+    } catch (err: any) {
       console.error('Tracking error:', err);
+      setError(err.message || 'Failed to connect to tracking service');
     } finally {
       setLoading(false);
     }
@@ -115,6 +133,36 @@ export default function TrackOrderPage() {
     };
     return icons[status] || <Package className="w-5 h-5" />;
   };
+
+  const getOrderData = () => {
+    if (!trackingData?.data) return null;
+    
+    // Check different possible response structures
+    if (trackingData.data.order) {
+      return {
+        order_number: trackingData.data.order.order_number,
+        tracking_number: trackingData.data.order.tracking_number,
+        status: trackingData.data.order.status,
+        status_formatted: trackingData.data.order.status_label || trackingData.data.order.status,
+        created_at: trackingData.data.order.created_at,
+        total: trackingData.data.order.total,
+        items: trackingData.data.items || [],
+        tracking_info: trackingData.data.tracking_info,
+        delivery_details: trackingData.data.delivery_details,
+      };
+    } else if (trackingData.data.order_summary) {
+      return {
+        ...trackingData.data.order_summary,
+        items: trackingData.data.items || [],
+        tracking_info: trackingData.data.tracking_info,
+        delivery_details: trackingData.data.delivery_details,
+      };
+    }
+    
+    return null;
+  };
+
+  const orderData = getOrderData();
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -217,29 +265,29 @@ export default function TrackOrderPage() {
           </div>
 
           {/* Tracking Results */}
-          {trackingData && (
+          {trackingData && orderData && (
             <div className="space-y-8">
               {/* Order Summary */}
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                      Order #{trackingData.data.order_summary.order_number}
+                      Order #{orderData.order_number}
                     </h2>
                     <div className="flex items-center space-x-4 text-sm text-gray-600">
                       <div className="flex items-center">
                         <Package className="w-4 h-4 mr-2" />
-                        <span>Tracking: {trackingData.data.order_summary.tracking_number}</span>
+                        <span>Tracking: {orderData.tracking_number}</span>
                       </div>
                       <div className="flex items-center">
                         <Clock className="w-4 h-4 mr-2" />
-                        <span>Placed {new Date(trackingData.data.order_summary.created_at).toLocaleDateString()}</span>
+                        <span>Placed {new Date(orderData.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
                   <div className="mt-4 md:mt-0">
-                    <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(trackingData.data.order_summary.status)}`}>
-                      {trackingData.data.order_summary.status_formatted}
+                    <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(orderData.status)}`}>
+                      {orderData.status_formatted}
                     </span>
                   </div>
                 </div>
@@ -247,87 +295,99 @@ export default function TrackOrderPage() {
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Items</h3>
                   <div className="space-y-3">
-                    {trackingData.data.items.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center py-2">
-                        <span className="text-gray-700">{item.name} × {item.quantity}</span>
-                        <span className="font-medium">{item.price}</span>
-                      </div>
-                    ))}
+                    {orderData.items && orderData.items.length > 0 ? (
+                      orderData.items.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center py-2">
+                          <span className="text-gray-700">{item.name} × {item.quantity}</span>
+                          <span className="font-medium">{item.price}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500">No items found</p>
+                    )}
                     <div className="flex justify-between items-center pt-4 border-t border-gray-200">
                       <span className="font-semibold text-gray-900">Total</span>
-                      <span className="font-bold text-lg">{trackingData.data.order_summary.total}</span>
+                      <span className="font-bold text-lg">{orderData.total}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Tracking Timeline */}
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Timeline</h2>
-                
-                <div className="relative">
-                  {/* Progress bar */}
-                  <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200">
-                    <div
-                      className="absolute top-0 left-0 w-0.5 bg-green-500 transition-all duration-500"
-                      style={{
-                        height: `${(trackingData.data.tracking_info.timeline.filter(s => s.completed).length / trackingData.data.tracking_info.timeline.length) * 100}%`,
-                      }}
-                    />
-                  </div>
+              {orderData.tracking_info && (
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Timeline</h2>
+                  
+                  <div className="relative">
+                    {/* Progress bar */}
+                    <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200">
+                      {orderData.tracking_info.timeline && orderData.tracking_info.timeline.length > 0 && (
+                        <div
+                          className="absolute top-0 left-0 w-0.5 bg-green-500 transition-all duration-500"
+                          style={{
+                            height: `${(orderData.tracking_info.timeline.filter(s => s.completed).length / orderData.tracking_info.timeline.length) * 100}%`,
+                          }}
+                        />
+                      )}
+                    </div>
 
-                  {/* Steps */}
-                  <div className="space-y-8 relative">
-                    {trackingData.data.tracking_info.timeline.map((step, index) => (
-                      <div key={index} className="flex items-start">
-                        <div className="relative z-10">
-                          <div
-                            className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                              step.completed
-                                ? 'bg-green-100 border-2 border-green-500'
-                                : step.current
-                                ? 'bg-blue-100 border-2 border-blue-500'
-                                : 'bg-gray-100 border-2 border-gray-300'
-                            }`}
-                          >
-                            {getStatusIcon(step.status)}
-                          </div>
-                        </div>
-                        
-                        <div className="ml-6 flex-1">
-                          <div className="flex items-center justify-between">
-                            <h3
-                              className={`text-lg font-semibold ${
-                                step.completed || step.current
-                                  ? 'text-gray-900'
-                                  : 'text-gray-500'
-                              }`}
-                            >
-                              {step.title}
-                            </h3>
-                            {step.date && (
-                              <span className="text-sm text-gray-500">
-                                {new Date(step.date).toLocaleDateString()}
-                              </span>
-                            )}
-                          </div>
-                          
-                          <p className="mt-1 text-gray-600">{step.description}</p>
-                          
-                          {step.current && (
-                            <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                              Current Status
+                    {/* Steps */}
+                    <div className="space-y-8 relative">
+                      {orderData.tracking_info.timeline && orderData.tracking_info.timeline.length > 0 ? (
+                        orderData.tracking_info.timeline.map((step, index) => (
+                          <div key={index} className="flex items-start">
+                            <div className="relative z-10">
+                              <div
+                                className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                                  step.completed
+                                    ? 'bg-green-100 border-2 border-green-500'
+                                    : step.current
+                                    ? 'bg-blue-100 border-2 border-blue-500'
+                                    : 'bg-gray-100 border-2 border-gray-300'
+                                }`}
+                              >
+                                {getStatusIcon(step.status)}
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                            
+                            <div className="ml-6 flex-1">
+                              <div className="flex items-center justify-between">
+                                <h3
+                                  className={`text-lg font-semibold ${
+                                    step.completed || step.current
+                                      ? 'text-gray-900'
+                                      : 'text-gray-500'
+                                  }`}
+                                >
+                                  {step.title}
+                                </h3>
+                                {step.date && (
+                                  <span className="text-sm text-gray-500">
+                                    {new Date(step.date).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <p className="mt-1 text-gray-600">{step.description}</p>
+                              
+                              {step.current && (
+                                <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                  Current Status
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500">No tracking information available</p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Delivery Information */}
-              {trackingData.data.delivery_details && (
+              {orderData.delivery_details && (
                 <div className="bg-white rounded-lg shadow-lg p-6">
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">Delivery Information</h2>
                   
@@ -337,36 +397,36 @@ export default function TrackOrderPage() {
                         <h3 className="text-sm font-medium text-gray-500 mb-2">Delivery Address</h3>
                         <div className="flex items-start">
                           <MapPin className="w-5 h-5 text-gray-400 mr-3 mt-0.5" />
-                          <p className="text-gray-900">{trackingData.data.delivery_details.delivery_address}</p>
+                          <p className="text-gray-900">{orderData.delivery_details.delivery_address}</p>
                         </div>
                       </div>
                       
-                      {trackingData.data.delivery_details.estimated_delivery_time && (
+                      {orderData.delivery_details.estimated_delivery_time && (
                         <div>
                           <h3 className="text-sm font-medium text-gray-500 mb-2">Estimated Delivery</h3>
                           <div className="flex items-center">
                             <Clock className="w-5 h-5 text-gray-400 mr-3" />
                             <p className="text-gray-900">
-                              {new Date(trackingData.data.delivery_details.estimated_delivery_time).toLocaleString()}
+                              {new Date(orderData.delivery_details.estimated_delivery_time).toLocaleString()}
                             </p>
                           </div>
                         </div>
                       )}
                     </div>
 
-                    {trackingData.data.delivery_details.driver && (
+                    {orderData.delivery_details.driver && (
                       <div className="space-y-4">
                         <div>
                           <h3 className="text-sm font-medium text-gray-500 mb-2">Delivery Driver</h3>
                           <div className="flex items-center">
                             <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-3">
                               <span className="text-blue-600 font-medium text-lg">
-                                {trackingData.data.delivery_details.driver.name.charAt(0)}
+                                {orderData.delivery_details.driver.name.charAt(0)}
                               </span>
                             </div>
                             <div>
-                              <p className="font-medium text-gray-900">{trackingData.data.delivery_details.driver.name}</p>
-                              <p className="text-sm text-gray-500">{trackingData.data.delivery_details.driver.phone}</p>
+                              <p className="font-medium text-gray-900">{orderData.delivery_details.driver.name}</p>
+                              <p className="text-sm text-gray-500">{orderData.delivery_details.driver.phone}</p>
                             </div>
                           </div>
                         </div>
@@ -377,34 +437,38 @@ export default function TrackOrderPage() {
               )}
 
               {/* Shipping Information */}
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Shipping Details</h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Shipping Method</h3>
-                    <p className="text-gray-900">{trackingData.data.tracking_info.shipping_method}</p>
-                  </div>
+              {orderData.tracking_info && (
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Shipping Details</h2>
                   
-                  {trackingData.data.tracking_info.carrier && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                      <h3 className="text-sm font-medium text-gray-500 mb-2">Carrier</h3>
-                      <p className="text-gray-900">{trackingData.data.tracking_info.carrier}</p>
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">Shipping Method</h3>
+                      <p className="text-gray-900">{orderData.tracking_info.shipping_method || 'Standard Shipping'}</p>
                     </div>
-                  )}
-                  
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Last Updated</h3>
-                    <p className="text-gray-900">{trackingData.data.tracking_info.last_updated}</p>
+                    
+                    {orderData.tracking_info.carrier && (
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 mb-2">Carrier</h3>
+                        <p className="text-gray-900">{orderData.tracking_info.carrier}</p>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">Last Updated</h3>
+                      <p className="text-gray-900">
+                        {orderData.tracking_info.last_updated || new Date().toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Need Help Section */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-blue-900 mb-4">Need Help with Your Order?</h3>
                 <p className="text-blue-700 mb-4">
-                  {trackingData.data.tracking_info.status_description}
+                  {orderData.tracking_info?.status_description || 'If you have any questions about your order, our support team is here to help.'}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link
@@ -420,6 +484,18 @@ export default function TrackOrderPage() {
                     View FAQ
                   </Link>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Success but no data */}
+          {trackingData && trackingData.success && !orderData && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+              <div className="flex items-center">
+                <AlertCircle className="w-5 h-5 text-yellow-400 mr-2" />
+                <span className="text-yellow-700">
+                  Order found but detailed information is not available. Please try again later or contact support.
+                </span>
               </div>
             </div>
           )}

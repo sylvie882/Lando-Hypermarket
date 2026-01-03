@@ -319,13 +319,13 @@ class ApiService {
   };
 
   // Promotion APIs (Public)
-  promotions = {
-    getAll: (params?: { type?: string }) => 
-      this.api.get('/promotions', { params }),
+  // promotions = {
+  //   getAll: (params?: { type?: string }) => 
+  //     this.api.get('/promotions', { params }),
     
-    validate: (data: { code: string; order_amount: number }) => 
-      this.api.post('/promotions/validate', data),
-  };
+  //   validate: (data: { code: string; order_amount: number }) => 
+  //     this.api.post('/promotions/validate', data),
+  // };
 
   // Cart APIs (including promo apply)
   cart = {
@@ -712,13 +712,26 @@ class ApiService {
     updateSettings: (data: any) => this.api.put('/notifications/settings', data),
   };
 
-  payments = {
-    getMethods: () => this.api.get('/payment/methods'),
-    createIntent: (data: any) => this.api.post('/payment/intent', data),
-    process: (orderId: number, data: any) => 
-      this.api.post(`/orders/${orderId}/pay`, data),
-    getHistory: () => this.api.get('/payment/history'),
+   payments = {
+    getMethods: () => this.get('/payment/methods'),
+    createPaymentIntent: (data: any) => this.post('/payment/intent', data),
+    processPayment: (orderId: number, data: any) => 
+      this.post(`/orders/${orderId}/pay`, data),
+    getHistory: () => this.get('/payment/history'),
   };
+
+  promotions = {
+    validate: (data: { code: string; order_amount: number }) => 
+      this.post('/promotions/validate', data),
+  };
+
+  // payments = {
+  //   getMethods: () => this.api.get('/payment/methods'),
+  //   createIntent: (data: any) => this.api.post('/payment/intent', data),
+  //   process: (orderId: number, data: any) => 
+  //     this.api.post(`/orders/${orderId}/pay`, data),
+  //   getHistory: () => this.api.get('/payment/history'),
+  // };
 
   // Generic methods
   get = <T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => 
