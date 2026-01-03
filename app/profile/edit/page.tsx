@@ -377,8 +377,15 @@ export default function EditProfilePage() {
   };
 
   const handleLinkGoogleAccount = async () => {
-    toast.info('Google account linking would redirect to Google OAuth. This feature needs to be implemented on the backend.');
-  };
+  toast('Google account linking would redirect to Google OAuth. This feature needs to be implemented on the backend.', {
+    icon: 'ℹ️',
+    style: {
+      background: '#dbeafe',
+      color: '#1e40af',
+      border: '1px solid #3b82f6'
+    }
+  });
+};
 
   const handleUnlinkGoogleAccount = async () => {
     try {
