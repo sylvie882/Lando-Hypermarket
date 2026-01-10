@@ -1,39 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-:root {
-  --green-light: #8fbf7a;
-  --green-medium: #6fa36b;
-  --light-green-line: #9bcf8f;
-  --red: #e53935;
-}
-
-/* Hover styles */
-.nav-link-hover:hover {
-  background-color: rgba(155, 207, 143, 0.2);
-}
-
-.red-hover:hover {
-  background-color: rgba(229, 57, 53, 0.1);
-}
-
-.category-hover:hover {
-  background-color: rgba(155, 207, 143, 0.4);
-  border-color: var(--green-light);
-}
-
-/* Focus styles */
-.search-focus:focus {
-  border-color: var(--green-medium);
-  box-shadow: 0 0 0 2px rgba(143, 191, 122, 0.2);
-}
-
-/* Button gradient */
-.btn-gradient {
-  background: linear-gradient(
-    135deg,
-    var(--green-medium),
-    var(--green-light)
-  );
-}

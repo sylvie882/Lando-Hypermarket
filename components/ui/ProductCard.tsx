@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Product } from '@/types';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -37,6 +38,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [userReview, setUserReview] = useState<any>(null);
   const [hasCheckedWishlist, setHasCheckedWishlist] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   // Logo colors
   const logoColors = {
@@ -63,23 +66,29 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const finalPriceNum = finalPrice ? parseFloat(String(finalPrice)) : 0;
   
   // Calculate discount percentage
-  const discountPercentage = price > 0 && finalPriceNum < price
-    ? Math.round(((price - finalPriceNum) / price) * 100)
-    : 0;
+  const discountPercentage = useMemo(() => {
+    return price > 0 && finalPriceNum < price
+      ? Math.round(((price - finalPriceNum) / price) * 100)
+      : 0;
+  }, [price, finalPriceNum]);
 
   // Safely handle stock quantity
-  const stockQuantity = product.stock_quantity ? 
-    (typeof product.stock_quantity === 'number' 
-      ? product.stock_quantity 
-      : parseInt(String(product.stock_quantity)))
-    : 0;
+  const stockQuantity = useMemo(() => {
+    return product.stock_quantity ? 
+      (typeof product.stock_quantity === 'number' 
+        ? product.stock_quantity 
+        : parseInt(String(product.stock_quantity)))
+      : 0;
+  }, [product.stock_quantity]);
   
-  const isInStock = product.is_in_stock !== undefined 
-    ? Boolean(product.is_in_stock)
-    : stockQuantity > 0;
+  const isInStock = useMemo(() => {
+    return product.is_in_stock !== undefined 
+      ? Boolean(product.is_in_stock)
+      : stockQuantity > 0;
+  }, [product.is_in_stock, stockQuantity]);
 
   // Safely handle is_new property
-  const isNewProduct = React.useMemo(() => {
+  const isNewProduct = useMemo(() => {
     return Boolean(
       (product as any).is_new || 
       (product as any).isNew || 
@@ -89,19 +98,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
     );
   }, [product]);
 
-  // Safely handle description - use the actual description field from API
-  const description = React.useMemo(() => {
+  // Safely handle description
+  const description = useMemo(() => {
     return product.description || '';
   }, [product.description]);
 
   // Enhanced description handling with highlights
-  const getDescriptionHighlights = () => {
+  const getDescriptionHighlights = useCallback(() => {
     const desc = description || '';
-    
-    // Extract key features or create highlights from description
     const highlights = [];
     
-    // Check for common product features
     if (desc.toLowerCase().includes('organic') || desc.toLowerCase().includes('natural')) {
       highlights.push({ icon: '🌿', text: '100% Organic' });
     }
@@ -121,7 +127,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
       highlights.push({ icon: '🔬', text: 'Rich in Nutrients' });
     }
     
-    // Add default highlights if none found
     if (highlights.length === 0) {
       highlights.push(
         { icon: '✅', text: 'High Quality' },
@@ -129,21 +134,25 @@ const ProductCard: React.FC<ProductCardProps> = ({
       );
     }
     
-    return highlights.slice(0, 3); // Limit to 3 highlights
-  };
+    return highlights.slice(0, 3);
+  }, [description]);
 
-  const descriptionHighlights = getDescriptionHighlights();
+  const descriptionHighlights = useMemo(() => getDescriptionHighlights(), [getDescriptionHighlights]);
 
   // Safely handle rating
-  const rating = product.rating 
-    ? (typeof product.rating === 'string' 
-        ? parseFloat(product.rating) 
-        : typeof product.rating === 'number' 
-          ? product.rating 
-          : 0)
-    : 0;
+  const rating = useMemo(() => {
+    const r = product.rating 
+      ? (typeof product.rating === 'string' 
+          ? parseFloat(product.rating) 
+          : typeof product.rating === 'number' 
+            ? product.rating 
+            : 0)
+      : 0;
+    
+    return isNaN(r) ? 0 : Math.min(Math.max(r, 0), 5);
+  }, [product.rating]);
   
-  const displayRating = isNaN(rating) ? 0 : Math.min(Math.max(rating, 0), 5);
+  const displayRating = rating;
 
   // Check if user can review this product
   useEffect(() => {
@@ -266,7 +275,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   }, [isAuthenticated, product.id, hasCheckedWishlist, checkWishlistStatus]);
 
   // Format currency in Kenyan Shillings
-  const formatKSH = (amount: any) => {
+  const formatKSH = useCallback((amount: any) => {
     const numAmount = amount ? parseFloat(String(amount)) : 0;
     
     if (isNaN(numAmount) || numAmount <= 0) {
@@ -279,22 +288,20 @@ const ProductCard: React.FC<ProductCardProps> = ({
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(numAmount);
-  };
+  }, []);
 
-  // Get image URL
-  const getImageUrl = () => {
+  // Get optimized image URL
+  const getImageUrl = useCallback(() => {
     const baseUrl = 'https://api.hypermarket.co.ke';
     const timestamp = product.updated_at ? new Date(product.updated_at).getTime() : Date.now();
     
+    let imageUrl = '';
+    
     if (product.main_image) {
-      const url = product.main_image.startsWith('http') 
+      imageUrl = product.main_image.startsWith('http') 
         ? product.main_image 
         : `${baseUrl}${product.main_image.startsWith('/') ? '' : '/'}${product.main_image}`;
-      
-      return `${url}${url.includes('?') ? '&' : '?'}t=${timestamp}`;
-    }
-    
-    if (product.thumbnail) {
+    } else if (product.thumbnail) {
       let url = product.thumbnail;
       if (!url.startsWith('http')) {
         if (url.startsWith('/storage/')) {
@@ -305,13 +312,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
           url = `${baseUrl}/storage/${url}`;
         }
       }
-      return `${url}${url.includes('?') ? '&' : '?'}t=${timestamp}`;
+      imageUrl = url;
+    } else {
+      return `https://api.hypermarket.co.ke/storage/default-product.jpg?t=${timestamp}`;
     }
     
-    return `https://api.hypermarket.co.ke/storage/default-product.jpg?t=${timestamp}`;
-  };
+    // Add cache busting and optimize for web
+    return `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${timestamp}&w=400&h=300&fit=crop&auto=format`;
+  }, [product.main_image, product.thumbnail, product.updated_at]);
 
-  const imageUrl = getImageUrl();
+  const imageUrl = useMemo(() => getImageUrl(), [getImageUrl]);
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
@@ -392,7 +402,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   // Star Rating Display
-  const renderStarRating = () => {
+  const renderStarRating = useCallback(() => {
     const stars = [];
     const fullStars = Math.floor(displayRating);
     const hasHalfStar = displayRating % 1 >= 0.5;
@@ -435,10 +445,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }
     
     return stars;
-  };
+  }, [displayRating, logoColors.gold]);
 
   // Handle badge positioning
-  const getBadgePosition = () => {
+  const getBadgePosition = useCallback(() => {
     const badges = [];
     
     if (isNewProduct) {
@@ -475,9 +485,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }
     
     return badges.slice(0, 2);
-  };
+  }, [isNewProduct, product.is_featured, discountPercentage, logoColors]);
 
-  const badges = getBadgePosition();
+  const badges = useMemo(() => getBadgePosition(), [getBadgePosition]);
+
+  // Reset image state when product changes
+  useEffect(() => {
+    setImageError(false);
+    setImageLoaded(false);
+  }, [product.id]);
 
   return (
     <div className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 overflow-hidden h-full flex flex-col">
@@ -496,21 +512,36 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </div>
       )}
 
-      {/* Product Image Section */}
-      <div className="relative overflow-hidden bg-gray-100">
+      {/* Product Image Section - Optimized */}
+      <div className="relative overflow-hidden bg-gray-50">
         <Link 
           href={`/products/${product.id}`} 
           className="block"
           onClick={() => onViewTrack && onViewTrack(product.id)}
         >
           <div className="relative w-full" style={{ paddingBottom: '75%' }}>
-            <img
-              src={imageUrl}
+            {/* Loading skeleton */}
+            {!imageLoaded && !imageError && (
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200 animate-pulse" />
+            )}
+            
+            {/* Optimized Image with Next.js Image component */}
+            <Image
+              src={imageError ? '/placeholder-product.jpg' : imageUrl}
               alt={product.name || 'Product image'}
-              className="absolute inset-0 object-cover w-full h-full group-hover:scale-110 transition-transform duration-700"
-              onError={(e) => {
-                e.currentTarget.src = `https://api.hypermarket.co.ke/storage/default-product.jpg?t=${Date.now()}`;
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className={`object-cover transition-transform duration-700 ${
+                imageLoaded ? 'group-hover:scale-110 opacity-100' : 'opacity-0'
+              }`}
+              onLoad={() => setImageLoaded(true)}
+              onError={() => {
+                setImageError(true);
+                setImageLoaded(true);
               }}
+              loading="lazy"
+              quality={85}
+              unoptimized={false}
             />
             
             {/* Out of Stock Overlay */}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { api } from '@/lib/api';
 import { Product, Category } from '@/types';
 import ProductCard from '@/components/ui/ProductCard';
@@ -167,6 +167,8 @@ const HomePage: React.FC = () => {
   const [visibleBanners, setVisibleBanners] = useState<Banner[]>([]);
   const [displayCount, setDisplayCount] = useState(5);
 
+  const bannerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // Logo colors from header component
   const logoColors = {
     dark: '#1a1a1a', // very dark charcoal
@@ -185,12 +187,12 @@ const HomePage: React.FC = () => {
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
   // Add scroll to top function
-  const scrollToTop = () => {
+  const scrollToTop = useCallback(() => {
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
-  };
+  }, []);
 
   const getImageUrl = useCallback((path: string | null | undefined, defaultImage = '/default-banner.jpg'): string => {
     if (!path) return defaultImage;
@@ -221,7 +223,12 @@ const HomePage: React.FC = () => {
     }
     
     if (imagePath.startsWith('http')) {
-      return imagePath;
+      // Add optimization parameters to external URLs
+      const url = new URL(imagePath);
+      url.searchParams.set('w', isMobile ? '800' : '1920');
+      url.searchParams.set('q', '75');
+      url.searchParams.set('auto', 'format');
+      return url.toString();
     }
     
     let cleanPath = imagePath;
@@ -235,13 +242,7 @@ const HomePage: React.FC = () => {
     
     const baseUrl = 'https://api.hypermarket.co.ke';
     
-    const params = new URLSearchParams({
-      width: isMobile ? '800' : '1920',
-      quality: '75',
-      format: 'auto'
-    });
-    
-    return `${baseUrl}/storage/${cleanPath}?${params}`;
+    return `${baseUrl}/storage/${cleanPath}?w=${isMobile ? '800' : '1920'}&q=75&auto=format&fit=crop`;
   }, []);
 
   const preloadBannerImage = useCallback((bannerId: number, banner: Banner, isMobile: boolean) => {
@@ -396,13 +397,24 @@ const HomePage: React.FC = () => {
       const initialBanners = banners.slice(0, displayCount);
       setVisibleBanners(initialBanners);
       
+      // Preload first 2 banners for better UX
       initialBanners.slice(0, 2).forEach(banner => {
         preloadBannerImage(banner.id, banner, false);
         preloadBannerImage(banner.id, banner, true);
       });
       
-      const interval = setInterval(nextBanner, 5000);
-      return () => clearInterval(interval);
+      // Setup banner rotation interval
+      if (bannerIntervalRef.current) {
+        clearInterval(bannerIntervalRef.current);
+      }
+      
+      bannerIntervalRef.current = setInterval(nextBanner, 5000);
+      
+      return () => {
+        if (bannerIntervalRef.current) {
+          clearInterval(bannerIntervalRef.current);
+        }
+      };
     }
   }, [banners, displayCount, preloadBannerImage, nextBanner]);
 
@@ -417,10 +429,17 @@ const HomePage: React.FC = () => {
         preloadBannerImage(banner.id, banner, true);
       });
     }
-  }, [banners, displayCount, preloadedImages]);
+  }, [banners, displayCount, preloadBannerImage]);
 
   useEffect(() => {
     fetchData();
+    
+    return () => {
+      // Cleanup on unmount
+      if (bannerIntervalRef.current) {
+        clearInterval(bannerIntervalRef.current);
+      }
+    };
   }, []);
 
   const fetchData = async () => {
@@ -584,27 +603,32 @@ const HomePage: React.FC = () => {
     isMobile: boolean; 
     isActive: boolean;
   }) => {
-    const imageUrl = useMemo(() => getBannerImageUrl(banner, isMobile), [banner, isMobile]);
+    const imageUrl = useMemo(() => getBannerImageUrl(banner, isMobile), [banner, isMobile, getBannerImageUrl]);
     const hasError = imageErrors.has(banner.id);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [loadAttempted, setLoadAttempted] = useState(false);
 
     useEffect(() => {
-      if (isActive && !isLoaded && !hasError) {
+      if (isActive && !loadAttempted && !hasError) {
+        setLoadAttempted(true);
         const img = new Image();
         img.src = imageUrl;
         img.onload = () => {
           setIsLoaded(true);
           setLoadedImages(prev => new Set(prev).add(banner.id));
         };
-        img.onerror = () => handleImageError(banner.id);
+        img.onerror = () => {
+          console.error(`Failed to load banner image: ${banner.id}`);
+          handleImageError(banner.id);
+        };
       }
-    }, [isActive, imageUrl, banner.id, isLoaded, hasError, handleImageError]);
+    }, [isActive, imageUrl, banner.id, loadAttempted, hasError, handleImageError]);
 
     return (
       <>
         {hasError ? (
           <div 
-            className={`absolute inset-0 flex items-center justify-center ${!isActive ? 'hidden' : ''}`}
+            className={`absolute inset-0 flex items-center justify-center bg-gradient-to-r ${!isActive ? 'hidden' : ''}`}
             style={{
               background: `linear-gradient(135deg, ${logoColors.orange}, ${logoColors.red})`
             }}
@@ -616,14 +640,17 @@ const HomePage: React.FC = () => {
           </div>
         ) : (
           <>
-            {(isLoaded || preloadedImages.has(banner.id)) && (
+            {(isLoaded || preloadedImages.has(banner.id)) ? (
               <img
                 src={imageUrl}
                 alt={banner.title}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-10000 ease-linear group-hover:scale-105"
                 loading={isActive ? "eager" : "lazy"}
                 onError={() => handleImageError(banner.id)}
+                decoding="async"
               />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse" />
             )}
           </>
         )}
@@ -641,18 +668,20 @@ const HomePage: React.FC = () => {
     index: number;
   }) => {
     const isActive = index === activeBannerIndex;
-    const imageUrl = useMemo(() => getBannerImageUrl(banner, true), [banner]);
+    const imageUrl = useMemo(() => getBannerImageUrl(banner, true), [banner, getBannerImageUrl]);
     const hasError = imageErrors.has(banner.id);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [loadAttempted, setLoadAttempted] = useState(false);
 
     useEffect(() => {
-      if (isActive && !isLoaded && !hasError) {
+      if (isActive && !loadAttempted && !hasError) {
+        setLoadAttempted(true);
         const img = new Image();
         img.src = imageUrl;
         img.onload = () => setIsLoaded(true);
         img.onerror = () => handleImageError(banner.id);
       }
-    }, [isActive, imageUrl, banner.id, isLoaded, hasError]);
+    }, [isActive, imageUrl, banner.id, loadAttempted, hasError, handleImageError]);
 
     return (
       <div
@@ -674,14 +703,17 @@ const HomePage: React.FC = () => {
           </div>
         ) : (
           <>
-            {(isLoaded || preloadedImages.has(banner.id)) && (
+            {(isLoaded || preloadedImages.has(banner.id)) ? (
               <img
                 src={imageUrl}
                 alt={banner.title}
                 className="absolute inset-0 w-full h-full object-cover"
                 loading={isActive ? "eager" : "lazy"}
                 onError={() => handleImageError(banner.id)}
+                decoding="async"
               />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse" />
             )}
             
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
@@ -725,20 +757,19 @@ const HomePage: React.FC = () => {
           background: `linear-gradient(135deg, white, ${logoColors.lightGreenLine}20)`
         }}
       >
-    
-<div className="text-center">
-  <div className="relative">
-    <div style={{ color: logoColors.orange }}>
-      <LoadingSpinner size="lg" />
-    </div>
-    <Leaf 
-      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" 
-      style={{ color: logoColors.orange }} 
-      size={24} 
-    />
-  </div>
-  <p className="mt-4" style={{ color: logoColors.dark }}>Loading fresh products...</p>
-</div>
+        <div className="text-center">
+          <div className="relative">
+            <div style={{ color: logoColors.orange }}>
+              <LoadingSpinner size="lg" />
+            </div>
+            <Leaf 
+              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" 
+              style={{ color: logoColors.orange }} 
+              size={24} 
+            />
+          </div>
+          <p className="mt-4" style={{ color: logoColors.dark }}>Loading fresh products...</p>
+        </div>
       </div>
     );
   }
@@ -862,6 +893,7 @@ const HomePage: React.FC = () => {
                 src="https://api.hypermarket.co.ke/storage/banners/default-homepage.jpg" 
                 alt="Fresh produce"
                 className="w-full h-full object-cover opacity-20"
+                loading="eager"
               />
             </div>
             <div className="relative h-full flex items-center">
@@ -1064,6 +1096,7 @@ const HomePage: React.FC = () => {
                         src={getImageUrl(category.image)} 
                         alt={category.name}
                         className="w-full h-full object-cover rounded-2xl"
+                        loading="lazy"
                       />
                     ) : (
                       <Leaf size={32} style={{ color: logoColors.greenMedium }} />
