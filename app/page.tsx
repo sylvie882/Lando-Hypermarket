@@ -164,7 +164,7 @@ const HomePage: React.FC = () => {
       const allCategories = categoriesRes.data || [];
       // Filter active categories and take first 15 for horizontal scroll
       const activeCategories = allCategories
-        .filter(cat => cat.is_active)
+        .filter((cat: CategoryData) => cat.is_active)
         .slice(0, 15);
       setCategories(activeCategories);
 
