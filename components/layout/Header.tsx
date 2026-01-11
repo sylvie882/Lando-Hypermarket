@@ -420,16 +420,31 @@ const Header: React.FC = () => {
         .search-suggestion:hover {
           transform: scale(1.05);
         }
+        
+        /* Enhanced search styles */
+        .search-glow {
+          box-shadow: 0 0 0 1px rgba(106, 156, 61, 0.1), 0 8px 25px rgba(106, 156, 61, 0.15);
+        }
+        
+        .search-glow:hover {
+          box-shadow: 0 0 0 1px rgba(106, 156, 61, 0.2), 0 12px 30px rgba(106, 156, 61, 0.2);
+        }
+        
+        .search-button-glow {
+          box-shadow: 0 4px 15px rgba(106, 156, 61, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        
+        .search-button-glow:hover {
+          box-shadow: 0 6px 20px rgba(106, 156, 61, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+          transform: translateY(-1px);
+        }
       `}</style>
-
-      {/* REMOVED: Top Banner section - Desktop Only */}
-      {/* The entire top banner (lines 347-418) has been removed */}
 
       {/* Main Header - Sticky */}
       <div className={`sticky-header ${scrolled ? 'shadow-lg' : 'shadow-sm'} transition-all duration-300`}>
         <div className="max-w-7xl mx-auto px-4">
           {/* First Row: Logo, Search, Actions */}
-          <div className="flex items-center justify-between py-4">
+          <div className="flex items-center justify-between py-3">
             {/* Mobile Menu Toggle - Left Side */}
             <button 
               className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 active:scale-95"
@@ -438,32 +453,32 @@ const Header: React.FC = () => {
               aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? (
-                <X size={24} className="text-gray-700" />
+                <X size={22} className="text-gray-700" />
               ) : (
-                <Menu size={24} className="text-gray-700" />
+                <Menu size={22} className="text-gray-700" />
               )}
             </button>
 
             {/* Logo - Centered on mobile */}
             <div className="flex items-center mx-auto lg:mx-0">
               <Link href="/" className="flex items-center group" aria-label="Lando Hypermarket Home">
-                <div className="flex items-center space-x-3">
-                  <div className="relative w-12 h-12 rounded-xl overflow-hidden border-2 border-green-500 shadow-lg group-hover:shadow-green-200 transition-all duration-300">
+                <div className="flex items-center space-x-2">
+                  <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-green-500 shadow-md group-hover:shadow-green-200 transition-all duration-300">
                     <Image
                       src="/logo.jpeg"
                       alt="Lando Hypermarket Logo"
                       fill
                       className="object-cover"
-                      sizes="(max-width: 768px) 48px, 48px"
+                      sizes="(max-width: 768px) 40px, 40px"
                       priority
                       loading="eager"
                     />
                   </div>
                   <div className="hidden sm:block">
-                    <div className="text-2xl font-bold text-gray-900 group-hover:text-green-700 transition-colors">
+                    <div className="text-xl font-bold text-gray-900 group-hover:text-green-700 transition-colors">
                       LANDO
                     </div>
-                    <div className="text-sm font-semibold text-green-600 group-hover:text-green-700 transition-colors tracking-wide">
+                    <div className="text-xs font-semibold text-green-600 group-hover:text-green-700 transition-colors tracking-wide">
                       HYPERMARKET
                     </div>
                   </div>
@@ -472,45 +487,44 @@ const Header: React.FC = () => {
             </div>
 
             {/* Desktop Search Bar - Centered */}
-            <div className="hidden lg:flex flex-1 max-w-2xl mx-8">
+            <div className="hidden lg:flex flex-1 max-w-2xl mx-6">
               <form onSubmit={handleSearch} className="relative w-full" role="search">
-                <div className="flex items-center">
+                <div className="flex items-center search-glow rounded-2xl transition-all duration-300">
                   <div className="relative flex-1">
                     <input
                       type="search"
                       placeholder="Search for groceries, fruits, vegetables..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-5 py-3.5 pl-14 bg-white border border-gray-300 rounded-l-xl focus:outline-none focus:ring-3 focus:ring-green-500/30 focus:border-green-500 placeholder-gray-500 transition-all duration-200"
-                      style={{ borderRadius: '12px 0 0 12px' }}
+                      className="w-full px-5 py-3 pl-14 bg-white rounded-l-2xl focus:outline-none focus:ring-4 focus:ring-green-500/20 focus:border-green-500 placeholder-gray-500 transition-all duration-200 text-sm"
                       aria-label="Search products"
                     />
                     <div className="absolute left-5 top-0 bottom-0 flex items-center justify-center pointer-events-none">
-                      <Search className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                      <Search className="h-5 w-5 text-green-500" aria-hidden="true" />
                     </div>
                   </div>
                   <button
                     type="submit"
-                    className="px-8 py-3.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-r-xl hover:from-green-700 hover:to-green-600 transition-all duration-300 font-semibold border border-green-600 shadow-lg hover:shadow-green-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
-                    style={{ borderRadius: '0 12px 12px 0' }}
+                    className="px-7 py-3 bg-gradient-to-r from-green-600 via-green-500 to-green-600 text-white rounded-r-2xl hover:from-green-700 hover:via-green-600 hover:to-green-700 transition-all duration-300 font-semibold search-button-glow disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 flex items-center space-x-2"
                     disabled={!searchQuery.trim()}
                     aria-label="Submit search"
                   >
-                    Search
+                    <Search size={18} className="hidden sm:block" />
+                    <span>Search</span>
                   </button>
                 </div>
               </form>
             </div>
 
             {/* Right Side Actions */}
-            <div className="flex items-center space-x-3 md:space-x-4">
+            <div className="flex items-center space-x-2 md:space-x-3">
               {/* Mobile Search */}
               <button 
                 className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 active:scale-95"
                 onClick={() => setSearchOpen(true)}
                 aria-label="Open search"
               >
-                <Search size={22} className="text-gray-700" />
+                <Search size={20} className="text-gray-700" />
               </button>
 
               {/* Account */}
@@ -519,12 +533,12 @@ const Header: React.FC = () => {
                   <>
                     <button
                       onClick={() => setUserMenuOpen(!userMenuOpen)}
-                      className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-xl transition-all duration-200 group"
+                      className="flex items-center space-x-2 p-1.5 hover:bg-gray-50 rounded-xl transition-all duration-200 group"
                       aria-label="Account menu"
                       aria-expanded={userMenuOpen}
                     >
-                      <div className="h-10 w-10 rounded-xl bg-gradient-to-r from-green-500 to-green-400 flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
-                        <span className="text-white font-bold text-base">
+                      <div className="h-9 w-9 rounded-xl bg-gradient-to-r from-green-500 to-green-400 flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
+                        <span className="text-white font-bold text-sm">
                           {userInitial}
                         </span>
                       </div>
@@ -535,7 +549,7 @@ const Header: React.FC = () => {
                         <div className="text-xs text-gray-500 truncate">{userFirstName}</div>
                       </div>
                       <ChevronDown 
-                        size={16} 
+                        size={14} 
                         className={`text-gray-400 flex-shrink-0 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`}
                       />
                     </button>
@@ -599,11 +613,11 @@ const Header: React.FC = () => {
                 ) : (
                   <Link 
                     href="/auth/login"
-                    className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-xl transition-all duration-200 group"
+                    className="flex items-center space-x-2 p-1.5 hover:bg-gray-50 rounded-xl transition-all duration-200 group"
                     aria-label="Login to your account"
                   >
-                    <div className="h-10 w-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-green-100 transition-colors">
-                      <User size={20} className="text-gray-600 group-hover:text-green-600 transition-colors" />
+                    <div className="h-9 w-9 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-green-100 transition-colors">
+                      <User size={18} className="text-gray-600 group-hover:text-green-600 transition-colors" />
                     </div>
                     <div className="hidden xl:block min-w-0">
                       <div className="text-sm font-semibold text-gray-900 group-hover:text-green-700 transition-colors">
@@ -618,12 +632,12 @@ const Header: React.FC = () => {
               {/* Wishlist */}
               <Link 
                 href="/profile/wishlist" 
-                className="hidden lg:block relative p-2 hover:bg-gray-50 rounded-xl transition-all duration-200 group"
+                className="hidden lg:block relative p-1.5 hover:bg-gray-50 rounded-xl transition-all duration-200 group"
                 aria-label={`Wishlist ${wishlistCount > 0 ? `with ${wishlistCount} items` : ''}`}
               >
                 <div className="relative">
                   <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-red-100 transition-colors">
-                    <Heart size={22} className="text-gray-600 group-hover:text-red-600 transition-colors" />
+                    <Heart size={20} className="text-gray-600 group-hover:text-red-600 transition-colors" />
                   </div>
                   {wishlistCount > 0 && (
                     <div className="cart-badge">{wishlistCount}</div>
@@ -634,51 +648,49 @@ const Header: React.FC = () => {
               {/* Cart */}
               <Link 
                 href="/cart" 
-                className="relative p-2 hover:bg-gray-50 rounded-xl transition-all duration-200 group"
+                className="relative p-1.5 hover:bg-gray-50 rounded-xl transition-all duration-200 group"
                 aria-label={`Shopping cart ${cartCount > 0 ? `with ${cartCount} items` : ''}`}
               >
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   <div className="relative">
                     <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
-                      <ShoppingCart size={24} className="text-green-700 group-hover:text-green-800 transition-colors" />
+                      <ShoppingCart size={22} className="text-green-700 group-hover:text-green-800 transition-colors" />
                     </div>
                     {cartCount > 0 && (
                       <div className="cart-badge">{displayCartCount}</div>
                     )}
                   </div>
                   <div className="hidden lg:block min-w-0">
-                    <div className="font-semibold text-gray-900 group-hover:text-green-700 transition-colors truncate">
+                    <div className="font-semibold text-gray-900 group-hover:text-green-700 transition-colors truncate text-sm">
                       My Cart
                     </div>
-                    <div className="text-sm text-gray-600 truncate">Ksh 0.00</div>
+                    <div className="text-xs text-gray-600 truncate">Ksh 0.00</div>
                   </div>
                 </div>
               </Link>
             </div>
           </div>
 
-          {/* Mobile Search Bar - Always visible */}
-          <div className="lg:hidden py-3 animate-slideInUp">
+          {/* Mobile Search Bar - Reduced height */}
+          <div className="lg:hidden py-2 animate-slideInUp">
             <form onSubmit={handleSearch} className="relative" role="search">
-              <div className="flex items-center">
+              <div className="flex items-center search-glow rounded-xl transition-all duration-300">
                 <div className="relative flex-1">
                   <input
                     type="search"
                     placeholder="What are you looking for?"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-4 py-3.5 pl-12 bg-white border border-gray-300 rounded-l-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 placeholder-gray-500 transition-all duration-200"
-                    style={{ borderRadius: '12px 0 0 12px' }}
+                    className="w-full px-4 py-3 pl-12 bg-white rounded-l-xl focus:outline-none focus:ring-3 focus:ring-green-500/20 focus:border-green-500 placeholder-gray-500 transition-all duration-200 text-sm"
                     aria-label="Search products"
                   />
                   <div className="absolute left-4 top-0 bottom-0 flex items-center justify-center pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                    <Search className="h-5 w-5 text-green-500" aria-hidden="true" />
                   </div>
                 </div>
                 <button
                   type="submit"
-                  className="px-5 py-3.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-r-xl hover:from-green-700 hover:to-green-600 transition-all duration-300 border border-green-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
-                  style={{ borderRadius: '0 12px 12px 0' }}
+                  className="px-5 py-3 bg-gradient-to-r from-green-600 via-green-500 to-green-600 text-white rounded-r-xl hover:from-green-700 hover:via-green-600 hover:to-green-700 transition-all duration-300 border border-green-600 font-medium search-button-glow disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
                   disabled={!searchQuery.trim()}
                   aria-label="Submit search"
                 >
@@ -688,20 +700,20 @@ const Header: React.FC = () => {
             </form>
           </div>
 
-          {/* Second Navigation Row - Desktop Only */}
-          <div className="hidden lg:flex items-center justify-between py-3 border-t border-gray-100">
+          {/* Second Navigation Row - Desktop Only - Reduced height */}
+          <div className="hidden lg:flex items-center justify-between py-2 border-t border-gray-100">
             {/* Categories Button */}
             <div className="relative" ref={categoriesMenuRef}>
               <button
                 onClick={() => setCategoriesOpen(!categoriesOpen)}
-                className="flex items-center space-x-3 px-6 py-3.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:from-green-700 hover:to-green-600 transition-all duration-300 shadow-lg hover:shadow-xl group"
+                className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:from-green-700 hover:to-green-600 transition-all duration-300 shadow-lg hover:shadow-xl group"
                 aria-label={categoriesOpen ? "Close categories" : "Open categories"}
                 aria-expanded={categoriesOpen}
               >
-                <Menu size={20} className="flex-shrink-0 group-hover:rotate-90 transition-transform" />
-                <span className="font-semibold">ALL CATEGORIES</span>
+                <Menu size={18} className="flex-shrink-0 group-hover:rotate-90 transition-transform" />
+                <span className="font-semibold text-sm">ALL CATEGORIES</span>
                 <ChevronDown 
-                  size={16} 
+                  size={14} 
                   className={`flex-shrink-0 transition-transform ${categoriesOpen ? 'rotate-180' : ''}`}
                 />
               </button>
@@ -755,8 +767,8 @@ const Header: React.FC = () => {
               )}
             </div>
 
-            {/* Navigation Links */}
-            <nav className="flex items-center space-x-8" aria-label="Main navigation">
+            {/* Navigation Links - Reduced spacing */}
+            <nav className="flex items-center space-x-6" aria-label="Main navigation">
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 const isActive = isLinkActive(link.href);
@@ -764,19 +776,19 @@ const Header: React.FC = () => {
                   <Link
                     key={link.id}
                     href={link.href}
-                    className={`nav-underline text-gray-700 font-medium hover:text-green-600 transition-colors flex items-center space-x-2.5 ${isActive ? 'active-nav text-green-600 font-semibold' : ''}`}
+                    className={`nav-underline text-gray-700 font-medium hover:text-green-600 transition-colors flex items-center space-x-2 ${isActive ? 'active-nav text-green-600 font-semibold' : ''}`}
                     aria-current={isActive ? 'page' : undefined}
                   >
                     <div className={`p-1.5 rounded-lg ${isActive ? 'bg-green-100' : 'bg-gray-100'} group-hover:bg-green-100 transition-colors`}>
                       <Icon 
-                        size={18} 
-                        className={`${isActive ? 'text-green-600' : 'text-gray-500'} group-hover:text-green-600 transition-colors`} 
+                        size={16} 
+                        className={`${isActive ? 'text-green-600' : 'text-gray-500'} group-hover:text-green-600 transition-colors`}
                       />
                     </div>
-                    <span>{link.name}</span>
+                    <span className="text-sm">{link.name}</span>
                     {link.badge && (
                       <span 
-                        className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                        className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
                           link.badge === 'HOT' 
                             ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white' 
                             : 'bg-gradient-to-r from-green-500 to-cyan-500 text-white'
@@ -791,11 +803,11 @@ const Header: React.FC = () => {
               })}
             </nav>
 
-            {/* Contact Info */}
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 hover:border-amber-300 transition-all duration-200 group">
-                <div className="p-2 bg-amber-100 rounded-lg group-hover:bg-amber-200 transition-colors">
-                  <Headphones size={20} className="text-amber-600" />
+            {/* Contact Info - Reduced size */}
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 hover:border-amber-300 transition-all duration-200 group">
+                <div className="p-1.5 bg-amber-100 rounded-lg group-hover:bg-amber-200 transition-colors">
+                  <Headphones size={18} className="text-amber-600" />
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs text-gray-600 truncate">Need help? Call us</div>
@@ -825,24 +837,23 @@ const Header: React.FC = () => {
             </div>
             
             <form onSubmit={handleSearch} className="relative mb-8" role="search">
-              <div className="relative">
+              <div className="relative search-glow rounded-2xl">
                 <input
                   ref={searchInputRef}
                   type="search"
                   placeholder="Search products, brands, categories..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-5 py-4 pl-14 bg-white border border-gray-300 rounded-2xl focus:outline-none focus:ring-3 focus:ring-green-500/30 focus:border-green-500 placeholder-gray-500 text-lg transition-all duration-200"
+                  className="w-full px-5 py-4 pl-14 bg-white rounded-2xl focus:outline-none focus:ring-4 focus:ring-green-500/20 focus:border-green-500 placeholder-gray-500 text-lg transition-all duration-200"
                   autoFocus
-                  style={{ borderRadius: '16px' }}
                   aria-label="Search products"
                 />
                 <div className="absolute left-5 top-0 bottom-0 flex items-center justify-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  <Search className="h-5 w-5 text-green-500" aria-hidden="true" />
                 </div>
                 <button
                   type="submit"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-2.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:from-green-700 hover:to-green-600 transition-all duration-300 border border-green-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-2.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:from-green-700 hover:to-green-600 transition-all duration-300 border border-green-600 search-button-glow disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
                   disabled={!searchQuery.trim()}
                   aria-label="Submit search"
                 >

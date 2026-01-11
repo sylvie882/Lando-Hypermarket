@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, ArrowRight, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/api';
-import Image from 'next/image';
 
 interface Banner {
   id: number;
@@ -33,7 +32,6 @@ interface BannerCarouselProps {
     desktop?: string;
   };
   rounded?: boolean;
-  showTitle?: boolean;
 }
 
 const BannerCarousel: React.FC<BannerCarouselProps> = ({
@@ -41,8 +39,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
     mobile: '280px',
     desktop: '380px'
   },
-  rounded = true,
-  showTitle = true
+  rounded = true
 }) => {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -246,6 +243,18 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
     setImageErrors(prev => new Set(prev).add(bannerId));
   };
 
+  // Get link for banner click
+  const getBannerLink = (banner: Banner): string => {
+    if (banner.category_slug) {
+      return `/category/${banner.category_slug}`;
+    }
+    if (banner.button_link) {
+      return banner.button_link;
+    }
+    // Default fallback
+    return '/products';
+  };
+
   // Auto-rotate banners
   useEffect(() => {
     if (banners.length <= 1) return;
@@ -264,10 +273,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
         style={{ height: typeof window !== 'undefined' && window.innerWidth < 768 ? height.mobile : height.desktop }}
       >
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-            <p className="mt-4 text-gray-600 font-medium">Loading banners...</p>
-          </div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
         </div>
       </div>
     );
@@ -281,8 +287,6 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
       >
         <div className="absolute inset-0 flex items-center justify-center p-8">
           <div className="text-center text-white max-w-md">
-            <h2 className="text-2xl font-bold mb-4">Unable to Load Banners</h2>
-            <p className="mb-6">{error}</p>
             <button
               onClick={fetchBanners}
               className="inline-flex items-center gap-2 bg-white text-emerald-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
@@ -304,6 +308,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
           const imageUrl = getImageUrl(banner, false);
           const isActive = index === activeIndex;
           const hasImageError = imageErrors.has(banner.id);
+          const bannerLink = getBannerLink(banner);
           
           return (
             <div
@@ -316,50 +321,24 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-emerald-600 flex items-center justify-center">
                   <div className="text-white text-center p-8 max-w-2xl">
                     <h1 className="text-4xl font-bold mb-4">{banner.title}</h1>
-                    {banner.subtitle && (
-                      <p className="text-xl mb-8">{banner.subtitle}</p>
-                    )}
                   </div>
                 </div>
               ) : (
                 <>
-                  {/* Background Image */}
-                  <img
-                    src={imageUrl}
-                    alt={banner.title}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    onError={() => handleImageError(banner.id)}
-                    loading={isActive ? "eager" : "lazy"}
-                  />
-                  
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent" />
-                  
-                  {/* Content */}
-                  <div className="relative h-full flex items-center">
-                    <div className="container mx-auto px-8">
-                      {showTitle && (
-                        <div className="max-w-2xl text-white">
-                          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                            {banner.title}
-                          </h1>
-                          {banner.subtitle && (
-                            <p className="text-xl mb-8">{banner.subtitle}</p>
-                          )}
-                          {banner.button_text && banner.button_link && (
-                            <a
-                              href={banner.button_link}
-                              onClick={() => handleBannerClick(banner.id)}
-                              className="inline-flex items-center bg-white text-emerald-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-300 hover:scale-105 shadow-lg"
-                            >
-                              {banner.button_text}
-                              <ArrowRight className="ml-2" size={20} />
-                            </a>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  {/* Clickable Image */}
+                  <a
+                    href={bannerLink}
+                    onClick={() => handleBannerClick(banner.id)}
+                    className="absolute inset-0 w-full h-full block cursor-pointer"
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={banner.title}
+                      className="w-full h-full object-cover"
+                      onError={() => handleImageError(banner.id)}
+                      loading={isActive ? "eager" : "lazy"}
+                    />
+                  </a>
                 </>
               )}
             </div>
@@ -373,6 +352,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
           const mobileImageUrl = getImageUrl(banner, true);
           const isActive = index === activeIndex;
           const hasImageError = imageErrors.has(banner.id);
+          const bannerLink = getBannerLink(banner);
           
           return (
             <div
@@ -385,47 +365,24 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-emerald-600 flex items-end pb-8">
                   <div className="text-white p-6">
                     <h2 className="text-2xl font-bold mb-2">{banner.title}</h2>
-                    {banner.subtitle && (
-                      <p className="text-base mb-4">{banner.subtitle}</p>
-                    )}
                   </div>
                 </div>
               ) : (
                 <>
-                  {/* Background Image */}
-                  <img
-                    src={mobileImageUrl}
-                    alt={banner.title}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    onError={() => handleImageError(banner.id)}
-                    loading={isActive ? "eager" : "lazy"}
-                  />
-                  
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
-                  
-                  {/* Content */}
-                  {showTitle && (
-                    <div className="relative h-full flex items-end pb-6 px-6">
-                      <div className="text-white">
-                        <h2 className="text-2xl font-bold mb-2">
-                          {banner.title}
-                        </h2>
-                        {banner.subtitle && (
-                          <p className="text-base mb-4">{banner.subtitle}</p>
-                        )}
-                        {banner.button_text && banner.button_link && (
-                          <a
-                            href={banner.button_link}
-                            onClick={() => handleBannerClick(banner.id)}
-                            className="inline-flex items-center bg-white text-emerald-600 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-100 transition-colors duration-300"
-                          >
-                            {banner.button_text}
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  {/* Clickable Image */}
+                  <a
+                    href={bannerLink}
+                    onClick={() => handleBannerClick(banner.id)}
+                    className="absolute inset-0 w-full h-full block cursor-pointer"
+                  >
+                    <img
+                      src={mobileImageUrl}
+                      alt={banner.title}
+                      className="w-full h-full object-cover"
+                      onError={() => handleImageError(banner.id)}
+                      loading={isActive ? "eager" : "lazy"}
+                    />
+                  </a>
                 </>
               )}
             </div>

@@ -275,21 +275,19 @@ const HomePage: React.FC = () => {
         }
       `}</style>
 
-      {/* Hero Banner */}
-      <section className="relative py-4 md:py-6 lg:py-8 px-4 md:px-6 -mt-4 pt-0">
-        <div className="container mx-auto max-w-7xl">
-          <div className="rounded-xl md:rounded-2xl overflow-hidden shadow-lg">
-            <BannerCarousel 
-              height={{ mobile: '280px', desktop: '380px' }}
-              rounded={false}
-              showTitle={true}
-            />
-          </div>
-        </div>
-      </section>
+     <section className="py-8 px-4 md:px-6 lg:px-8">
+  <div className="container mx-auto max-w-7xl shadow-md rounded-xl overflow-hidden">
+    <BannerCarousel
+      height={{ mobile: '280px', desktop: '380px' }}
+      showTitle={true}
+      rounded={false}
+    />
+  </div>
+</section>
+
 
       {/* Features Grid - QuickMart Style */}
-      <section className="py-8 bg-white border-b border-gray-200">
+      {/* <section className="py-8 bg-white border-b border-gray-200">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
@@ -330,7 +328,7 @@ const HomePage: React.FC = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
     {/* Categories Section - HORIZONTAL SCROLL LIKE QUICKMART */}
 {categories.length > 0 && (
@@ -340,7 +338,7 @@ const HomePage: React.FC = () => {
   >
     <div className="container mx-auto px-4">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Shop By Category</h2>
+        <h2 className="text-2xl text-center font-bold text-gray-900">Shop By Category</h2>
         <div className="flex items-center space-x-4">
           <Link 
             href="/categories" 
