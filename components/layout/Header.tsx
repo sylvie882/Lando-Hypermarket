@@ -422,81 +422,8 @@ const Header: React.FC = () => {
         }
       `}</style>
 
-      {/* Top Banner - Desktop Only */}
-      <div className="hidden lg:block bg-gradient-to-r from-green-700 via-green-600 to-green-700 text-white py-2 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 relative z-10">
-          <div className="flex items-center justify-between text-sm">
-            {/* Left side: Store info */}
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-2">
-                <Clock size={14} className="text-amber-300 flex-shrink-0" />
-                <span>Open 24/7</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Truck size={14} className="text-amber-300 flex-shrink-0" />
-                <span>Free Delivery on orders over Ksh 2,000</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Shield size={14} className="text-amber-300 flex-shrink-0" />
-                <span>100% Quality Guarantee</span>
-              </div>
-            </div>
-
-            {/* Right side: User links */}
-            <div className="flex items-center space-x-6">
-              <Link 
-                href="/store-locator" 
-                className="hover:text-amber-200 transition-colors flex items-center space-x-1"
-                aria-label="Find a store"
-              >
-                <Navigation size={14} />
-                <span>Store Locator</span>
-              </Link>
-              <Link 
-                href="/help" 
-                className="hover:text-amber-200 transition-colors flex items-center space-x-1"
-                aria-label="Get help"
-              >
-                <HelpCircle size={14} />
-                <span>Help Center</span>
-              </Link>
-              
-              {!isAuthenticated ? (
-                <div className="flex items-center space-x-3">
-                  <Link 
-                    href="/auth/login" 
-                    className="hover:text-amber-200 transition-colors"
-                    aria-label="Login to your account"
-                  >
-                    Login
-                  </Link>
-                  <span className="text-green-300" aria-hidden="true">/</span>
-                  <Link 
-                    href="/auth/register" 
-                    className="hover:text-amber-200 transition-colors"
-                    aria-label="Create an account"
-                  >
-                    Register
-                  </Link>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <span className="truncate max-w-[140px]">
-                    Welcome, {userFirstName}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        
-        {/* Animated background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='0.4' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E")`
-          }}></div>
-        </div>
-      </div>
+      {/* REMOVED: Top Banner section - Desktop Only */}
+      {/* The entire top banner (lines 347-418) has been removed */}
 
       {/* Main Header - Sticky */}
       <div className={`sticky-header ${scrolled ? 'shadow-lg' : 'shadow-sm'} transition-all duration-300`}>
