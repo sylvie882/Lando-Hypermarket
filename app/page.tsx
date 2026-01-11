@@ -279,7 +279,7 @@ const HomePage: React.FC = () => {
   <div className="container mx-auto max-w-7xl shadow-md rounded-xl overflow-hidden">
     <BannerCarousel
       height={{ mobile: '280px', desktop: '380px' }}
-      showTitle={true}
+      // showTitle={true}
       rounded={false}
     />
   </div>
