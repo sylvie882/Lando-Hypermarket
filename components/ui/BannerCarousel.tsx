@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/api';
+import Image from 'next/image';
 
 interface Banner {
   id: number;
@@ -26,11 +27,28 @@ interface Banner {
   mobile_image_url?: string;
 }
 
-const BannerCarousel: React.FC = () => {
+interface BannerCarouselProps {
+  height?: {
+    mobile?: string;
+    desktop?: string;
+  };
+  rounded?: boolean;
+  showTitle?: boolean;
+}
+
+const BannerCarousel: React.FC<BannerCarouselProps> = ({
+  height = {
+    mobile: '280px',
+    desktop: '380px'
+  },
+  rounded = true,
+  showTitle = true
+}) => {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     fetchBanners();
@@ -40,10 +58,23 @@ const BannerCarousel: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
+      setImageErrors(new Set());
       
-      console.log('Fetching banners...');
-      const response = await api.banners.getHomepage();
-      console.log('API Response:', response);
+      console.log('🚀 Fetching banners from API...');
+      
+      // Try multiple endpoints
+      let response;
+      try {
+        response = await api.banners.getHomepage();
+      } catch (apiError) {
+        console.log('Trying alternative endpoint...');
+        // Fallback: try a direct fetch
+        response = await fetch('https://api.hypermarket.co.ke/api/banners/homepage');
+        if (!response.ok) throw new Error(`API responded with ${response.status}`);
+        response = await response.json();
+      }
+      
+      console.log('📦 API Response:', response);
       
       let bannerData: Banner[] = [];
       
@@ -55,63 +86,141 @@ const BannerCarousel: React.FC = () => {
           bannerData = response.data.data;
         } else if (response.data.success && Array.isArray(response.data.data)) {
           bannerData = response.data.data;
+        } else if (response.data.banners && Array.isArray(response.data.banners)) {
+          bannerData = response.data.banners;
         }
+      } else if (Array.isArray(response)) {
+        bannerData = response;
       }
       
-      console.log('Processed banners:', bannerData);
+      console.log(`✅ Processed ${bannerData.length} banners`);
       
       // Filter active homepage banners
       const homepageBanners = bannerData
-        .filter(banner => 
-          banner.is_active && 
-          banner.type === 'homepage' &&
-          banner.image
-        )
-        .sort((a, b) => a.order - b.order);
+        .filter(banner => {
+          const isActive = banner.is_active === true || banner.is_active === undefined;
+          const isHomepage = banner.type === 'homepage' || !banner.type;
+          const hasImage = banner.image || banner.image_url;
+          return isActive && hasImage;
+        })
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .slice(0, 5); // Limit to 5 banners
       
-      console.log('Homepage banners:', homepageBanners);
-      setBanners(homepageBanners);
+      console.log(`🎯 ${homepageBanners.length} active homepage banners found`);
+      
+      if (homepageBanners.length === 0) {
+        // Create fallback banners if no banners are returned
+        console.log('⚠️ No banners found, creating fallback banners');
+        setBanners([
+          {
+            id: 1,
+            title: "Fresh Farm Produce",
+            subtitle: "Organic vegetables delivered to your doorstep",
+            image: "https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
+            mobile_image: "https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            button_text: "Shop Now",
+            button_link: "/products",
+            order: 1,
+            is_active: true,
+            start_date: null,
+            end_date: null,
+            type: 'homepage',
+            category_slug: null,
+            clicks: 0,
+            impressions: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          {
+            id: 2,
+            title: "Free Delivery",
+            subtitle: "On orders over KES 2,000",
+            image: "https://images.unsplash.com/photo-1561715276-a2d087060f1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
+            mobile_image: "https://images.unsplash.com/photo-1561715276-a2d087060f1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            button_text: "View Products",
+            button_link: "/products?category=vegetables",
+            order: 2,
+            is_active: true,
+            start_date: null,
+            end_date: null,
+            type: 'homepage',
+            category_slug: null,
+            clicks: 0,
+            impressions: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ]);
+      } else {
+        setBanners(homepageBanners);
+      }
       
     } catch (error: any) {
-      console.error('Failed to fetch banners:', error);
+      console.error('❌ Failed to fetch banners:', error);
       setError(error.message || 'Failed to load banners');
+      
+      // Even on error, set some fallback banners
+      setBanners([
+        {
+          id: 999,
+          title: "Welcome to Lando Ranch",
+          subtitle: "Fresh farm products delivered daily",
+          image: "https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
+          mobile_image: "https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+          button_text: "Start Shopping",
+          button_link: "/products",
+          order: 1,
+          is_active: true,
+          start_date: null,
+          end_date: null,
+          type: 'homepage',
+          category_slug: null,
+          clicks: 0,
+          impressions: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Get the correct image URL
+  // Get the correct image URL with fallback
   const getImageUrl = (banner: Banner, isMobile = false): string => {
     // Try image_url from API first
     if (!isMobile && banner.image_url) {
-      console.log('Using image_url:', banner.image_url);
       return banner.image_url;
     }
     
     if (isMobile && banner.mobile_image_url) {
-      console.log('Using mobile_image_url:', banner.mobile_image_url);
       return banner.mobile_image_url;
     }
     
-    // Fallback: Construct URL from image path
+    // Use image path
     const imagePath = isMobile ? banner.mobile_image || banner.image : banner.image;
     
     if (!imagePath) {
-      console.warn('No image path found for banner:', banner.id);
-      return '/placeholder-banner.jpg';
+      console.warn(`No image path for banner ${banner.id}, using fallback`);
+      return isMobile 
+        ? "https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+        : "https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80";
     }
     
     // Check if already a full URL
     if (imagePath.startsWith('http')) {
-      console.log('Image is already full URL:', imagePath);
       return imagePath;
     }
     
     // Construct full URL
-    const baseUrl = ' https://api.hypermarket.co.ke';
-    const url = `${baseUrl}/storage/${imagePath.replace(/^banners\//, 'banners/')}`;
-    console.log('Constructed URL:', url);
-    return url;
+    const baseUrl = 'https://api.hypermarket.co.ke';
+    let cleanPath = imagePath;
+    
+    // Remove leading slashes or storage/ prefix
+    if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
+    if (cleanPath.startsWith('storage/')) cleanPath = cleanPath.replace('storage/', '');
+    
+    return `${baseUrl}/storage/${cleanPath}`;
   };
 
   const nextSlide = () => {
@@ -132,67 +241,54 @@ const BannerCarousel: React.FC = () => {
     }
   };
 
-  // Debug: Log image URLs when banners change
+  const handleImageError = (bannerId: number) => {
+    console.error(`Image failed to load for banner ${bannerId}`);
+    setImageErrors(prev => new Set(prev).add(bannerId));
+  };
+
+  // Auto-rotate banners
   useEffect(() => {
-    if (banners.length > 0) {
-      console.log('=== DEBUG: Banner Image URLs ===');
-      banners.forEach((banner, index) => {
-        const desktopUrl = getImageUrl(banner, false);
-        const mobileUrl = getImageUrl(banner, true);
-        
-        console.log(`Banner ${index} - ${banner.title}:`, {
-          id: banner.id,
-          image_field: banner.image,
-          image_url_field: banner.image_url,
-          desktopUrl,
-          mobile_image_field: banner.mobile_image,
-          mobile_image_url_field: banner.mobile_image_url,
-          mobileUrl,
-        });
-        
-        // Test if URLs are accessible
-        if (typeof window !== 'undefined') {
-          // Create image elements to test loading
-          const testDesktop = new Image();
-          testDesktop.onload = () => console.log(`✓ Desktop image ${index} loads OK`);
-          testDesktop.onerror = () => console.error(`✗ Desktop image ${index} failed to load`);
-          testDesktop.src = desktopUrl;
-          
-          const testMobile = new Image();
-          testMobile.onload = () => console.log(`✓ Mobile image ${index} loads OK`);
-          testMobile.onerror = () => console.error(`✗ Mobile image ${index} failed to load`);
-          testMobile.src = mobileUrl;
-        }
-      });
-      console.log('=== END DEBUG ===');
-    }
-  }, [banners]);
+    if (banners.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      nextSlide();
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [banners.length, activeIndex]);
 
   if (isLoading) {
     return (
-      <div className="h-[400px] md:h-[600px] bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse">
-        <div className="container mx-auto px-4 h-full flex items-center justify-center">
+      <div 
+        className={`relative ${rounded ? 'rounded-2xl' : ''} overflow-hidden bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse`}
+        style={{ height: typeof window !== 'undefined' && window.innerWidth < 768 ? height.mobile : height.desktop }}
+      >
+        <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
-            <p className="mt-4 text-gray-600">Loading banners...</p>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+            <p className="mt-4 text-gray-600 font-medium">Loading banners...</p>
           </div>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && banners.length === 0) {
     return (
-      <div className="h-[400px] md:h-[600px] bg-gradient-to-r from-red-500 to-red-600">
-        <div className="container mx-auto px-4 h-full flex items-center justify-center">
-          <div className="text-center text-white">
-            <h2 className="text-2xl font-bold mb-4">Error Loading Banners</h2>
-            <p className="mb-4">{error}</p>
+      <div 
+        className={`relative ${rounded ? 'rounded-2xl' : ''} overflow-hidden bg-gradient-to-r from-emerald-500 to-emerald-600`}
+        style={{ height: typeof window !== 'undefined' && window.innerWidth < 768 ? height.mobile : height.desktop }}
+      >
+        <div className="absolute inset-0 flex items-center justify-center p-8">
+          <div className="text-center text-white max-w-md">
+            <h2 className="text-2xl font-bold mb-4">Unable to Load Banners</h2>
+            <p className="mb-6">{error}</p>
             <button
               onClick={fetchBanners}
-              className="bg-white text-red-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100"
+              className="inline-flex items-center gap-2 bg-white text-emerald-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
             >
-              Retry
+              <RefreshCw size={18} />
+              Try Again
             </button>
           </div>
         </div>
@@ -200,116 +296,138 @@ const BannerCarousel: React.FC = () => {
     );
   }
 
-  if (banners.length === 0) {
-    return (
-      <div className="h-[400px] md:h-[600px] bg-gradient-to-r from-orange-500 to-orange-600">
-        <div className="container mx-auto px-4 h-full flex items-center">
-          <div className="max-w-2xl text-white">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Welcome to Lando Ranch</h1>
-            <p className="text-xl mb-8">Fresh farm products delivered to your doorstep</p>
-            <a
-              href="/products"
-              className="inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors duration-300"
-            >
-              Shop Now
-              <ArrowRight className="ml-2" size={20} />
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="relative overflow-hidden">
+    <div className={`relative overflow-hidden ${rounded ? 'rounded-2xl' : ''} shadow-lg`}>
       {/* Desktop Banners */}
-      <div className="hidden md:block h-[600px]">
+      <div className="hidden md:block" style={{ height: height.desktop }}>
         {banners.map((banner, index) => {
           const imageUrl = getImageUrl(banner, false);
+          const isActive = index === activeIndex;
+          const hasImageError = imageErrors.has(banner.id);
           
           return (
             <div
               key={banner.id}
-              className={`absolute inset-0 transition-opacity duration-500 ${
-                index === activeIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              className={`absolute inset-0 transition-all duration-700 ease-in-out ${
+                isActive ? 'opacity-100 z-10 scale-100' : 'opacity-0 z-0 scale-105'
               }`}
-              style={{
-                backgroundImage: `url(${imageUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-black/30" />
-              <div className="relative h-full flex items-center">
-                <div className="container mx-auto px-4">
-                  <div className="max-w-2xl text-white">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                      {banner.title}
-                    </h1>
+              {hasImageError ? (
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-emerald-600 flex items-center justify-center">
+                  <div className="text-white text-center p-8 max-w-2xl">
+                    <h1 className="text-4xl font-bold mb-4">{banner.title}</h1>
                     {banner.subtitle && (
                       <p className="text-xl mb-8">{banner.subtitle}</p>
                     )}
-                    {banner.button_text && banner.button_link && (
-                      <a
-                        href={banner.button_link}
-                        onClick={() => handleBannerClick(banner.id)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center bg-white text-orange-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors duration-300"
-                      >
-                        {banner.button_text}
-                        <ArrowRight className="ml-2" size={20} />
-                      </a>
-                    )}
                   </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* Background Image */}
+                  <img
+                    src={imageUrl}
+                    alt={banner.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={() => handleImageError(banner.id)}
+                    loading={isActive ? "eager" : "lazy"}
+                  />
+                  
+                  {/* Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent" />
+                  
+                  {/* Content */}
+                  <div className="relative h-full flex items-center">
+                    <div className="container mx-auto px-8">
+                      {showTitle && (
+                        <div className="max-w-2xl text-white">
+                          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                            {banner.title}
+                          </h1>
+                          {banner.subtitle && (
+                            <p className="text-xl mb-8">{banner.subtitle}</p>
+                          )}
+                          {banner.button_text && banner.button_link && (
+                            <a
+                              href={banner.button_link}
+                              onClick={() => handleBannerClick(banner.id)}
+                              className="inline-flex items-center bg-white text-emerald-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-300 hover:scale-105 shadow-lg"
+                            >
+                              {banner.button_text}
+                              <ArrowRight className="ml-2" size={20} />
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           );
         })}
       </div>
 
       {/* Mobile Banners */}
-      <div className="md:hidden h-[400px]">
+      <div className="md:hidden" style={{ height: height.mobile }}>
         {banners.map((banner, index) => {
           const mobileImageUrl = getImageUrl(banner, true);
+          const isActive = index === activeIndex;
+          const hasImageError = imageErrors.has(banner.id);
           
           return (
             <div
               key={banner.id}
-              className={`absolute inset-0 transition-opacity duration-500 ${
-                index === activeIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              className={`absolute inset-0 transition-all duration-700 ease-in-out ${
+                isActive ? 'opacity-100 z-10 scale-100' : 'opacity-0 z-0 scale-105'
               }`}
-              style={{
-                backgroundImage: `url(${mobileImageUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
             >
-              <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/20" />
-              <div className="relative h-full flex items-end pb-8">
-                <div className="container mx-auto px-4">
-                  <div className="text-white">
-                    <h2 className="text-2xl font-bold mb-2">
-                      {banner.title}
-                    </h2>
+              {hasImageError ? (
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-emerald-600 flex items-end pb-8">
+                  <div className="text-white p-6">
+                    <h2 className="text-2xl font-bold mb-2">{banner.title}</h2>
                     {banner.subtitle && (
                       <p className="text-base mb-4">{banner.subtitle}</p>
                     )}
-                    {banner.button_text && banner.button_link && (
-                      <a
-                        href={banner.button_link}
-                        onClick={() => handleBannerClick(banner.id)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center bg-white text-orange-600 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-100 transition-colors duration-300"
-                      >
-                        {banner.button_text}
-                      </a>
-                    )}
                   </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* Background Image */}
+                  <img
+                    src={mobileImageUrl}
+                    alt={banner.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={() => handleImageError(banner.id)}
+                    loading={isActive ? "eager" : "lazy"}
+                  />
+                  
+                  {/* Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+                  
+                  {/* Content */}
+                  {showTitle && (
+                    <div className="relative h-full flex items-end pb-6 px-6">
+                      <div className="text-white">
+                        <h2 className="text-2xl font-bold mb-2">
+                          {banner.title}
+                        </h2>
+                        {banner.subtitle && (
+                          <p className="text-base mb-4">{banner.subtitle}</p>
+                        )}
+                        {banner.button_text && banner.button_link && (
+                          <a
+                            href={banner.button_link}
+                            onClick={() => handleBannerClick(banner.id)}
+                            className="inline-flex items-center bg-white text-emerald-600 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-100 transition-colors duration-300"
+                          >
+                            {banner.button_text}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           );
         })}
@@ -332,19 +450,32 @@ const BannerCarousel: React.FC = () => {
           >
             <ChevronRight size={24} />
           </button>
+          
+          {/* Dots Indicator */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-2 z-20">
             {banners.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setActiveIndex(index)}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  index === activeIndex ? 'bg-white scale-125' : 'bg-white/50'
+                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                  index === activeIndex 
+                    ? 'bg-white scale-125 shadow-lg' 
+                    : 'bg-white/50 hover:bg-white/70'
                 }`}
                 aria-label={`Go to slide ${index + 1}`}
               />
             ))}
           </div>
         </>
+      )}
+      
+      {/* Error Display */}
+      {error && banners.length > 0 && (
+        <div className="absolute top-4 right-4 z-30">
+          <div className="bg-red-500/90 text-white px-4 py-2 rounded-lg text-sm backdrop-blur-sm">
+            Using cached banners
+          </div>
+        </div>
       )}
     </div>
   );
