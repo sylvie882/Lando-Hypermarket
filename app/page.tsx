@@ -338,7 +338,7 @@ const HomePage: React.FC = () => {
   >
     <div className="container mx-auto px-4">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl text-center font-bold text-gray-900">Shop By Category</h2>
+        <h2 className="text-2xl  font-bold text-gray-900">Best-Selling Categories</h2>
         <div className="flex items-center space-x-4">
           <Link 
             href="/categories" 
