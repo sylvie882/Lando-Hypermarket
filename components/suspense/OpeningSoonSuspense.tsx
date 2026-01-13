@@ -184,11 +184,11 @@ export default function OpeningSoonSuspense() {
             <div className="mt-12 flex flex-wrap justify-center gap-6 md:gap-10 text-gray-600">
               <div className="flex items-center gap-2">
                 <Phone className="w-5 h-5 text-green-600" />
-                <span>+254 711 000 000</span>
+                <span>+254 716 354 589</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-5 h-5 text-green-600" />
-                <span>info@landohypermarket.co.ke</span>
+                <span>info@hypermarket.co.ke</span>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-green-600" />
