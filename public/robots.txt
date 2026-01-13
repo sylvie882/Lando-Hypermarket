@@ -1,0 +1,6 @@
+# public/robots.txt
+User-agent: *
+Allow: /
+Sitemap: https://hypermarket.co.ke/sitemap.xml
+
+# Crawl-delay: 10

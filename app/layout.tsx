@@ -1,4 +1,4 @@
-// app/layout.tsx - FOR HYPERMARKET.CO.KE
+// app/layout.tsx - UPDATED WITH GOOGLE VERIFICATION
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -14,7 +14,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 const SITE_URL = 'https://hypermarket.co.ke';
 const SITE_NAME = 'Hypermarket Kenya';
-const BUSINESS_PHONE = '+254 711 223344'; // Add your real phone
+const BUSINESS_PHONE = '+254 711 223344';
 const BUSINESS_EMAIL = 'info@hypermarket.co.ke';
 
 export const viewport: Viewport = {
@@ -26,52 +26,37 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  
-  // TITLE OPTIMIZATION
   title: {
     default: 'Hypermarket Kenya | Online Grocery Store - Fresh Food Delivery Nairobi',
     template: '%s | Hypermarket Kenya'
   },
-  
-  // DESCRIPTION OPTIMIZATION
   description: 'Buy fresh groceries, vegetables, fruits, dairy products online in Kenya. Free delivery in Nairobi for orders above Ksh 2,000. Same-day grocery delivery available.',
-  
-  // KEYWORDS BASED ON YOUR BUSINESS
   keywords: [
-    // Primary keywords
     'Hypermarket Kenya',
     'online grocery shopping Kenya',
     'buy groceries online Nairobi',
     'fresh vegetables delivery Nairobi',
     'fruits delivery Kenya',
-    
-    // Location-based
     'grocery delivery Nairobi',
     'online supermarket Kenya',
     'food delivery Nairobi',
     'Nairobi grocery store',
     'Kenya ecommerce',
-    
-    // Product-specific
     'fresh tomatoes delivery',
     'potatoes Nairobi',
     'onions online',
     'bananas delivery',
     'milk delivery Nairobi',
     'eggs delivery',
-    
-    // Service keywords
     'same day delivery Nairobi',
     'free delivery groceries',
     'online shopping Kenya',
     'grocery app Kenya',
     'food shopping online'
   ],
-  
   authors: [{ name: 'Hypermarket Kenya' }],
   creator: 'Hypermarket Kenya',
   publisher: 'Hypermarket Kenya',
-  
   robots: {
     index: true,
     follow: true,
@@ -83,8 +68,6 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  
-  // OPEN GRAPH FOR SOCIAL SHARING
   openGraph: {
     type: 'website',
     locale: 'en_KE',
@@ -101,8 +84,6 @@ export const metadata: Metadata = {
       },
     ],
   },
-  
-  // TWITTER CARDS
   twitter: {
     card: 'summary_large_image',
     title: 'Hypermarket Kenya | Online Grocery Store',
@@ -111,19 +92,13 @@ export const metadata: Metadata = {
     creator: '@hypermarket_ke',
     site: '@hypermarket_ke',
   },
-  
-  // ICONS
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon-16x16.png',
     apple: '/apple-touch-icon.png',
   },
-  
-  // ADDITIONAL METADATA
   category: 'E-commerce & Grocery',
   applicationName: SITE_NAME,
-  
-  // LOCAL BUSINESS INFO
   other: {
     'geo.region': 'KE-NBO',
     'geo.placename': 'Nairobi',
@@ -140,17 +115,20 @@ export default function RootLayout({
   return (
     <html lang="en-KE">
       <head>
-        {/* CRITICAL: hreflang tags for Kenyan market */}
+        {/* GOOGLE SITE VERIFICATION - CRITICAL */}
+        <meta name="google-site-verification" content="5696457e6978be87" />
+        
+        {/* hreflang tags */}
         <link rel="alternate" href={SITE_URL} hrefLang="en-ke" />
         <link rel="alternate" href={SITE_URL} hrefLang="en" />
         <link rel="alternate" href={SITE_URL} hrefLang="x-default" />
         
-        {/* Preconnect for performance */}
+        {/* Preconnect */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.hypermarket.co.ke" />
         
-        {/* STRUCTURED DATA - CRITICAL FOR SEO */}
+        {/* Structured Data */}
         <Script
           id="schema-org"
           type="application/ld+json"
@@ -254,20 +232,17 @@ export default function RootLayout({
           }}
         />
         
-        {/* Favicon links */}
+        {/* Favicon */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
         
-        {/* Mobile meta tags */}
+        {/* Mobile meta */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Hypermarket" />
         <meta name="format-detection" content="telephone=yes" />
-        
-        {/* Search Console Verification - ADD YOUR CODE */}
-        <meta name="google-site-verification" content="YOUR_GOOGLE_VERIFICATION_CODE" />
         
       </head>
       <body className={inter.className}>
@@ -297,7 +272,7 @@ export default function RootLayout({
           </AuthProvider>
         </QueryProvider>
         
-        {/* Analytics Script - Add Google Analytics */}
+        {/* Google Analytics - Optional */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
           strategy="afterInteractive"
