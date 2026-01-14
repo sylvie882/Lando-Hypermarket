@@ -43,7 +43,7 @@ export default function OpeningSoonSuspense() {
       flashTimerRef.current = setTimeout(() => {
         setShowFlashDrop(false);
         clearInterval(countdownTimerRef.current);
-      }, 60000);
+      }, 70000);
     }, 1500);
 
     return () => {
@@ -176,75 +176,88 @@ export default function OpeningSoonSuspense() {
   return (
     <>
       {/* Flash Drop Modal - SIMPLIFIED VERSION */}
-      <AnimatePresence>
-        {showFlashDrop && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[999999] flex items-center justify-center p-4"
-            style={{
-              background: 'rgba(0, 0, 0, 0.7)',
-              backdropFilter: 'blur(4px)'
-            }}
+      {/* Flash Drop Modal */}
+<AnimatePresence>
+  {showFlashDrop && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[999999] flex items-center justify-center p-4"
+      style={{
+        background: 'rgba(0,0,0,0.75)',
+        backdropFilter: 'blur(6px)',
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.92, y: 30 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.92, opacity: 0 }}
+        className="relative w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl"
+      >
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <Image
+            src="/flash-banner.png" // 👈 your image here
+            alt="Lando Hypermarket Flash"
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute inset-0 bg-black/70" />
+        </div>
+
+        {/* Content */}
+        <div className="relative p-8 text-center text-white">
+          {/* Top Row */}
+          <div className="flex items-center justify-between mb-6">
+            <span className="px-4 py-1 text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-green-500 to-purple-600 rounded-full">
+              Flash Drop
+            </span>
+            <div className="flex items-center gap-2 font-bold">
+              <Timer className="w-4 h-4 text-green-400" />
+              {formatTime(timeLeft)}
+            </div>
+          </div>
+
+          {/* Headline */}
+          <div className="text-6xl font-black mb-4">
+            3…2…1…
+          </div>
+
+          <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+            Lando Hypermarket is Landing!
+          </h2>
+
+          {/* Subheading */}
+          <p className="text-lg text-gray-200 mb-8 max-w-xl mx-auto">
+            Biggest launch in the neighborhood. Doorbusters, giveaways, and early-bird perks.
+          </p>
+
+          {/* CTA */}
+          <button
+            onClick={handleFlashCTA}
+            className="inline-flex items-center justify-center gap-2 px-10 py-4 text-lg font-black rounded-2xl
+              bg-gradient-to-r from-green-500 to-purple-600
+              hover:scale-105 active:scale-95 transition-transform
+              shadow-xl shadow-green-500/30"
           >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-sm bg-gradient-to-br from-gray-900 to-black rounded-2xl overflow-hidden border border-green-500/20 shadow-2xl"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-transparent to-purple-500/10" />
-              
-              {/* Header */}
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="px-3 py-1 text-xs font-bold tracking-wider uppercase bg-gradient-to-r from-green-500 to-purple-500 text-white rounded-full">
-                    Flash Drop
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Timer className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-bold text-white tabular-nums">
-                      {formatTime(timeLeft)}
-                    </span>
-                  </div>
-                </div>
+            🚀 Claim Launch Perks →
+          </button>
 
-                {/* Content */}
-                <div className="text-center">
-                  <div className="text-4xl font-black mb-3 bg-gradient-to-r from-green-400 to-purple-400 bg-clip-text text-transparent">
-                    3…2…1…
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-3">
-                    Lando Hypermarket is Landing!
-                  </h3>
-                  <p className="text-gray-300 text-sm mb-6">
-                    First 500 sign-ups unlock exclusive launch-week perks. Limited time offer!
-                  </p>
-                </div>
+          {/* Dismiss */}
+          <button
+            onClick={handleFlashDismiss}
+            className="block mx-auto mt-6 text-sm text-gray-300 hover:text-white"
+          >
+            Not now
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
 
-                {/* CTA Button */}
-                <button
-                  onClick={handleFlashCTA}
-                  className="w-full py-3 px-6 bg-gradient-to-r from-green-500 to-purple-600 text-white font-bold rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-purple-500/25 mb-4"
-                >
-                  🚀 Get Early Access →
-                </button>
-
-                {/* Footer */}
-                <div className="text-center">
-                  <button
-                    onClick={handleFlashDismiss}
-                    className="text-gray-400 text-sm hover:text-white transition-colors"
-                  >
-                    Not now
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Main Modal - SIMPLIFIED VERSION */}
       <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
