@@ -4,7 +4,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Timer, Mail, Phone, MapPin, ShoppingBag, Star, Truck } from 'lucide-react';
-import FlashSale from '../flash/FlashSale';
 import Image from 'next/image';
 
 export default function OpeningSoonSuspense() {
@@ -20,7 +19,6 @@ export default function OpeningSoonSuspense() {
     const dismissed = localStorage.getItem('opening-soon-dismissed');
     if (dismissed === 'true') {
       setIsVisible(false);
-      return; // Don't show anything if already dismissed
     }
 
     // Show flash drop after a short delay
@@ -39,21 +37,15 @@ export default function OpeningSoonSuspense() {
       }, 1000);
       
       // Auto-dismiss flash after 60 seconds
-      setTimeout(() => {
+      flashTimerRef.current = setTimeout(() => {
         setShowFlashDrop(false);
-        if (countdownTimerRef.current) {
-          clearInterval(countdownTimerRef.current);
-        }
+        clearInterval(countdownTimerRef.current);
       }, 70000);
     }, 1500);
 
     return () => {
-      if (flashTimerRef.current) {
-        clearTimeout(flashTimerRef.current);
-      }
-      if (countdownTimerRef.current) {
-        clearInterval(countdownTimerRef.current);
-      }
+      clearTimeout(flashTimerRef.current);
+      clearInterval(countdownTimerRef.current);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
@@ -161,12 +153,8 @@ export default function OpeningSoonSuspense() {
 
   const handleFlashDismiss = () => {
     setShowFlashDrop(false);
-    if (countdownTimerRef.current) {
-      clearInterval(countdownTimerRef.current);
-    }
-    if (flashTimerRef.current) {
-      clearTimeout(flashTimerRef.current);
-    }
+    clearInterval(countdownTimerRef.current);
+    clearTimeout(flashTimerRef.current);
   };
 
   const handleFlashCTA = () => {
@@ -347,11 +335,6 @@ export default function OpeningSoonSuspense() {
                 We respect your privacy. No spam.
               </p>
             </div>
-          </div>
-
-          {/* FLASH SALE PREVIEW */}
-          <div className="mt-8 w-full max-w-4xl">
-            <FlashSale isPreview={true} />
           </div>
 
           {/* Contact Info */}
