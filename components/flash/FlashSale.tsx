@@ -4,7 +4,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Timer, Mail, Phone, MapPin, ShoppingBag, Star, Truck, Leaf } from 'lucide-react';
-import CountdownTimer from './CountdownTimer';
 import FlashSale from '../flash/FlashSale';
 import Image from 'next/image';
 
