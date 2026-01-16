@@ -275,147 +275,99 @@ const HomePage: React.FC = () => {
         }
       `}</style>
 
-     <section className="py-8 px-4 md:px-6 lg:px-8">
-  <div className="container mx-auto max-w-7xl shadow-md rounded-xl overflow-hidden">
-    <BannerCarousel
-      height={{ mobile: '280px', desktop: '380px' }}
-      // showTitle={true}
-      rounded={false}
-    />
-  </div>
-</section>
-
-
-      {/* Features Grid - QuickMart Style */}
-      {/* <section className="py-8 bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              {
-                icon: <Truck size={24} />,
-                title: 'Free Delivery',
-                desc: 'Over Ksh 2000',
-                color: 'text-red-600'
-              },
-              {
-                icon: <Clock4 size={24} />,
-                title: '24/7 Service',
-                desc: 'Open All Time',
-                color: 'text-red-600'
-              },
-              {
-                icon: <ShieldCheck size={24} />,
-                title: '100% Secure',
-                desc: 'Safe Shopping',
-                color: 'text-red-600'
-              },
-              {
-                icon: <Award size={24} />,
-                title: 'Quality Products',
-                desc: 'Guaranteed',
-                color: 'text-red-600'
-              }
-            ].map((feature, index) => (
-              <div key={index} className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
-                <div className={`${feature.color}`}>
-                  {feature.icon}
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-900">{feature.title}</h4>
-                  <p className="text-sm text-gray-600">{feature.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Banner Section - Adjusted padding */}
+      <section className="pt-4 pb-0 px-4 md:px-6 lg:px-8">
+        <div className="container mx-auto max-w-7xl">
+          <BannerCarousel
+            height={{ mobile: '280px', desktop: '380px' }}
+            rounded={false}
+          />
         </div>
-      </section> */}
+      </section>
 
-    {/* Categories Section - HORIZONTAL SCROLL LIKE QUICKMART */}
-{categories.length > 0 && (
-  <section 
-    ref={categoriesSectionRef}
-    className="section-hidden py-12 bg-white"
-  >
-    <div className="container mx-auto px-4">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl  font-bold text-gray-900">Best-Selling Categories</h2>
-        <div className="flex items-center space-x-4">
-          <Link 
-            href="/categories" 
-            className="text-red-600 hover:text-red-700 font-medium flex items-center"
-          >
-            View All <ArrowRight size={16} className="ml-1" />
-          </Link>
-          {/* Scroll buttons for mobile/desktop */}
-          <div className="flex space-x-2">
-            <button
-              onClick={() => scrollCategories('left')}
-              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors hidden sm:block"
-              aria-label="Scroll left"
-            >
-              <ChevronLeft size={20} className="text-gray-600" />
-            </button>
-            <button
-              onClick={() => scrollCategories('right')}
-              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors hidden sm:block"
-              aria-label="Scroll right"
-            >
-              <ChevronRight size={20} className="text-gray-600" />
-            </button>
-          </div>
-        </div>
-      </div>
-      
-
-      {/* Horizontal scrolling categories */}
-      <div className="relative">
-        <div 
-          ref={categoriesScrollRef}
-          className="flex space-x-4 overflow-x-auto pb-4 hide-scrollbar"
-          style={{ scrollBehavior: 'smooth' }}
+      {/* Categories Section - Directly after banner */}
+      {categories.length > 0 && (
+        <section 
+          ref={categoriesSectionRef}
+          className="pt-2 pb-12 bg-white"
         >
-          {categories.map((category) => (
-            <Link
-              key={category.id}
-              href={`/categories/${category.slug}`}
-              className="flex-shrink-0 w-36 sm:w-40 md:w-44 bg-white rounded-lg p-4 hover:shadow-lg transition-all duration-300 text-center group"
-            >
-              {/* LARGER IMAGE - Removed border from container */}
-              <div className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-4 bg-gray-50 rounded-full flex items-center justify-center group-hover:bg-red-50 transition-colors">
-                {category.image ? (
-                  <img 
-                    src={getImageUrl(category.image)} 
-                    alt={category.name}
-                    className="w-full h-full object-cover rounded-full"
-                    loading="lazy"
-                  />
-                ) : (
-                  <ShoppingBag size={28} className="text-gray-600 group-hover:text-red-600" />
-                )}
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Best-Selling Categories</h2>
+              <div className="flex items-center space-x-4">
+                <Link 
+                  href="/categories" 
+                  className="text-red-600 hover:text-red-700 font-medium flex items-center"
+                >
+                  View All <ArrowRight size={16} className="ml-1" />
+                </Link>
+                {/* Scroll buttons for mobile/desktop */}
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => scrollCategories('left')}
+                    className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors hidden sm:block"
+                    aria-label="Scroll left"
+                  >
+                    <ChevronLeft size={20} className="text-gray-600" />
+                  </button>
+                  <button
+                    onClick={() => scrollCategories('right')}
+                    className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors hidden sm:block"
+                    aria-label="Scroll right"
+                  >
+                    <ChevronRight size={20} className="text-gray-600" />
+                  </button>
+                </div>
               </div>
-              <h3 className="font-medium text-gray-900 text-sm md:text-base group-hover:text-red-600 line-clamp-2">
-                {category.name}
-              </h3>
-              {category.products_count && (
-                <p className="text-xs text-gray-500 mt-1">{category.products_count} items</p>
-              )}
-            </Link>
-          ))}
-        </div>
-        
-        {/* Scroll gradient indicators */}
-        <div className="absolute left-0 top-0 bottom-4 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-4 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none" />
-      </div>
-    </div>
-  </section>
-)}
-
+            </div>
+            
+            {/* Horizontal scrolling categories */}
+            <div className="relative">
+              <div 
+                ref={categoriesScrollRef}
+                className="flex space-x-4 overflow-x-auto pb-4 hide-scrollbar"
+                style={{ scrollBehavior: 'smooth' }}
+              >
+                {categories.map((category) => (
+                  <Link
+                    key={category.id}
+                    href={`/categories/${category.slug}`}
+                    className="flex-shrink-0 w-36 sm:w-40 md:w-44 bg-white rounded-lg p-4 hover:shadow-lg transition-all duration-300 text-center group border border-gray-100"
+                  >
+                    <div className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-4 bg-gray-50 rounded-full flex items-center justify-center group-hover:bg-red-50 transition-colors">
+                      {category.image ? (
+                        <img 
+                          src={getImageUrl(category.image)} 
+                          alt={category.name}
+                          className="w-full h-full object-cover rounded-full"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <ShoppingBag size={28} className="text-gray-600 group-hover:text-red-600" />
+                      )}
+                    </div>
+                    <h3 className="font-medium text-gray-900 text-sm md:text-base group-hover:text-red-600 line-clamp-2">
+                      {category.name}
+                    </h3>
+                    {category.products_count && (
+                      <p className="text-xs text-gray-500 mt-1">{category.products_count} items</p>
+                    )}
+                  </Link>
+                ))}
+              </div>
+              
+              {/* Scroll gradient indicators */}
+              <div className="absolute left-0 top-0 bottom-4 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none" />
+              <div className="absolute right-0 top-0 bottom-4 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none" />
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Featured Products Section - 12 PRODUCTS */}
       <section 
         ref={featuredSectionRef}
-        className="section-hidden py-12 bg-gray-50"
+        className="py-12 bg-gray-50"
       >
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
@@ -464,7 +416,7 @@ const HomePage: React.FC = () => {
       {/* New Arrivals Section - 12 PRODUCTS */}
       <section 
         ref={newArrivalsSectionRef}
-        className="section-hidden py-12 bg-white"
+        className="py-12 bg-white"
       >
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
