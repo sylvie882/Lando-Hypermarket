@@ -1,11 +1,9 @@
-
 // components/suspense/OpeningSoonSuspense.tsx
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Timer, Mail, Phone, MapPin, ShoppingBag, Star, Truck, Leaf } from 'lucide-react';
-import CountdownTimer from './CountdownTimer';
+import { X, Timer, Mail, Phone, MapPin, ShoppingBag, Star, Truck } from 'lucide-react';
 import FlashSale from '../flash/FlashSale';
 import Image from 'next/image';
 
@@ -22,6 +20,7 @@ export default function OpeningSoonSuspense() {
     const dismissed = localStorage.getItem('opening-soon-dismissed');
     if (dismissed === 'true') {
       setIsVisible(false);
+      return; // Don't show anything if already dismissed
     }
 
     // Show flash drop after a short delay
@@ -40,15 +39,21 @@ export default function OpeningSoonSuspense() {
       }, 1000);
       
       // Auto-dismiss flash after 60 seconds
-      flashTimerRef.current = setTimeout(() => {
+      setTimeout(() => {
         setShowFlashDrop(false);
-        clearInterval(countdownTimerRef.current);
+        if (countdownTimerRef.current) {
+          clearInterval(countdownTimerRef.current);
+        }
       }, 70000);
     }, 1500);
 
     return () => {
-      clearTimeout(flashTimerRef.current);
-      clearInterval(countdownTimerRef.current);
+      if (flashTimerRef.current) {
+        clearTimeout(flashTimerRef.current);
+      }
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+      }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
@@ -156,8 +161,12 @@ export default function OpeningSoonSuspense() {
 
   const handleFlashDismiss = () => {
     setShowFlashDrop(false);
-    clearInterval(countdownTimerRef.current);
-    clearTimeout(flashTimerRef.current);
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+    }
+    if (flashTimerRef.current) {
+      clearTimeout(flashTimerRef.current);
+    }
   };
 
   const handleFlashCTA = () => {
@@ -175,91 +184,89 @@ export default function OpeningSoonSuspense() {
 
   return (
     <>
-      {/* Flash Drop Modal - SIMPLIFIED VERSION */}
       {/* Flash Drop Modal */}
-<AnimatePresence>
-  {showFlashDrop && (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[999999] flex items-center justify-center p-4"
-      style={{
-        background: 'rgba(0,0,0,0.75)',
-        backdropFilter: 'blur(6px)',
-      }}
-    >
-      <motion.div
-        initial={{ scale: 0.92, y: 30 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.92, opacity: 0 }}
-        className="relative w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl"
-      >
-        {/* Background Image */}
-        <div className="absolute inset-0">
-          <Image
-            src="/flash-banner.png" // 👈 your image here
-            alt="Lando Hypermarket Flash"
-            fill
-            className="object-cover"
-            priority
-          />
-          <div className="absolute inset-0 bg-black/70" />
-        </div>
-
-        {/* Content */}
-        <div className="relative p-8 text-center text-white">
-          {/* Top Row */}
-          <div className="flex items-center justify-between mb-6">
-            <span className="px-4 py-1 text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-green-500 to-purple-600 rounded-full">
-              Flash Drop
-            </span>
-            <div className="flex items-center gap-2 font-bold">
-              <Timer className="w-4 h-4 text-green-400" />
-              {formatTime(timeLeft)}
-            </div>
-          </div>
-
-          {/* Headline */}
-          <div className="text-6xl font-black mb-4">
-            3…2…1…
-          </div>
-
-          <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
-            Lando Hypermarket is Landing!
-          </h2>
-
-          {/* Subheading */}
-          <p className="text-lg text-gray-200 mb-8 max-w-xl mx-auto">
-            Biggest launch in the neighborhood. Doorbusters, giveaways, and early-bird perks.
-          </p>
-
-          {/* CTA */}
-          <button
-            onClick={handleFlashCTA}
-            className="inline-flex items-center justify-center gap-2 px-10 py-4 text-lg font-black rounded-2xl
-              bg-gradient-to-r from-green-500 to-purple-600
-              hover:scale-105 active:scale-95 transition-transform
-              shadow-xl shadow-green-500/30"
+      <AnimatePresence>
+        {showFlashDrop && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[999999] flex items-center justify-center p-4"
+            style={{
+              background: 'rgba(0,0,0,0.75)',
+              backdropFilter: 'blur(6px)',
+            }}
           >
-            🚀 Claim Launch Perks →
-          </button>
+            <motion.div
+              initial={{ scale: 0.92, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0 }}
+              className="relative w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl"
+            >
+              {/* Background Image */}
+              <div className="absolute inset-0">
+                <Image
+                  src="/flash-banner.png"
+                  alt="Lando Hypermarket Flash"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+                <div className="absolute inset-0 bg-black/70" />
+              </div>
 
-          {/* Dismiss */}
-          <button
-            onClick={handleFlashDismiss}
-            className="block mx-auto mt-6 text-sm text-gray-300 hover:text-white"
-          >
-            Not now
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
+              {/* Content */}
+              <div className="relative p-8 text-center text-white">
+                {/* Top Row */}
+                <div className="flex items-center justify-between mb-6">
+                  <span className="px-4 py-1 text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-green-500 to-purple-600 rounded-full">
+                    Flash Drop
+                  </span>
+                  <div className="flex items-center gap-2 font-bold">
+                    <Timer className="w-4 h-4 text-green-400" />
+                    {formatTime(timeLeft)}
+                  </div>
+                </div>
 
+                {/* Headline */}
+                <div className="text-6xl font-black mb-4">
+                  3…2…1…
+                </div>
 
-      {/* Main Modal - SIMPLIFIED VERSION */}
+                <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+                  Lando Hypermarket is Landing!
+                </h2>
+
+                {/* Subheading */}
+                <p className="text-lg text-gray-200 mb-8 max-w-xl mx-auto">
+                  Biggest launch in the neighborhood. Doorbusters, giveaways, and early-bird perks.
+                </p>
+
+                {/* CTA */}
+                <button
+                  onClick={handleFlashCTA}
+                  className="inline-flex items-center justify-center gap-2 px-10 py-4 text-lg font-black rounded-2xl
+                    bg-gradient-to-r from-green-500 to-purple-600
+                    hover:scale-105 active:scale-95 transition-transform
+                    shadow-xl shadow-green-500/30"
+                >
+                  🚀 Claim Launch Perks →
+                </button>
+
+                {/* Dismiss */}
+                <button
+                  onClick={handleFlashDismiss}
+                  className="block mx-auto mt-6 text-sm text-gray-300 hover:text-white"
+                >
+                  Not now
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Modal */}
       <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
         <div className="min-h-screen flex flex-col items-center justify-center p-4">
           {/* Close Button */}
@@ -340,6 +347,11 @@ export default function OpeningSoonSuspense() {
                 We respect your privacy. No spam.
               </p>
             </div>
+          </div>
+
+          {/* FLASH SALE PREVIEW */}
+          <div className="mt-8 w-full max-w-4xl">
+            <FlashSale isPreview={true} />
           </div>
 
           {/* Contact Info */}

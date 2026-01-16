@@ -1,352 +1,368 @@
-// components/flash/FlashSale.tsx - UPDATED WITH YOUR BRANDING
+// components/suspense/OpeningSoonSuspense.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { ShoppingBag, Tag, Clock, ChevronRight, Star, Truck, Leaf } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Timer, Mail, Phone, MapPin, ShoppingBag, Star, Truck, Leaf } from 'lucide-react';
+import CountdownTimer from './CountdownTimer';
+import FlashSale from '../flash/FlashSale';
 import Image from 'next/image';
 
-interface FlashSaleItem {
-  id: number;
-  name: string;
-  originalPrice: number;
-  salePrice: number;
-  discount: number;
-  category: string;
-  rating: number;
-  sold: number;
-  stock: number;
-  description: string;
-}
+export default function OpeningSoonSuspense() {
+  const [isVisible, setIsVisible] = useState(true);
+  const [showFlashDrop, setShowFlashDrop] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(60);
+  const animationFrameRef = useRef<number>();
+  const countdownTimerRef = useRef<NodeJS.Timeout>();
+  const flashTimerRef = useRef<NodeJS.Timeout>();
 
-interface FlashSaleProps {
-  isPreview?: boolean;
-}
-
-export default function FlashSale({ isPreview = false }: FlashSaleProps) {
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 2,
-    minutes: 30,
-    seconds: 45,
-  });
-
-  // Countdown timer effect
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        const newSeconds = prev.seconds - 1;
-        const newMinutes = newSeconds < 0 ? prev.minutes - 1 : prev.minutes;
-        const newHours = newMinutes < 0 ? prev.hours - 1 : prev.hours;
-        
-        return {
-          hours: newHours < 0 ? 23 : newHours,
-          minutes: newMinutes < 0 ? 59 : newMinutes,
-          seconds: newSeconds < 0 ? 59 : newSeconds,
-        };
-      });
-    }, 1000);
+    // Check if user has dismissed the modal before
+    const dismissed = localStorage.getItem('opening-soon-dismissed');
+    if (dismissed === 'true') {
+      setIsVisible(false);
+    }
 
-    return () => clearInterval(timer);
+    // Show flash drop after a short delay
+    flashTimerRef.current = setTimeout(() => {
+      setShowFlashDrop(true);
+      
+      // Start 1 minute countdown
+      countdownTimerRef.current = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownTimerRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      // Auto-dismiss flash after 60 seconds
+      flashTimerRef.current = setTimeout(() => {
+        setShowFlashDrop(false);
+        clearInterval(countdownTimerRef.current);
+      }, 70000);
+    }, 1500);
+
+    return () => {
+      clearTimeout(flashTimerRef.current);
+      clearInterval(countdownTimerRef.current);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
   }, []);
 
-  const flashSaleItems: FlashSaleItem[] = [
-    {
-      id: 1,
-      name: 'Fresh Organic Tomatoes (1kg)',
-      originalPrice: 450,
-      salePrice: 299,
-      discount: 34,
-      category: 'Vegetables',
-      rating: 4.8,
-      sold: 124,
-      stock: 50,
-      description: 'Farm-fresh organic tomatoes, perfect for salads and cooking',
-    },
-    {
-      id: 2,
-      name: 'Premium Hass Avocados (4pcs)',
-      originalPrice: 300,
-      salePrice: 199,
-      discount: 34,
-      category: 'Fruits',
-      rating: 4.9,
-      sold: 89,
-      stock: 30,
-      description: 'Creamy and delicious, perfect for guacamole',
-    },
-    {
-      id: 3,
-      name: 'Organic Carrots (1kg)',
-      originalPrice: 280,
-      salePrice: 189,
-      discount: 32,
-      category: 'Vegetables',
-      rating: 4.7,
-      sold: 156,
-      stock: 45,
-      description: 'Sweet and crunchy, packed with vitamins',
-    },
-    {
-      id: 4,
-      name: 'Fresh Milk (1L)',
-      originalPrice: 180,
-      salePrice: 149,
-      discount: 17,
-      category: 'Dairy',
-      rating: 4.6,
-      sold: 203,
-      stock: 60,
-      description: 'Pure, pasteurized fresh milk',
-    },
-    {
-      id: 5,
-      name: 'Organic Spinach (500g)',
-      originalPrice: 220,
-      salePrice: 149,
-      discount: 32,
-      category: 'Vegetables',
-      rating: 4.5,
-      sold: 98,
-      stock: 40,
-      description: 'Nutrient-rich fresh spinach leaves',
-    },
-    {
-      id: 6,
-      name: 'Bananas (1kg)',
-      originalPrice: 150,
-      salePrice: 99,
-      discount: 34,
-      category: 'Fruits',
-      rating: 4.8,
-      sold: 167,
-      stock: 55,
-      description: 'Sweet and ripe, perfect for snacks',
-    },
-    {
-      id: 7,
-      name: 'Free Range Eggs (12pcs)',
-      originalPrice: 350,
-      salePrice: 249,
-      discount: 29,
-      category: 'Poultry',
-      rating: 4.7,
-      sold: 134,
-      stock: 35,
-      description: 'Farm fresh free-range eggs',
-    },
-    {
-      id: 8,
-      name: 'Onions (1kg)',
-      originalPrice: 180,
-      salePrice: 129,
-      discount: 28,
-      category: 'Vegetables',
-      rating: 4.6,
-      sold: 187,
-      stock: 65,
-      description: 'Fresh red onions for your recipes',
-    },
-  ];
+  // Confetti animation
+  useEffect(() => {
+    if (!showFlashDrop || typeof window === 'undefined') return;
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 999998;
+    `;
+    document.body.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles: Array<{
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      size: number;
+      color: string;
+      life: number;
+    }> = [];
+
+    const colors = ['#00f5a0', '#6a5cff', '#ffffff', '#ffe66d'];
+
+    // Create initial burst
+    for (let i = 0; i < 50; i++) {
+      particles.push({
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        vx: (Math.random() - 0.5) * 4,
+        vy: (Math.random() - 0.5) * 4 - 2,
+        size: Math.random() * 3 + 2,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 100
+      });
+    }
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.05;
+        p.life -= 1;
+        
+        if (p.life <= 0 || p.y > canvas.height || p.x < 0 || p.x > canvas.width) {
+          particles.splice(i, 1);
+          continue;
+        }
+        
+        ctx.save();
+        ctx.globalAlpha = p.life / 100;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+        ctx.restore();
+      }
+      
+      if (particles.length > 0) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    animate();
+
+    // Handle window resize
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (canvas.parentNode) {
+        canvas.parentNode.removeChild(canvas);
+      }
+    };
+  }, [showFlashDrop]);
+
+  const handleDismiss = () => {
+    setIsVisible(false);
+    localStorage.setItem('opening-soon-dismissed', 'true');
   };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-    },
+  const handleFlashDismiss = () => {
+    setShowFlashDrop(false);
+    clearInterval(countdownTimerRef.current);
+    clearTimeout(flashTimerRef.current);
   };
+
+  const handleFlashCTA = () => {
+    window.open('https://hypermarket.co.ke/lando-launch?utm_source=flash&utm_medium=onsite&utm_campaign=lando_prelaunch', '_blank');
+    handleFlashDismiss();
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  if (!isVisible) return null;
 
   return (
-    <div className={`${isPreview ? 'bg-gradient-to-r from-amber-50 to-orange-50' : 'bg-white'} rounded-3xl shadow-xl p-6 border border-amber-200`}>
-      {/* Header with Branding */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-        <div className="flex items-center gap-3 mb-4 md:mb-0">
-          <div className="relative">
-            <div className="bg-gradient-to-r from-red-500 to-orange-500 p-3 rounded-xl">
-              <Tag className="w-8 h-8 text-white" />
-            </div>
-            <div className="absolute -top-2 -right-2 bg-green-600 text-white text-xs px-2 py-1 rounded-full">
-              <Leaf className="w-3 h-3 inline mr-1" />
-              Organic
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Lando Flash Sale</h2>
-              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
-                🔥 HOT DEALS
-              </span>
-            </div>
-            <p className="text-gray-600">Limited time offers! Don't miss out</p>
-          </div>
-        </div>
-        
-        {/* Timer with Brand Colors */}
-        <div className="flex items-center gap-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-full shadow-lg">
-          <Clock className="w-5 h-5" />
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold">{timeLeft.hours.toString().padStart(2, '0')}</span>
-            <span>:</span>
-            <span className="text-2xl font-bold">{timeLeft.minutes.toString().padStart(2, '0')}</span>
-            <span>:</span>
-            <span className="text-2xl font-bold">{timeLeft.seconds.toString().padStart(2, '0')}</span>
-          </div>
-          <span className="text-sm font-medium">LEFT</span>
-        </div>
-      </div>
-
-      {/* Sale Items Grid */}
+    <>
+      {/* Flash Drop Modal - SIMPLIFIED VERSION */}
+      {/* Flash Drop Modal */}
+<AnimatePresence>
+  {showFlashDrop && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[999999] flex items-center justify-center p-4"
+      style={{
+        background: 'rgba(0,0,0,0.75)',
+        backdropFilter: 'blur(6px)',
+      }}
+    >
       <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className={`grid ${isPreview ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'} gap-6`}
+        initial={{ scale: 0.92, y: 30 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.92, opacity: 0 }}
+        className="relative w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl"
       >
-        {flashSaleItems.slice(0, isPreview ? 4 : 8).map((item) => (
-          <motion.div
-            key={item.id}
-            variants={itemVariants}
-            whileHover={{ y: -5, transition: { duration: 0.2 } }}
-            className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-2xl transition-all duration-300 group"
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <Image
+            src="/flash-banner.png" // 👈 your image here
+            alt="Lando Hypermarket Flash"
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute inset-0 bg-black/70" />
+        </div>
+
+        {/* Content */}
+        <div className="relative p-8 text-center text-white">
+          {/* Top Row */}
+          <div className="flex items-center justify-between mb-6">
+            <span className="px-4 py-1 text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-green-500 to-purple-600 rounded-full">
+              Flash Drop
+            </span>
+            <div className="flex items-center gap-2 font-bold">
+              <Timer className="w-4 h-4 text-green-400" />
+              {formatTime(timeLeft)}
+            </div>
+          </div>
+
+          {/* Headline */}
+          <div className="text-6xl font-black mb-4">
+            3…2…1…
+          </div>
+
+          <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+            Lando Hypermarket is Landing!
+          </h2>
+
+          {/* Subheading */}
+          <p className="text-lg text-gray-200 mb-8 max-w-xl mx-auto">
+            Biggest launch in the neighborhood. Doorbusters, giveaways, and early-bird perks.
+          </p>
+
+          {/* CTA */}
+          <button
+            onClick={handleFlashCTA}
+            className="inline-flex items-center justify-center gap-2 px-10 py-4 text-lg font-black rounded-2xl
+              bg-gradient-to-r from-green-500 to-purple-600
+              hover:scale-105 active:scale-95 transition-transform
+              shadow-xl shadow-green-500/30"
           >
-            {/* Badge with Brand Colors */}
-            <div className="absolute top-3 left-3 z-10">
-              <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                -{item.discount}% OFF
+            🚀 Claim Launch Perks →
+          </button>
+
+          {/* Dismiss */}
+          <button
+            onClick={handleFlashDismiss}
+            className="block mx-auto mt-6 text-sm text-gray-300 hover:text-white"
+          >
+            Not now
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
+
+      {/* Main Modal - SIMPLIFIED VERSION */}
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
+        <div className="min-h-screen flex flex-col items-center justify-center p-4">
+          {/* Close Button */}
+          <button
+            onClick={handleDismiss}
+            className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors z-10"
+          >
+            <X className="w-5 h-5 text-gray-700" />
+          </button>
+
+          {/* Logo */}
+          <div className="text-center mb-6">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-r from-green-400 to-emerald-600 p-1 mb-4 mx-auto">
+              <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                <Image
+                  src="/logo.jpeg"
+                  alt="Logo"
+                  width={72}
+                  height={72}
+                  className="object-cover"
+                />
               </div>
             </div>
-            
-            {/* Product Image Placeholder with Brand Colors */}
-            <div className="relative h-48 bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-r from-green-200 to-emerald-300 flex items-center justify-center shadow-inner">
-                <ShoppingBag className="w-16 h-16 text-green-600" />
-              </div>
-              {/* Category Badge */}
-              <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium text-gray-700">
-                {item.category}
-              </div>
-            </div>
-            
-            {/* Product Info */}
-            <div className="p-5">
-              <div className="mb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg text-gray-900 line-clamp-1 group-hover:text-green-700 transition-colors">
-                      {item.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 line-clamp-2 mt-1">
-                      {item.description}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 ml-2">
-                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                    <span className="font-medium">{item.rating}</span>
-                  </div>
-                </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              <span className="text-green-600">LANDO</span> HYPERMARKET
+            </h1>
+            <p className="text-gray-600 text-sm italic">
+              Famous And Renowned Throughout The Land
+            </p>
+          </div>
+
+          {/* Main Content Card */}
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 max-w-md w-full shadow-lg border border-green-100">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center gap-2 bg-green-500/10 text-green-700 px-4 py-2 rounded-full mb-4">
+                <Timer className="w-4 h-4" />
+                <span className="font-bold text-sm">COMING SOON</span>
               </div>
               
-              {/* Pricing */}
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-gray-900">Ksh {item.salePrice}</span>
-                    <span className="text-gray-400 line-through">Ksh {item.originalPrice}</span>
+              <h2 className="text-xl font-bold text-gray-900 mb-3">
+                Opening at Your Neighborhood!
+              </h2>
+              
+              <p className="text-gray-600 mb-6">
+                Get ready for fresh, organic produce delivered straight to your doorstep.
+              </p>
+
+              {/* Features */}
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                {[
+                  { icon: Star, text: 'Organic', color: 'text-yellow-500' },
+                  { icon: Truck, text: 'Free Delivery', color: 'text-green-500' },
+                  { icon: Timer, text: 'Same Day', color: 'text-blue-500' },
+                  { icon: ShoppingBag, text: 'Fresh', color: 'text-emerald-500' },
+                ].map((feature, index) => (
+                  <div key={index} className="bg-white rounded-lg p-3 flex flex-col items-center">
+                    <feature.icon className={`w-5 h-5 ${feature.color} mb-1`} />
+                    <span className="text-xs font-medium text-gray-700">{feature.text}</span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                      Save Ksh {item.originalPrice - item.salePrice}
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Add to Cart Button */}
-                <button className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-3 rounded-full hover:from-green-600 hover:to-emerald-700 transition-all hover:scale-110 shadow-md group-hover:shadow-lg">
-                  <ShoppingBag className="w-5 h-5" />
+                ))}
+              </div>
+            </div>
+
+            {/* Email Signup */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <h3 className="font-bold text-gray-900 mb-2">Get Early Access</h3>
+              <div className="space-y-3">
+                <input
+                  type="email"
+                  placeholder="Your email address"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+                <button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity">
+                  Notify Me on Launch
                 </button>
               </div>
-              
-              {/* Stock Progress */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Sold: {item.sold}</span>
-                  <span className="text-gray-600">Stock: {item.stock}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${(item.sold / (item.sold + item.stock)) * 100}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 text-center">
-                  ⚡ Hurry! Only {item.stock} left in stock
-                </p>
-              </div>
-              
-              {/* Delivery Info */}
-              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-                <Truck className="w-4 h-4 text-green-600" />
-                <span className="text-sm text-gray-600">Free delivery in Nairobi</span>
-              </div>
+              <p className="text-xs text-gray-500 mt-3 text-center">
+                We respect your privacy. No spam.
+              </p>
             </div>
-          </motion.div>
-        ))}
-      </motion.div>
+          </div>
 
-      {/* CTA Button */}
-      {isPreview ? (
-        <div className="text-center mt-8">
-          <button className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-700 text-white px-8 py-4 rounded-full font-bold text-lg hover:shadow-xl transition-all hover:scale-105 shadow-lg">
-            <ShoppingBag className="w-5 h-5" />
-            View All Flash Deals 
-            <ChevronRight className="w-5 h-5" />
+          {/* Contact Info */}
+          <div className="mt-8 flex flex-col gap-3 text-sm text-gray-600 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <Phone className="w-4 h-4 text-green-600" />
+              <span>+254 716 354 589</span>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <Mail className="w-4 h-4 text-green-600" />
+              <span>info@hypermarket.co.ke</span>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <MapPin className="w-4 h-4 text-green-600" />
+              <span>Nairobi, Kenya</span>
+            </div>
+          </div>
+
+          {/* Partner CTA */}
+          <button className="mt-8 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-3 px-6 rounded-full hover:scale-105 transition-transform">
+            🤝 Partner With Us →
           </button>
-          <div className="flex items-center justify-center gap-4 mt-4">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              Available on Website
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              Available on Mobile App
-            </div>
-          </div>
         </div>
-      ) : (
-        <div className="flex flex-col md:flex-row justify-between items-center mt-8 pt-8 border-t border-amber-200 gap-6">
-          <div className="flex items-center gap-4">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-3 rounded-full">
-              <Truck className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <p className="font-medium text-gray-900">Free Nairobi Delivery</p>
-              <p className="text-sm text-gray-600">On orders above Ksh 2,000</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <button className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-full font-medium hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2">
-              <Leaf className="w-5 h-5" />
-              View Organic Collection
-            </button>
-            
-            <button className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-8 py-3 rounded-full font-bold hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2">
-              Shop All Deals 
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
+    </>
   );
-}
+}  

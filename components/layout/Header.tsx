@@ -10,10 +10,11 @@ import {
   Phone, LogIn, ChevronDown, MapPin, Clock,
   Package, Star, Home, ChevronRight, Headphones, Tag,
   ShoppingBag, Gift, Shield, CreditCard, HelpCircle,
-  Navigation, PhoneCall
+  Navigation, PhoneCall, Zap, ChevronLeft, ArrowRight, Percent
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { debounce } from 'lodash';
+import { Product } from '@/types';
 
 const Header: React.FC = () => {
   const { user, isAuthenticated, logout, isLoading: authLoading } = useAuth();
@@ -26,10 +27,15 @@ const Header: React.FC = () => {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPromoBanner, setShowPromoBanner] = useState(true);
+  const [promoProducts, setPromoProducts] = useState<Product[]>([]);
+  const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
+  const [isPromoLoading, setIsPromoLoading] = useState(false);
   
   const userMenuRef = useRef<HTMLDivElement>(null);
   const categoriesMenuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const promoIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const pathname = usePathname();
   const router = useRouter();
@@ -51,7 +57,130 @@ const Header: React.FC = () => {
     grayLight: '#f3f4f6' // gray-100
   }), []);
 
-  // Categories data - memoized
+  // ========== FETCH PROMOTIONAL PRODUCTS ==========
+  const fetchPromotionalProducts = useCallback(async () => {
+    try {
+      setIsPromoLoading(true);
+      
+      // Try to get products with discounts first
+      const response = await api.products.getAll({ 
+        per_page: 10,
+        sort: 'discount',
+        order: 'desc',
+        discount_min: 10 // Minimum 10% discount
+      });
+      
+      let products: Product[] = response.data?.data || response.data || [];
+      
+      // If not enough discounted products, get featured products
+      if (products.length < 4) {
+        const featuredRes = await api.products.getFeatured();
+        const featuredProducts = featuredRes.data || [];
+        
+        // Merge without duplicates
+        const existingIds = new Set(products.map(p => p.id));
+        const additionalProducts = featuredProducts.filter((p: Product) => !existingIds.has(p.id));
+        products = [...products, ...additionalProducts].slice(0, 10);
+      }
+      
+      // Ensure we have at least some products
+      if (products.length < 4) {
+        const newArrivalsRes = await api.products.getAll({ 
+          per_page: 4,
+          sort: 'created_at',
+          order: 'desc'
+        });
+        const newProducts = newArrivalsRes.data?.data || newArrivalsRes.data || [];
+        products = [...products, ...newProducts].slice(0, 10);
+      }
+      
+      setPromoProducts(products);
+      
+      // Start auto-rotation if we have multiple products
+      if (products.length > 1) {
+        if (promoIntervalRef.current) {
+          clearInterval(promoIntervalRef.current);
+        }
+        
+        promoIntervalRef.current = setInterval(() => {
+          setCurrentPromoIndex(prev => (prev + 1) % Math.min(products.length, 4));
+        }, 5000);
+      }
+      
+    } catch (error) {
+      console.error('Failed to fetch promotional products:', error);
+    } finally {
+      setIsPromoLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPromotionalProducts();
+    
+    return () => {
+      if (promoIntervalRef.current) {
+        clearInterval(promoIntervalRef.current);
+      }
+    };
+  }, [fetchPromotionalProducts]);
+
+  // ========== PRODUCT CALCULATIONS ==========
+  const calculateDiscount = useCallback((product: Product) => {
+    const price = product.price ? parseFloat(String(product.price)) : 0;
+    const finalPrice = product.final_price || product.discounted_price || price;
+    const finalPriceNum = finalPrice ? parseFloat(String(finalPrice)) : price;
+    
+    if (price > 0 && finalPriceNum < price) {
+      return Math.round(((price - finalPriceNum) / price) * 100);
+    }
+    return 0;
+  }, []);
+
+  const formatKSH = useCallback((amount: any) => {
+    const numAmount = amount ? parseFloat(String(amount)) : 0;
+    
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return 'KSh 0';
+    }
+    
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(numAmount);
+  }, []);
+
+  const getImageUrl = useCallback((product: Product): string => {
+    const baseUrl = 'https://api.hypermarket.co.ke';
+    const timestamp = product.updated_at ? new Date(product.updated_at).getTime() : Date.now();
+    
+    let imageUrl = '';
+    
+    if (product.main_image) {
+      imageUrl = product.main_image.startsWith('http') 
+        ? product.main_image 
+        : `${baseUrl}${product.main_image.startsWith('/') ? '' : '/'}${product.main_image}`;
+    } else if (product.thumbnail) {
+      let url = product.thumbnail;
+      if (!url.startsWith('http')) {
+        if (url.startsWith('/storage/')) {
+          url = `${baseUrl}${url}`;
+        } else if (url.startsWith('storage/')) {
+          url = `${baseUrl}/${url}`;
+        } else {
+          url = `${baseUrl}/storage/${url}`;
+        }
+      }
+      imageUrl = url;
+    } else {
+      return `https://api.hypermarket.co.ke/storage/default-product.jpg?t=${timestamp}`;
+    }
+    
+    return `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${timestamp}&w=300&h=200&fit=crop&auto=format`;
+  }, []);
+
+  // ========== CATEGORIES DATA ==========
   const categories = useMemo(() => [
     { 
       id: 'fruits-vegetables', 
@@ -145,7 +274,6 @@ const Header: React.FC = () => {
       setScrolled(window.scrollY > 10);
     };
     
-    // Throttle scroll events for performance
     const throttledScroll = debounce(handleScroll, 100);
     window.addEventListener('scroll', throttledScroll, { passive: true });
     
@@ -314,6 +442,39 @@ const Header: React.FC = () => {
     'Tomatoes', 'Onions', 'Potatoes', 'Chicken', 'Beef', 'Fish'
   ], []);
 
+  // Function to close promo banner
+  const closePromoBanner = useCallback(() => {
+    setShowPromoBanner(false);
+    if (promoIntervalRef.current) {
+      clearInterval(promoIntervalRef.current);
+    }
+  }, []);
+
+  // Navigate promo products
+  const navigatePromo = useCallback((direction: 'prev' | 'next') => {
+    if (promoProducts.length === 0) return;
+    
+    setCurrentPromoIndex(prev => {
+      if (direction === 'next') {
+        return (prev + 1) % Math.min(promoProducts.length, 4);
+      } else {
+        return (prev - 1 + Math.min(promoProducts.length, 4)) % Math.min(promoProducts.length, 4);
+      }
+    });
+    
+    // Reset auto-rotation timer
+    if (promoIntervalRef.current) {
+      clearInterval(promoIntervalRef.current);
+    }
+    
+    promoIntervalRef.current = setInterval(() => {
+      setCurrentPromoIndex(prev => (prev + 1) % Math.min(promoProducts.length, 4));
+    }, 5000);
+  }, [promoProducts.length]);
+
+  // Get current promo product
+  const currentPromoProduct = promoProducts[currentPromoIndex];
+
   return (
     <>
       <style jsx global>{`
@@ -332,9 +493,21 @@ const Header: React.FC = () => {
           to { transform: translateY(0); opacity: 1; }
         }
         
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
+        }
+        
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        
         .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
         .animate-slideInLeft { animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .animate-slideInUp { animation: slideInUp 0.3s ease-out; }
+        .animate-pulse-slow { animation: pulse 2s infinite; }
+        .animate-slideInRight { animation: slideInRight 0.3s ease-out; }
         
         .cart-badge {
           position: absolute;
@@ -421,7 +594,6 @@ const Header: React.FC = () => {
           transform: scale(1.05);
         }
         
-        /* Enhanced search styles */
         .search-glow {
           box-shadow: 0 0 0 1px rgba(106, 156, 61, 0.1), 0 8px 25px rgba(106, 156, 61, 0.15);
         }
@@ -438,10 +610,280 @@ const Header: React.FC = () => {
           box-shadow: 0 6px 20px rgba(106, 156, 61, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
           transform: translateY(-1px);
         }
+        
+        /* Promo banner styles */
+        .promo-gradient {
+          background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 20%, #ffa726 40%, #ffcc80 60%, #ffb74d 80%, #ff9800 100%);
+          background-size: 200% 200%;
+          animation: gradientShift 8s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        
+        .text-shadow-sm {
+          text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .price-slash {
+          position: relative;
+        }
+        
+        .price-slash::before {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 0;
+          width: 100%;
+          height: 1px;
+          background: #c0392b;
+          transform: rotate(-10deg);
+        }
+        
+        .promo-product-slide {
+          transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .promo-dot {
+          transition: all 0.3s ease;
+        }
+        
+        .promo-dot.active {
+          transform: scale(1.2);
+          background: white !important;
+        }
       `}</style>
 
+      {/* Real Product Promotional Banner */}
+      {showPromoBanner && promoProducts.length > 0 && (
+        <div className="relative w-full promo-gradient py-3 px-4 animate-fadeIn border-b border-orange-300">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between">
+              {/* Close Button */}
+              <button
+                onClick={closePromoBanner}
+                className="text-white/90 hover:text-white transition-colors p-1 mr-4 z-10"
+                aria-label="Close promotional banner"
+              >
+                <X size={18} />
+              </button>
+
+              {/* Promo Message */}
+              <div className="flex items-center space-x-3 flex-1">
+                <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30 flex items-center space-x-2">
+                  <Zap size={14} className="text-white" />
+                  <span className="text-white font-bold text-sm uppercase tracking-wide">HOT DEALS</span>
+                </div>
+                <div className="hidden md:block">
+                  <span className="text-white font-semibold text-lg tracking-tight text-shadow-sm">
+                    Limited Time Offers! Don't Miss Out
+                  </span>
+                </div>
+              </div>
+
+              {/* Promo Timer/Info */}
+              <div className="hidden lg:flex items-center space-x-4">
+                <div className="text-center">
+                  <div className="text-xs text-white/90 font-medium mb-1">Deals Ending Soon</div>
+                  <div className="text-white font-bold">24:59:59</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Promotional Products Carousel */}
+            {currentPromoProduct && (
+              <div className="mt-4 animate-slideInRight">
+                <div className="flex items-center justify-between bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+                  {/* Navigation Buttons */}
+                  {promoProducts.length > 1 && (
+                    <button
+                      onClick={() => navigatePromo('prev')}
+                      className="p-2 rounded-full bg-white/30 hover:bg-white/40 transition-colors flex-shrink-0 mr-4"
+                      aria-label="Previous product"
+                    >
+                      <ChevronLeft size={20} className="text-white" />
+                    </button>
+                  )}
+
+                  {/* Product Info */}
+                  <Link 
+                    href={`/products/${currentPromoProduct.id}`}
+                    className="flex items-center space-x-4 flex-1 group"
+                  >
+                    {/* Product Image */}
+                    <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden border-2 border-white/50 shadow-md">
+                      <Image
+                        src={getImageUrl(currentPromoProduct)}
+                        alt={currentPromoProduct.name || 'Product'}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="80px"
+                        loading="eager"
+                      />
+                      
+                      {/* Discount Badge */}
+                      {calculateDiscount(currentPromoProduct) > 0 && (
+                        <div className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+                          -{calculateDiscount(currentPromoProduct)}%
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Product Details */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-white text-sm md:text-base truncate group-hover:underline">
+                        {currentPromoProduct.name || 'Special Offer'}
+                      </h4>
+                      
+                      {/* Category */}
+                      {currentPromoProduct.category?.name && (
+                        <div className="text-xs text-white/80 mb-1">
+                          {currentPromoProduct.category.name}
+                        </div>
+                      )}
+                      
+                      {/* Price */}
+                      <div className="flex items-center space-x-2">
+                        <div className="text-lg font-bold text-white">
+                          {formatKSH(currentPromoProduct.final_price || currentPromoProduct.discounted_price || currentPromoProduct.price)}
+                        </div>
+                        
+                        {currentPromoProduct.price && 
+                         currentPromoProduct.final_price && 
+                         parseFloat(String(currentPromoProduct.final_price)) < parseFloat(String(currentPromoProduct.price)) && (
+                          <>
+                            <div className="text-sm text-white/80 price-slash">
+                              {formatKSH(currentPromoProduct.price)}
+                            </div>
+                            <div className="text-xs bg-red-500 text-white px-2 py-1 rounded-full font-bold">
+                              Save {formatKSH(parseFloat(String(currentPromoProduct.price)) - parseFloat(String(currentPromoProduct.final_price || currentPromoProduct.price)))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      
+                      {/* Stock Status */}
+                      <div className="text-xs mt-1">
+                        {currentPromoProduct.stock_quantity && parseInt(String(currentPromoProduct.stock_quantity)) > 0 ? (
+                          <span className="text-green-200 font-medium">
+                            {parseInt(String(currentPromoProduct.stock_quantity))} in stock
+                          </span>
+                        ) : (
+                          <span className="text-red-200 font-medium">
+                            Limited stock
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick View/CTA */}
+                    <div className="flex flex-col items-center space-y-2">
+                      <Link
+                        href={`/products/${currentPromoProduct.id}`}
+                        className="bg-white text-orange-600 font-bold px-4 py-2.5 rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center space-x-2 group/cta animate-pulse-slow"
+                        aria-label="View this deal"
+                      >
+                        <ShoppingBag size={16} className="group-hover/cta:rotate-12 transition-transform" />
+                        <span className="text-sm">Shop Now</span>
+                      </Link>
+                      
+                      <div className="text-xs text-white/70">
+                        Deal {currentPromoIndex + 1} of {Math.min(promoProducts.length, 4)}
+                      </div>
+                    </div>
+                  </Link>
+
+                  {/* Next Button */}
+                  {promoProducts.length > 1 && (
+                    <button
+                      onClick={() => navigatePromo('next')}
+                      className="p-2 rounded-full bg-white/30 hover:bg-white/40 transition-colors flex-shrink-0 ml-4"
+                      aria-label="Next product"
+                    >
+                      <ArrowRight size={20} className="text-white" />
+                    </button>
+                  )}
+                </div>
+                
+                {/* Dots Indicator */}
+                {promoProducts.length > 1 && (
+                  <div className="flex justify-center space-x-2 mt-3">
+                    {promoProducts.slice(0, 4).map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentPromoIndex(index)}
+                        className={`promo-dot w-2 h-2 rounded-full ${index === currentPromoIndex ? 'active' : 'bg-white/50'}`}
+                        aria-label={`Go to deal ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Alternative Banner when no products or loading */}
+      {showPromoBanner && (isPromoLoading || promoProducts.length === 0) && (
+        <div className="relative w-full promo-gradient py-3 px-4 animate-fadeIn border-b border-orange-300">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={closePromoBanner}
+                className="text-white/90 hover:text-white transition-colors p-1 mr-4"
+                aria-label="Close promotional banner"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="flex items-center space-x-3 flex-1">
+                <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30 flex items-center space-x-2">
+                  <Gift size={14} className="text-white" />
+                  <span className="text-white font-bold text-sm uppercase tracking-wide">SPECIAL OFFER</span>
+                </div>
+                <div>
+                  <span className="text-white font-semibold text-lg tracking-tight text-shadow-sm">
+                    New here? Get 3 free deliveries on your first order!
+                  </span>
+                </div>
+              </div>
+
+              <Link 
+                href="/auth/register"
+                className="bg-white text-orange-600 font-bold px-5 py-2.5 rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center space-x-2"
+                aria-label="Sign up for free deliveries"
+              >
+                <ShoppingBag size={18} />
+                <span>Sign Up Free</span>
+              </Link>
+            </div>
+            
+            {/* Price Highlights */}
+            <div className="mt-3 flex items-center justify-center space-x-6">
+              <div className="text-center">
+                <div className="text-xs text-white/90 font-medium mb-1">From As Low As</div>
+                <div className="text-white font-bold text-xl">Ksh 50</div>
+                <div className="text-xs text-white/80 font-medium">Everyday Essentials</div>
+              </div>
+              
+              <div className="h-8 w-px bg-white/40"></div>
+              
+              <div className="text-center">
+                <div className="text-xs text-white/90 font-medium mb-1">Chini kwa chini deals</div>
+                <div className="text-white font-bold text-lg">1,946 Kes</div>
+                <div className="text-white font-bold text-sm">→ 1,466 Kes</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Header - Sticky */}
-      <div className={`sticky-header ${scrolled ? 'shadow-lg' : 'shadow-sm'} transition-all duration-300`}>
+      <div className={`sticky-header ${scrolled ? 'shadow-lg' : 'shadow-sm'} transition-all duration-300 ${!showPromoBanner ? 'pt-0' : ''}`}>
         <div className="max-w-7xl mx-auto px-4">
           {/* First Row: Logo, Search, Actions */}
           <div className="flex items-center justify-between py-3">
