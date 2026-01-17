@@ -1174,7 +1174,7 @@ const Header: React.FC = () => {
                           >
                             <Icon size={20} className={`mx-auto mb-2 ${service.color}`} />
                             <div className="font-medium text-sm">{service.name}</div>
-                            <div className="text-xs text-gray-500">{service.desc}</div>
+                            {/* <div className="text-xs text-gray-500">{service.desc}</div> */}
                           </Link>
                         );
                       })}
