@@ -782,6 +782,12 @@ const Header: React.FC = () => {
                       priority
                     />
                   </div>
+                  {/* Show "Lando Hypermarket" text on mobile */}
+                  <div className="block sm:hidden">
+                    <div className="text-lg font-bold text-[#6a9c3d] tracking-tight">LANDO</div>
+                    <div className="text-xs font-medium text-[#666666] -mt-1">HYPERMARKET</div>
+                  </div>
+                  {/* Show full branding on larger screens */}
                   <div className="hidden sm:block">
                     <div className="text-2xl font-black text-[#6a9c3d] tracking-tight">LANDO</div>
                     <div className="text-xs font-medium text-[#666666] -mt-1">HYPERMARKET</div>
