@@ -15,6 +15,14 @@ interface PersonalizedRecommendationsProps {
   className?: string;
 }
 
+// Extend Product type to include metadata
+interface ProductWithMetadata extends Product {
+  metadata?: {
+    relevance_score?: number;
+    recommendation_type?: string;
+  };
+}
+
 const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = ({
   title = "Recommended For You",
   limit = 12,
@@ -22,7 +30,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
   showStrategy = false,
   className = ""
 }) => {
-  const [recommendations, setRecommendations] = useState<Product[]>([]);
+  const [recommendations, setRecommendations] = useState<ProductWithMetadata[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [strategyUsed, setStrategyUsed] = useState<string>('hybrid');
@@ -45,7 +53,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
       
       if (response.success && Array.isArray(response.recommendations)) {
         // Transform the API response to match Product type
-        const transformedProducts: Product[] = response.recommendations.map((rec: any) => {
+        const transformedProducts: ProductWithMetadata[] = response.recommendations.map((rec: any) => {
           // Calculate final price
           const finalPrice = rec.discounted_price || rec.price;
           
@@ -323,10 +331,10 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
                   </div>
                 )}
                 
+                {/* REMOVED showRelevance prop since ProductCard doesn't support it */}
                 <ProductCard 
                   product={product} 
                   onViewTrack={trackProductView}
-                  showRelevance={false}
                 />
               </div>
             ))}
