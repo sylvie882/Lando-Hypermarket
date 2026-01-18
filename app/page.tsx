@@ -429,11 +429,11 @@ const HomePage: React.FC = () => {
       {isAuthenticated ? (
         <section className="py-12 bg-white border-t border-gray-100">
           <div className="container mx-auto px-4">
-            <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+            {/* <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
               <p className="text-sm text-green-800">
                 ✅ Authenticated as {user?.name || 'User'} | Showing personalized recommendations
               </p>
-            </div>
+            </div> */}
             <PersonalizedRecommendations 
               title="Recommended For You"
               limit={12}
