@@ -269,7 +269,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
   if (isLoading) {
     return (
       <div 
-        className={`relative ${rounded ? 'rounded-2xl' : ''} overflow-hidden bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse`}
+        className={`relative ${rounded ? 'rounded-2xl' : ''} overflow-hidden bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse border-2 border-gray-300`}
         style={{ height: typeof window !== 'undefined' && window.innerWidth < 768 ? height.mobile : height.desktop }}
       >
         <div className="absolute inset-0 flex items-center justify-center">
@@ -282,7 +282,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
   if (error && banners.length === 0) {
     return (
       <div 
-        className={`relative ${rounded ? 'rounded-2xl' : ''} overflow-hidden bg-gradient-to-r from-emerald-500 to-emerald-600`}
+        className={`relative ${rounded ? 'rounded-2xl' : ''} overflow-hidden bg-gradient-to-r from-emerald-500 to-emerald-600 border-2 border-emerald-400`}
         style={{ height: typeof window !== 'undefined' && window.innerWidth < 768 ? height.mobile : height.desktop }}
       >
         <div className="absolute inset-0 flex items-center justify-center p-8">
@@ -301,7 +301,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
   }
 
   return (
-    <div className={`relative overflow-hidden ${rounded ? 'rounded-2xl' : ''} shadow-lg`}>
+    <div className={`relative overflow-hidden ${rounded ? 'rounded-2xl' : ''} shadow-lg border-2 border-gray-200`}>
       {/* Desktop Banners */}
       <div className="hidden md:block" style={{ height: height.desktop }}>
         {banners.map((banner, index) => {
