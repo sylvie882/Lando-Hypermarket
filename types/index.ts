@@ -74,6 +74,12 @@ export interface Product {
   unit?: string | null;
   barcode?: string | null;
   min_stock_threshold?: number;
+
+
+  metadata?: {
+    relevance_score?: number;
+    recommendation_type?: string;
+  };
 }
 // types/index.ts
 export interface Category {
