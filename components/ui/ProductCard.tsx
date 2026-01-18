@@ -155,30 +155,48 @@ const ProductCard: React.FC<ProductCardProps> = ({
     const baseUrl = 'https://api.hypermarket.co.ke';
     const timestamp = product.updated_at ? new Date(product.updated_at).getTime() : Date.now();
     
-    let imageUrl = '';
+    // Get the image path
+    const imagePath = product.main_image || product.thumbnail;
     
-    if (product.main_image) {
-      imageUrl = product.main_image.startsWith('http') 
-        ? product.main_image 
-        : `${baseUrl}${product.main_image.startsWith('/') ? '' : '/'}${product.main_image}`;
-    } else if (product.thumbnail) {
-      let url = product.thumbnail;
-      if (!url.startsWith('http')) {
-        if (url.startsWith('/storage/')) {
-          url = `${baseUrl}${url}`;
-        } else if (url.startsWith('storage/')) {
-          url = `${baseUrl}/${url}`;
-        } else {
-          url = `${baseUrl}/storage/${url}`;
-        }
-      }
-      imageUrl = url;
-    } else {
-      return `https://api.hypermarket.co.ke/storage/default-product.jpg?t=${timestamp}`;
+    console.log(`ProductCard ${product.id}: imagePath =`, imagePath);
+    
+    if (!imagePath) {
+      // Use a placeholder service instead of local file
+      return `https://via.placeholder.com/400x300/cccccc/666666?text=No+Image`;
     }
     
-    return `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${timestamp}&w=400&h=300&fit=crop&auto=format`;
-  }, [product.main_image, product.thumbnail, product.updated_at]);
+    // If it's already a full URL, return it with params
+    if (imagePath.startsWith('http')) {
+      return `${imagePath}${imagePath.includes('?') ? '&' : '?'}t=${timestamp}&w=400&h=300&fit=crop&auto=format`;
+    }
+    
+    // Clean the path
+    let cleanPath = imagePath;
+    
+    // Remove leading slash if present
+    if (cleanPath.startsWith('/')) {
+      cleanPath = cleanPath.substring(1);
+    }
+    
+    // Handle the specific format from your API
+    if (cleanPath.includes('products/thumbnails/')) {
+      // API returns: products/thumbnails/thumbnail-1767070660-69535bc434ad4.png
+      // Convert to: storage/products/thumbnails/thumbnail-1767070660-69535bc434ad4.png
+      if (!cleanPath.startsWith('storage/')) {
+        cleanPath = `storage/${cleanPath}`;
+      }
+    } else if (!cleanPath.startsWith('storage/')) {
+      // Add storage prefix if not present
+      cleanPath = `storage/${cleanPath}`;
+    }
+    
+    const finalUrl = `${baseUrl}/${cleanPath}`;
+    const urlWithParams = `${finalUrl}${finalUrl.includes('?') ? '&' : '?'}t=${timestamp}&w=400&h=300&fit=crop&auto=format`;
+    
+    console.log(`ProductCard ${product.id}: finalUrl =`, urlWithParams);
+    
+    return urlWithParams;
+  }, [product.main_image, product.thumbnail, product.updated_at, product.id]);
 
   // ========== HANDLERS ==========
   const handleAddToCart = async () => {
@@ -330,15 +348,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
             
             {/* Product Image */}
             <Image
-              src={imageError ? '/placeholder-product.jpg' : imageUrl}
+              src={imageUrl}
               alt={product.name || 'Product image'}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className={`object-cover transition-transform duration-500 ${
                 imageLoaded ? 'group-hover:scale-105 opacity-100' : 'opacity-0'
               }`}
-              onLoad={() => setImageLoaded(true)}
-              onError={() => {
+              onLoad={() => {
+                console.log(`ProductCard ${product.id}: Image loaded successfully`);
+                setImageLoaded(true);
+              }}
+              onError={(e) => {
+                console.error(`ProductCard ${product.id}: Failed to load image:`, imageUrl, e);
                 setImageError(true);
                 setImageLoaded(true);
               }}

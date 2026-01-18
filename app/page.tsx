@@ -27,6 +27,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
+import PersonalizedRecommendations from '@/components/ui/PersonalizedRecommendations';
+import { useAuth } from '@/lib/auth'; // Add this import
 
 interface CategoryData {
   id: number;
@@ -49,6 +51,16 @@ const HomePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showCustomerSupport, setShowCustomerSupport] = useState(false);
+  
+  // Get authentication status from auth context
+  const { isAuthenticated, user, token } = useAuth(); // Use the actual auth hook
+
+  console.log('HomePage - Auth status:', { 
+    isAuthenticated, 
+    hasUser: !!user, 
+    hasToken: !!token,
+    user: user?.name || 'No user'
+  });
 
   // Refs
   const featuredSectionRef = useRef<HTMLDivElement>(null);
@@ -412,6 +424,59 @@ const HomePage: React.FC = () => {
           )}
         </div>
       </section>
+
+      {/* PERSONALIZED RECOMMENDATIONS SECTION - FIXED */}
+      {isAuthenticated ? (
+        <section className="py-12 bg-white border-t border-gray-100">
+          <div className="container mx-auto px-4">
+            <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+              <p className="text-sm text-green-800">
+                ✅ Authenticated as {user?.name || 'User'} | Showing personalized recommendations
+              </p>
+            </div>
+            <PersonalizedRecommendations 
+              title="Recommended For You"
+              limit={12}
+              showHeader={true}
+              showStrategy={true}
+            />
+          </div>
+        </section>
+      ) : (
+        <section className="py-12 bg-white border-t border-gray-100">
+          <div className="container mx-auto px-4">
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-800">
+                ℹ️ Sign in to see personalized recommendations tailored just for you
+              </p>
+            </div>
+            <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <Sparkles size={48} className="mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Sign in for personalized recommendations
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Log in to your account to see products tailored just for you based on your preferences and browsing history.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link
+                  href="/auth/login"
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
+                >
+                  Sign In
+                  <ArrowRight size={18} className="ml-2" />
+                </Link>
+                <Link
+                  href="/auth/register"
+                  className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
+                >
+                  Create Account
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* New Arrivals Section - 12 PRODUCTS */}
       <section 

@@ -583,51 +583,41 @@ class ApiService {
     trackImpression: (id: number) => this.api.post(`/banners/${id}/track-impression`),
   };
 
-  products = {
+   products = {
+    // Basic product operations
     getAll: (params?: any) => this.api.get('/products', { params }),
     getById: (id: string | number) => this.api.get(`/products/${id}`),
     getFeatured: () => this.api.get('/products/featured'),
     search: (query: string) => this.api.get('/products/search', { params: { query } }),
     getRelated: (id: string | number) => this.api.get(`/products/${id}/related`),
+    getByCategory: (slug: string) => this.api.get(`/products/category/${slug}`),
+    
+    // Reviews
     getReviews: (id: string | number) => this.api.get(`/products/${id}/reviews`),
     getTopReview: (id: string | number) => this.api.get(`/products/${id}/top-review`),
     getReviewStats: (id: string | number) => this.api.get(`/products/${id}/review-stats`),
-
-    // Personalized recommendations
-    getPersonalizedRecommendations: (params?: { limit?: number }) =>
-      this.api.get('/personalized/recommendations', { params }),
-
-    // Personalized offers
-    getPersonalizedOffers: (params?: { per_page?: number }) =>
-      this.api.get('/personalized/offers', { params }),
-
-    // User preferences
-    getUserPreferences: () =>
-      this.api.get('/preferences'),
-
-    // Update preferences
-    updatePreferences: (data: any) =>
-      this.api.put('/preferences', data),
-
-    // Shopping analytics
-    getShoppingAnalytics: () =>
-      this.api.get('/shopping-analytics'),
-
-    // Track product view
-    trackView: (productId: number) =>
-      this.api.post(`/products/${productId}/track-view`),
-
-    // Track offer interaction
-    trackOfferInteraction: (data: any) =>
-      this.api.post('/track-offer-interaction', data),
-
-    // Get real-time offers
-    getRealTimeOffers: (params?: any) =>
-      this.api.get('/real-time-offers', { params }),
-
-    // Add these too for testing
-    getPersonalizedPricing: (productId: number) =>
-      this.api.get(`/products/${productId}/personalized-pricing`),
+    
+    // Search autocomplete
+    searchAutocomplete: (query: string) => 
+      this.api.get('/products/search/autocomplete', { params: { query } }),
+    
+    getPersonalizedRecommendations: (params?: { 
+  limit?: number; 
+  strategy?: string;
+  per_page?: number;
+}) => {
+  return this.api.get('/personalized/recommendations', { params })
+    .then(response => response.data); // Extract the data
+},
+    
+    // Track product view for recommendations
+    trackView: (productId: number, duration?: number) => 
+      this.api.post(`/products/${productId}/track-view`, { duration }),
+    
+    // For vendor/admin operations (if needed)
+    create: (data: any) => this.api.post('/products', data),
+    update: (id: string | number, data: any) => this.api.put(`/products/${id}`, data),
+    delete: (id: string | number) => this.api.delete(`/products/${id}`),
   };
 
   categories = {
