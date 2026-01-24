@@ -2,32 +2,35 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import Image from 'next/image'; // Added Image import
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { 
   ShoppingCart, User, Search, Menu, X, Heart, Truck, 
-  Phone, LogIn, ChevronDown, MapPin, Clock,
-  Package, Star, Home, ChevronRight, Headphones, Tag,
-  ShoppingBag, Gift, Shield, CreditCard, HelpCircle,
-  Navigation, PhoneCall, Zap, ChevronLeft, ArrowRight, Percent,
-  Store, ShoppingBasket, Coffee, Apple, Carrot, Beef,
-  Milk, Wine, Sparkles, BadgePercent,
-  Cloud, Pizza, Egg, Cookie, Utensils, Leaf,
-  Baby, Droplets, Fish, IceCream, Wheat,
-  ShoppingBasket as Basket,
-  Package as PackageIcon,
-  Truck as TruckIcon,
-  MapPin as LocationIcon,
+  Phone, ChevronDown, ArrowRight,
+  Package, Star, Home, ChevronRight,
+  ShoppingBasket,
   Smartphone,
   Globe,
   Award,
   RefreshCw,
-  ShieldCheck
+  ShieldCheck,
+  Trash2,
+  Apple, Carrot, Coffee, Utensils, Leaf,
+  Baby, Droplets, Bug, RefreshCw as RefreshCwIcon,
+  PawPrint,
+  Briefcase,
+  Dumbbell,
+  Car,
+  TreePine,
+  Sprout,
+  HeartPulse,
+  Pill,
+  Shirt
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { debounce } from 'lodash';
-import { Product } from '@/types';
+import { Product, Category } from '@/types';
 
 const Header: React.FC = () => {
   const { user, isAuthenticated, logout, isLoading: authLoading } = useAuth();
@@ -40,17 +43,21 @@ const Header: React.FC = () => {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPromoBanner, setShowPromoBanner] = useState(true);
   const [promoProducts, setPromoProducts] = useState<Product[]>([]);
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
   const [isPromoLoading, setIsPromoLoading] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [showAllCategories, setShowAllCategories] = useState(false);
   
   const userMenuRef = useRef<HTMLDivElement>(null);
   const categoriesMenuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const promoIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const categoryHoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const pathname = usePathname();
   const router = useRouter();
@@ -73,6 +80,41 @@ const Header: React.FC = () => {
     grayLight: '#f9fafb',
     grayMedium: '#e5e7eb'
   }), []);
+
+  // ========== FETCH CATEGORIES ==========
+  const fetchCategories = useCallback(async () => {
+    try {
+      setIsLoadingCategories(true);
+      const response = await api.categories.getAll();
+      const categoriesData = response.data || [];
+      setAllCategories(categoriesData);
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  }, []);
+
+  // ========== FETCH PRODUCTS FOR CATEGORY ==========
+  const fetchProductsForCategory = useCallback(async (categoryId: string | number) => {
+    try {
+      const response = await api.products.getAll({ 
+        category_id: categoryId,
+        per_page: 100,
+        sort: 'created_at',
+        order: 'desc'
+      });
+      const products = response.data?.data || response.data || [];
+      setCategoryProducts(products);
+    } catch (error) {
+      console.error('Failed to fetch category products:', error);
+    }
+  }, []);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   // ========== FETCH PROMOTIONAL PRODUCTS ==========
   const fetchPromotionalProducts = useCallback(async () => {
@@ -135,121 +177,88 @@ const Header: React.FC = () => {
     };
   }, [fetchPromotionalProducts]);
 
-  // Enhanced Categories with Subcategories
-  const categories = useMemo(() => [
-    { 
-      id: 'fresh-food', 
-      name: 'Fresh Food', 
-      icon: Apple,
-      color: 'bg-green-50 text-green-600',
-      bgColor: 'bg-green-500',
-      subcategories: [
-        { name: 'Fruits & Vegetables', icon: Apple },
-        { name: 'Meat & Poultry', icon: Beef },
-        { name: 'Fish & Seafood', icon: Fish },
-        { name: 'Dairy & Eggs', icon: Milk }
-      ],
-      featured: true
-    },
-    { 
-      id: 'bakery', 
-      name: 'Bakery', 
-      icon: Wheat,
-      color: 'bg-amber-50 text-amber-600',
-      bgColor: 'bg-amber-500',
-      subcategories: [
-        { name: 'Bread', icon: Wheat },
-        { name: 'Cakes & Pastries', icon: Cookie },
-        { name: 'Breakfast', icon: Coffee }
-      ],
-      featured: true
-    },
-    { 
-      id: 'beverages', 
-      name: 'Beverages', 
-      icon: Coffee,
-      color: 'bg-orange-50 text-orange-600',
-      bgColor: 'bg-orange-500',
-      subcategories: [
-        { name: 'Water & Soft Drinks', icon: Droplets },
-        { name: 'Juices', icon: Apple },
-        { name: 'Coffee & Tea', icon: Coffee }
-      ],
-      featured: false
-    },
-    { 
-      id: 'frozen', 
-      name: 'Frozen Foods', 
-      icon: Cloud,
-      color: 'bg-cyan-50 text-cyan-600',
-      bgColor: 'bg-cyan-500',
-      subcategories: [
-        { name: 'Frozen Vegetables', icon: Carrot },
-        { name: 'Ice Cream', icon: IceCream },
-        { name: 'Ready Meals', icon: Pizza }
-      ],
-      featured: false
-    },
-    { 
-      id: 'household', 
-      name: 'Household', 
-      icon: Home,
-      color: 'bg-purple-50 text-purple-600',
-      bgColor: 'bg-purple-500',
-      subcategories: [
-        { name: 'Cleaning', icon: Sparkles },
-        { name: 'Laundry', icon: RefreshCw },
-        { name: 'Home Care', icon: Home }
-      ],
-      featured: false
-    },
-    { 
-      id: 'personal-care', 
-      name: 'Personal Care', 
-      icon: Droplets,
-      color: 'bg-pink-50 text-pink-600',
-      bgColor: 'bg-pink-500',
-      subcategories: [
-        { name: 'Skincare', icon: Droplets },
-        { name: 'Haircare', icon: Baby },
-        { name: 'Baby Care', icon: Baby }
-      ],
-      featured: false
-    },
-    { 
-      id: 'promotions', 
-      name: 'Promotions', 
-      icon: Tag,
-      color: 'bg-red-50 text-red-600',
-      bgColor: 'bg-red-500',
-      subcategories: [
-        { name: 'Weekly Offers', icon: Tag },
-        { name: 'Flash Sales', icon: Zap },
-        { name: 'Clearance', icon: Percent }
-      ],
-      featured: true
-    },
-    { 
-      id: 'electronics', 
-      name: 'Electronics', 
-      icon: Smartphone,
-      color: 'bg-blue-50 text-blue-600',
-      bgColor: 'bg-blue-500',
-      subcategories: [
-        { name: 'Smartphones', icon: Smartphone },
-        { name: 'Accessories', icon: Headphones },
-        { name: 'Home Appliances', icon: Home }
-      ],
-      featured: false
-    },
-  ], []);
+  // Category icon mapping
+  const getCategoryIcon = (categoryName: string) => {
+    const iconMap: Record<string, React.ReactNode> = {
+      'Fruits': <Apple size={16} />,
+      'Vegetables': <Carrot size={16} />,
+      'Beverages': <Coffee size={16} />,
+      'Cleaning': <Home size={16} />,
+      'Household': <Home size={16} />,
+      'Disposables': <Utensils size={16} />,
+      'Garbage': <Trash2 size={16} />,
+      'Insect': <Bug size={16} />,
+      'Pest': <Bug size={16} />,
+      'Laundry': <RefreshCwIcon size={16} />,
+      'Detergents': <RefreshCwIcon size={16} />,
+      'Tissues': <Pill size={16} />,
+      'Eco': <Leaf size={16} />,
+      'Green': <Sprout size={16} />,
+      'Baby': <Baby size={16} />,
+      'Health': <HeartPulse size={16} />,
+      'Wellness': <HeartPulse size={16} />,
+      'Beauty': <Droplets size={16} />,
+      'Personal Care': <Droplets size={16} />,
+      'Pet': <PawPrint size={16} />,
+      'Office': <Briefcase size={16} />,
+      'School': <Briefcase size={16} />,
+      'Automotive': <Car size={16} />,
+      'Sports': <Dumbbell size={16} />,
+      'Outdoors': <Dumbbell size={16} />,
+      'Electronics': <Smartphone size={16} />,
+      'Clothing': <Shirt size={16} />,
+      'Accessories': <Shirt size={16} />,
+      'Home': <TreePine size={16} />,
+      'Garden': <TreePine size={16} />,
+      'Default': <Package size={16} />
+    };
+
+    for (const [key, icon] of Object.entries(iconMap)) {
+      if (categoryName.toLowerCase().includes(key.toLowerCase())) {
+        return icon;
+      }
+    }
+    return iconMap['Default'];
+  };
+
+  // Get top categories (with products, limited to 5 to prevent overlap)
+  const topCategories = useMemo(() => {
+    return allCategories
+      .filter(cat => cat.active_products_count > 0 && cat.parent_id === null)
+      .sort((a, b) => b.active_products_count - a.active_products_count)
+      .slice(0, 5);
+  }, [allCategories]);
+
+  // Handle category hover with delay
+  const handleCategoryHover = useCallback((category: Category) => {
+    if (categoryHoverTimeoutRef.current) {
+      clearTimeout(categoryHoverTimeoutRef.current);
+    }
+
+    categoryHoverTimeoutRef.current = setTimeout(() => {
+      setActiveCategory(category.slug);
+      fetchProductsForCategory(category.id);
+    }, 200);
+  }, [fetchProductsForCategory]);
+
+  // Handle category leave with delay
+  const handleCategoryLeave = useCallback(() => {
+    if (categoryHoverTimeoutRef.current) {
+      clearTimeout(categoryHoverTimeoutRef.current);
+    }
+
+    categoryHoverTimeoutRef.current = setTimeout(() => {
+      setActiveCategory(null);
+      setCategoryProducts([]);
+    }, 300);
+  }, []);
 
   // Quick Links with Icons
   const quickLinks = useMemo(() => [
     { 
       id: 'delivery', 
       name: 'Fast Delivery', 
-      icon: TruckIcon,
+      icon: Truck,
       desc: '1-2 Hour Delivery',
       color: 'text-green-500',
       bgColor: 'bg-green-50'
@@ -257,7 +266,7 @@ const Header: React.FC = () => {
     { 
       id: 'pickup', 
       name: 'Store Pickup', 
-      icon: PackageIcon,
+      icon: Package,
       desc: 'Pickup in 30min',
       color: 'text-orange-500',
       bgColor: 'bg-orange-50'
@@ -278,16 +287,6 @@ const Header: React.FC = () => {
       color: 'text-purple-500',
       bgColor: 'bg-purple-50'
     },
-  ], []);
-
-  // Navigation Menu Items
-  const navItems = useMemo(() => [
-    { id: 'home', name: 'Home', href: '/', featured: false },
-    { id: 'shop', name: 'Shop', href: '/products', featured: true },
-    { id: 'deals', name: 'Deals', href: '/deals', featured: true },
-    { id: 'new', name: 'New Arrivals', href: '/new', featured: true },
-    { id: 'recipes', name: 'Recipes', href: '/recipes', featured: false },
-    { id: 'stores', name: 'Stores', href: '/stores', featured: false },
   ], []);
 
   // Handle scroll effect
@@ -418,13 +417,6 @@ const Header: React.FC = () => {
     cartCount > 99 ? '99+' : cartCount, [cartCount]
   );
 
-  const closePromoBanner = useCallback(() => {
-    setShowPromoBanner(false);
-    if (promoIntervalRef.current) {
-      clearInterval(promoIntervalRef.current);
-    }
-  }, []);
-
   const quickSearches = useMemo(() => [
     'Fresh Vegetables', 'Organic Fruits', 'Dairy Products', 'Bakery Items',
     'Coffee & Tea', 'Snacks', 'Cleaning Supplies', 'Personal Care',
@@ -436,6 +428,30 @@ const Header: React.FC = () => {
     if (href === '/') return pathname === href;
     return pathname.startsWith(href);
   }, [pathname]);
+
+  // Format price
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES'
+    }).format(price);
+  };
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (categoryHoverTimeoutRef.current) {
+        clearTimeout(categoryHoverTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Handle product click
+  const handleProductClick = (productSlug: string) => {
+    setActiveCategory(null);
+    setCategoryProducts([]);
+    router.push(`/products/${productSlug}`);
+  };
 
   return (
     <>
@@ -462,14 +478,20 @@ const Header: React.FC = () => {
         
         @keyframes float {
           0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-5px); }
+          50% { transform: translateY(-3px); }
+        }
+        
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
         }
         
         .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
         .animate-slideInRight { animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .animate-slideInLeft { animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .animate-pulse-slow { animation: pulse 2s infinite; }
-        .animate-float { animation: float 3s ease-in-out infinite; }
+        .animate-float { animation: float 2.5s ease-in-out infinite; }
         
         .cart-badge {
           position: absolute;
@@ -490,79 +512,12 @@ const Header: React.FC = () => {
           box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
         }
         
-        .header-gradient {
-          background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
-        }
-        
-        .promo-gradient {
-          background: linear-gradient(135deg, #f97316 0%, #fb923c 50%, #f59e0b 100%);
-          background-size: 200% 200%;
-          animation: gradientShift 3s ease infinite;
-        }
-        
-        @keyframes gradientShift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        
         .search-glow {
           box-shadow: 0 0 0 1px #e5e7eb, 0 4px 12px rgba(34, 197, 94, 0.1);
         }
         
         .search-glow:focus-within {
           box-shadow: 0 0 0 2px #22c55e, 0 6px 20px rgba(34, 197, 94, 0.15);
-        }
-        
-        .nav-link {
-          position: relative;
-          padding-bottom: 4px;
-        }
-        
-        .nav-link::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          width: 0;
-          height: 2px;
-          background: linear-gradient(90deg, #22c55e 0%, #f97316 100%);
-          transition: width 0.3s ease;
-          border-radius: 1px;
-        }
-        
-        .nav-link:hover::after,
-        .nav-link.active::after {
-          width: 100%;
-        }
-        
-        .category-card {
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .category-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-        }
-        
-        .quick-link-card {
-          transition: all 0.3s ease;
-        }
-        
-        .quick-link-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
-        }
-        
-        .mobile-menu-bg {
-          background: linear-gradient(135deg, #f9fafb 0%, #f0fdf4 100%);
-        }
-        
-        .text-gradient {
-          background: linear-gradient(135deg, #22c55e 0%, #f97316 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
         }
         
         .dropdown-shadow {
@@ -582,86 +537,174 @@ const Header: React.FC = () => {
           background: #22c55e;
           border-radius: 4px;
         }
+
+        /* Category Display Styles */
+        .category-scroll {
+          display: flex;
+          overflow-x: auto;
+          scrollbar-width: thin;
+          scrollbar-color: #22c55e #f3f4f6;
+          gap: 8px;
+          flex: 1;
+          min-width: 0;
+        }
+        
+        .category-scroll::-webkit-scrollbar {
+          height: 6px;
+        }
+        
+        .category-scroll::-webkit-scrollbar-track {
+          background: #f3f4f6;
+          border-radius: 3px;
+        }
+        
+        .category-scroll::-webkit-scrollbar-thumb {
+          background: #22c55e;
+          border-radius: 3px;
+        }
+        
+        .category-tab {
+          position: relative;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+          min-width: 160px;
+        }
+        
+        .category-tab:hover {
+          background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%);
+          transform: translateY(-2px);
+        }
+        
+        .category-tab.active {
+          background: linear-gradient(135deg, #dcfce7 0%, #ffedd5 100%);
+          border-color: #22c55e;
+        }
+        
+        .category-tab.active::after {
+          content: '';
+          position: absolute;
+          bottom: -1px;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: linear-gradient(90deg, #22c55e 0%, #f97316 100%);
+        }
+
+        .product-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          gap: 16px;
+          animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .product-item {
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+
+        .product-item:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Delivery Banner Styles - REDUCED HEIGHT */
+        .delivery-banner {
+          background: linear-gradient(135deg, #f0fdf4 0%, #ffedd5 50%, #dbeafe 100%);
+          background-size: 200% 200%;
+          animation: gradientShift 6s ease infinite;
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .vehicle-glow {
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+        }
       `}</style>
 
-      {/* Top Information Bar */}
-      <div className="hidden lg:block bg-gradient-to-r from-green-50 to-orange-50 border-b border-gray-200 py-2 px-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <ShieldCheck size={14} className="text-green-500" />
-              <span>100% Quality Guaranteed</span>
+      {/* COMPACT DELIVERY BANNER - Matches other navbar padding */}
+      <div className="hidden lg:block delivery-banner py-2">
+        <div className="max-w-7xl mx-auto px-4"> {/* Added px-4 to match main header */}
+          <div className="flex items-center justify-between">
+            {/* Left: Vehicle Images and Compact Text */}
+            <div className="flex items-center space-x-4">
+              {/* Compact Vehicle Images */}
+              <div className="flex items-center space-x-1">
+                <div className="vehicle-glow animate-float" style={{ animationDelay: '0s' }}>
+                  <svg width="50" height="25" viewBox="0 0 200 100" className="text-green-600">
+                    <g transform="translate(0, 20)">
+                      <rect x="20" y="30" width="140" height="40" rx="5" fill="currentColor" opacity="0.9"/>
+                      <rect x="30" y="15" width="60" height="25" rx="3" fill="currentColor" opacity="0.9"/>
+                      <rect x="35" y="18" width="50" height="10" rx="2" fill="#93c5fd" opacity="0.8"/>
+                      <circle cx="50" cy="75" r="10" fill="#1f2937"/>
+                      <circle cx="50" cy="75" r="4" fill="#6b7280"/>
+                      <circle cx="130" cy="75" r="10" fill="#1f2937"/>
+                      <circle cx="130" cy="75" r="4" fill="#6b7280"/>
+                      <circle cx="165" cy="45" r="5" fill="#fbbf24"/>
+                      <circle cx="165" cy="55" r="5" fill="#fbbf24"/>
+                    </g>
+                  </svg>
+                </div>
+                
+                <div className="vehicle-glow animate-float" style={{ animationDelay: '0.5s' }}>
+                  <svg width="40" height="25" viewBox="0 0 150 100" className="text-orange-500">
+                    <g transform="translate(0, 30)">
+                      <path d="M20,40 Q40,20 70,20 Q100,20 120,40" stroke="currentColor" strokeWidth="5" fill="none"/>
+                      <circle cx="40" cy="45" r="12" fill="currentColor"/>
+                      <circle cx="40" cy="45" r="4" fill="#6b7280"/>
+                      <circle cx="100" cy="45" r="12" fill="currentColor"/>
+                      <circle cx="100" cy="45" r="4" fill="#6b7280"/>
+                      <circle cx="60" cy="15" r="8" fill="#374151"/>
+                      <path d="M60,23 L60,40 L40,50" stroke="#374151" strokeWidth="3" fill="none"/>
+                      <path d="M60,40 L80,50" stroke="#374151" strokeWidth="3" fill="none"/>
+                      <line x1="70" y1="15" x2="90" y2="25" stroke="#374151" strokeWidth="3"/>
+                      <line x1="90" y1="25" x2="95" y2="20" stroke="#374151" strokeWidth="3"/>
+                    </g>
+                  </svg>
+                </div>
+              </div>
+              
+              {/* Compact Delivery Text */}
+              <div className="text-left">
+                <div className="flex items-center space-x-2">
+                  <Truck size={16} className="text-green-600" />
+                  <span className="text-sm font-semibold text-gray-900">Instant Delivery</span>
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse-slow"></div>
+                </div>
+                <p className="text-xs text-gray-700 mt-0.5">
+                  <span className="font-medium text-green-700">Van & Motorcycle delivery</span> • 
+                  <span className="font-medium text-orange-600"> Order before 4 PM</span>
+                </p>
+              </div>
             </div>
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <Truck size={14} className="text-orange-500" />
-              <span>Free Delivery on orders over KSh 2,500</span>
+            
+            {/* Right: Compact Delivery Info */}
+            <div className="flex items-center space-x-6">
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-700">1-2 HRS</div>
+                <div className="text-xs text-gray-600">Van</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-orange-600">30-60 MIN</div>
+                <div className="text-xs text-gray-600">Motorcycle</div>
+              </div>
+              <div>
+                <Link 
+                  href="/delivery-info"
+                  className="px-4 py-1.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-semibold hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-sm hover:shadow text-xs flex items-center space-x-1"
+                >
+                  <Truck size={12} />
+                  <span>Zones</span>
+                </Link>
+              </div>
             </div>
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <Globe size={14} className="text-blue-500" />
-              <span>Delivery across Kenya</span>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Link href="/stores" className="text-sm text-gray-600 hover:text-green-600 transition-colors flex items-center space-x-1">
-              <Store size={14} />
-              <span>Store Locator</span>
-            </Link>
-            <div className="h-4 w-px bg-gray-300"></div>
-            <Link href="/help" className="text-sm text-gray-600 hover:text-green-600 transition-colors">Help Center</Link>
-            <div className="h-4 w-px bg-gray-300"></div>
-            <select className="text-sm text-gray-600 bg-transparent focus:outline-none">
-              <option>KES - KSh</option>
-              <option>USD - $</option>
-            </select>
           </div>
         </div>
       </div>
-
-      {/* Promotional Banner */}
-      {showPromoBanner && (
-        <div className="promo-gradient text-white py-2.5 px-4 relative overflow-hidden">
-          <div className="absolute inset-0 bg-black/10"></div>
-          <div className="relative max-w-7xl mx-auto">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex items-center space-x-3">
-                <div className="bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full flex items-center space-x-2 animate-pulse-slow">
-                  <Zap size={16} className="text-yellow-300" />
-                  <span className="font-bold text-sm tracking-wide">FLASH SALE</span>
-                </div>
-                <div className="text-sm sm:text-base font-medium">
-                  🎉 UP TO 50% OFF on Fresh Produce & More! Limited time offer
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="hidden sm:flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-full">
-                  <Clock size={14} />
-                  <span className="text-sm font-medium">Ends: 24:59:59</span>
-                </div>
-                <Link 
-                  href="/promotions"
-                  className="bg-white text-orange-600 font-bold px-5 py-2 rounded-lg hover:bg-gray-50 transition-all duration-300 transform hover:scale-105 flex items-center space-x-2 shadow-lg"
-                >
-                  <span>SHOP NOW</span>
-                  <ArrowRight size={16} />
-                </Link>
-                <button
-                  onClick={closePromoBanner}
-                  className="text-white/80 hover:text-white transition-colors"
-                  aria-label="Close promotional banner"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Main Header */}
       <header className={`sticky top-0 z-50 bg-white transition-all duration-300 ${scrolled ? 'shadow-xl' : 'shadow-sm'}`}>
         <div className="max-w-7xl mx-auto px-4">
           {/* First Row: Logo, Search, Actions */}
-          <div className="flex items-center justify-between py-4">
+          <div className="flex items-center justify-between py-3">
             {/* Logo */}
             <div className="flex items-center space-x-4">
               <button 
@@ -669,22 +712,21 @@ const Header: React.FC = () => {
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Open menu"
               >
-                <Menu size={24} className="text-gray-700" />
+                <Menu size={22} className="text-gray-700" />
               </button>
 
-              <Link href="/" className="flex items-center space-x-3 group">
-                <div className="relative w-12 h-12">
-                  {/* Replace with your logo */}
-                 <div className="flex items-center justify-center w-12 h-12 rounded-xl shadow-lg group-hover:shadow-xl transition-shadow duration-300 overflow-hidden">
-                  <img 
-                    src="/logo.jpeg" 
-                    alt="Lando Ranch Logo" 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+              <Link href="/" className="flex items-center space-x-2 group">
+                <div className="relative w-10 h-10">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-lg shadow group-hover:shadow-md transition-shadow duration-300 overflow-hidden">
+                    <img 
+                      src="/logo.jpeg" 
+                      alt="Lando Ranch Logo" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </div>
                 <div className="hidden sm:block">
-                  <div className="text-2xl font-black text-gray-900 tracking-tight">
+                  <div className="text-xl font-black text-gray-900 tracking-tight">
                     Lando
                   </div>
                   <div className="text-xs font-medium text-green-500 -mt-1">Hypermarket</div>
@@ -693,27 +735,27 @@ const Header: React.FC = () => {
             </div>
 
             {/* Desktop Search Bar */}
-            <div className="hidden lg:flex flex-1 max-w-2xl mx-8">
+            <div className="hidden lg:flex flex-1 max-w-2xl mx-6">
               <form onSubmit={handleSearch} className="relative w-full">
-                <div className="search-glow rounded-xl overflow-hidden transition-all duration-300">
+                <div className="search-glow rounded-lg overflow-hidden transition-all duration-300">
                   <div className="relative flex items-center">
-                    <div className="absolute left-4 flex items-center justify-center pointer-events-none">
-                      <Search size={20} className="text-gray-400" />
+                    <div className="absolute left-3 flex items-center justify-center pointer-events-none">
+                      <Search size={18} className="text-gray-400" />
                     </div>
                     <input
                       type="search"
-                      placeholder="Search for fresh produce, groceries, and more..."
+                      placeholder="Search products..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-5 py-3 pl-12 bg-gray-50 focus:outline-none text-gray-900 placeholder-gray-500"
+                      className="w-full px-4 py-2.5 pl-10 bg-gray-50 focus:outline-none text-gray-900 placeholder-gray-500 text-sm"
                       aria-label="Search products"
                     />
                     <button
                       type="submit"
-                      className="px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all duration-300 font-semibold text-sm flex items-center space-x-2"
+                      className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all duration-300 font-semibold text-xs flex items-center space-x-1"
                       disabled={!searchQuery.trim()}
                     >
-                      <Search size={18} />
+                      <Search size={16} />
                       <span>SEARCH</span>
                     </button>
                   </div>
@@ -722,23 +764,23 @@ const Header: React.FC = () => {
             </div>
 
             {/* Right Actions */}
-            <div className="flex items-center space-x-3 sm:space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               {/* Mobile Search */}
               <button 
-                className="lg:hidden p-2.5 hover:bg-gray-100 rounded-lg transition-colors"
+                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 onClick={() => setMobileSearchOpen(true)}
                 aria-label="Search"
               >
-                <Search size={22} className="text-gray-700" />
+                <Search size={20} className="text-gray-700" />
               </button>
 
               {/* Wishlist */}
               <Link 
                 href="/wishlist" 
-                className="hidden lg:flex relative p-2.5 hover:bg-gray-100 rounded-lg transition-colors group"
+                className="hidden lg:flex relative p-2 hover:bg-gray-100 rounded-lg transition-colors group"
                 aria-label="Wishlist"
               >
-                <Heart size={22} className="text-gray-700 group-hover:text-red-500 transition-colors" />
+                <Heart size={20} className="text-gray-700 group-hover:text-red-500 transition-colors" />
                 {wishlistCount > 0 && (
                   <div className="cart-badge">
                     {wishlistCount}
@@ -750,49 +792,49 @@ const Header: React.FC = () => {
               <div className="hidden lg:block relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="flex items-center space-x-2 p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                   aria-label="Account menu"
                 >
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-orange-500 flex items-center justify-center text-white font-bold shadow-md">
-                    {isAuthenticated ? userInitial : <User size={18} />}
+                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-green-500 to-orange-500 flex items-center justify-center text-white font-bold shadow-sm">
+                    {isAuthenticated ? userInitial : <User size={16} />}
                   </div>
                   <div className="text-left hidden xl:block">
-                    <div className="text-xs text-gray-500">Welcome back!</div>
+                    <div className="text-xs text-gray-500">Welcome!</div>
                     <div className="text-sm font-semibold text-gray-900">
                       {isAuthenticated ? userFirstName : 'Sign In'}
                     </div>
                   </div>
-                  <ChevronDown size={16} className="text-gray-400" />
+                  <ChevronDown size={14} className="text-gray-400" />
                 </button>
                 
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 animate-fadeIn dropdown-shadow overflow-hidden">
-                    <div className="p-4 bg-gradient-to-r from-green-50 to-orange-50 border-b">
-                      <div className="font-semibold text-gray-900">My Account</div>
+                  <div className="absolute right-0 top-full mt-1 w-60 bg-white border border-gray-200 rounded-lg shadow-xl z-50 animate-fadeIn dropdown-shadow overflow-hidden">
+                    <div className="p-3 bg-gradient-to-r from-green-50 to-orange-50 border-b">
+                      <div className="font-semibold text-gray-900 text-sm">My Account</div>
                       {isAuthenticated && user?.email && (
-                        <div className="text-sm text-gray-600 mt-1 truncate">{user.email}</div>
+                        <div className="text-xs text-gray-600 mt-0.5 truncate">{user.email}</div>
                       )}
                     </div>
-                    <div className="p-2">
+                    <div className="p-1.5">
                       {isAuthenticated ? (
                         <>
                           <Link 
                             href="/orders" 
-                            className="flex items-center px-4 py-3 hover:bg-gray-50 rounded-lg text-sm transition-colors group"
+                            className="flex items-center px-3 py-2 hover:bg-gray-50 rounded text-sm transition-colors group"
                             onClick={() => setUserMenuOpen(false)}
                           >
-                            <Package size={18} className="mr-3 text-gray-500 group-hover:text-green-500" />
+                            <Package size={16} className="mr-2 text-gray-500 group-hover:text-green-500" />
                             <div>
                               <div className="font-medium">My Orders</div>
-                              <div className="text-xs text-gray-500">Track & manage orders</div>
+                              <div className="text-xs text-gray-500">Track & manage</div>
                             </div>
                           </Link>
                           <Link 
                             href="/wishlist" 
-                            className="flex items-center px-4 py-3 hover:bg-gray-50 rounded-lg text-sm transition-colors group"
+                            className="flex items-center px-3 py-2 hover:bg-gray-50 rounded text-sm transition-colors group"
                             onClick={() => setUserMenuOpen(false)}
                           >
-                            <Heart size={18} className="mr-3 text-gray-500 group-hover:text-red-500" />
+                            <Heart size={16} className="mr-2 text-gray-500 group-hover:text-red-500" />
                             <div>
                               <div className="font-medium">Wishlist</div>
                               <div className="text-xs text-gray-500">Saved items</div>
@@ -800,19 +842,19 @@ const Header: React.FC = () => {
                           </Link>
                           <Link 
                             href="/profile" 
-                            className="flex items-center px-4 py-3 hover:bg-gray-50 rounded-lg text-sm transition-colors group"
+                            className="flex items-center px-3 py-2 hover:bg-gray-50 rounded text-sm transition-colors group"
                             onClick={() => setUserMenuOpen(false)}
                           >
-                            <User size={18} className="mr-3 text-gray-500 group-hover:text-blue-500" />
+                            <User size={16} className="mr-2 text-gray-500 group-hover:text-blue-500" />
                             <div>
                               <div className="font-medium">Profile</div>
-                              <div className="text-xs text-gray-500">Account settings</div>
+                              <div className="text-xs text-gray-500">Settings</div>
                             </div>
                           </Link>
-                          <div className="border-t my-2"></div>
+                          <div className="border-t my-1.5"></div>
                           <button 
                             onClick={handleLogout}
-                            className="w-full flex items-center justify-center px-4 py-3 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors"
+                            className="w-full flex items-center justify-center px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded text-sm font-medium transition-colors"
                           >
                             <span>Sign Out</span>
                           </button>
@@ -821,15 +863,15 @@ const Header: React.FC = () => {
                         <>
                           <Link 
                             href="/auth/login" 
-                            className="block px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg text-sm text-center font-semibold mb-2 hover:from-green-600 hover:to-green-700 transition-all duration-300"
+                            className="block px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded text-sm text-center font-semibold mb-1.5 hover:from-green-600 hover:to-green-700 transition-all duration-300"
                             onClick={() => setUserMenuOpen(false)}
                           >
                             Sign In
                           </Link>
-                          <div className="text-center text-sm text-gray-600 mb-3">New to MarketHub?</div>
+                          <div className="text-center text-xs text-gray-600 mb-1.5">New customer?</div>
                           <Link 
                             href="/auth/register" 
-                            className="block px-4 py-3 border-2 border-green-500 text-green-600 rounded-lg text-sm text-center font-semibold hover:bg-green-50 transition-colors"
+                            className="block px-3 py-2 border border-green-500 text-green-600 rounded text-sm text-center font-semibold hover:bg-green-50 transition-colors"
                             onClick={() => setUserMenuOpen(false)}
                           >
                             Create Account
@@ -844,21 +886,21 @@ const Header: React.FC = () => {
               {/* User Account - Mobile */}
               <Link 
                 href={isAuthenticated ? "/profile" : "/auth/login"}
-                className="lg:hidden p-2.5 hover:bg-gray-100 rounded-lg transition-colors"
+                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 aria-label="Account"
               >
-                <User size={22} className="text-gray-700" />
+                <User size={20} className="text-gray-700" />
               </Link>
 
               {/* Cart */}
               <Link 
                 href="/cart" 
-                className="relative p-2.5 hover:bg-gray-100 rounded-lg transition-colors group"
+                className="relative p-1.5 hover:bg-gray-100 rounded-lg transition-colors group"
                 aria-label="Shopping cart"
               >
                 <div className="relative">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 group-hover:from-orange-100 group-hover:to-orange-200 transition-all duration-300">
-                    <ShoppingCart size={24} className="text-orange-600" />
+                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 group-hover:from-orange-100 group-hover:to-orange-200 transition-all duration-300">
+                    <ShoppingCart size={20} className="text-orange-600" />
                   </div>
                   {cartCount > 0 && (
                     <div className="cart-badge">
@@ -866,146 +908,270 @@ const Header: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <div className="hidden lg:block ml-2">
-                  <div className="text-xs text-gray-500">Your Cart</div>
-                  <div className="text-sm font-bold text-gray-900">KSh 0.00</div>
+                <div className="hidden lg:block ml-1.5">
+                  <div className="text-xs text-gray-500">Cart</div>
+                  <div className="text-xs font-bold text-gray-900">KSh 0.00</div>
                 </div>
               </Link>
             </div>
           </div>
 
-          {/* Second Row: Navigation & Categories */}
-          <div className="hidden lg:flex items-center justify-between py-3 border-t border-gray-100">
-            {/* All Categories Button */}
-            <div className="relative" ref={categoriesMenuRef}>
-              <button
-                onClick={() => setCategoriesOpen(!categoriesOpen)}
-                onMouseEnter={() => setCategoriesOpen(true)}
-                className="flex items-center space-x-3 px-5 py-3.5 bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
-                aria-label="Browse categories"
-              >
-                <Menu size={20} />
-                <span>BROWSE CATEGORIES</span>
-                <ChevronDown size={18} className="ml-2" />
-              </button>
-              
-              {categoriesOpen && (
-                <div 
-                  className="absolute top-full left-0 mt-2 w-[800px] bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 animate-fadeIn dropdown-shadow"
-                  onMouseLeave={() => setCategoriesOpen(false)}
+          {/* ========== CATEGORIES WITH PRODUCTS DISPLAY ========== */}
+          <div className="hidden lg:block py-2 border-t border-gray-100 relative">
+            <div className="flex items-center justify-between">
+              {/* Left side: Categories */}
+              <div className="flex items-center space-x-3 flex-1 min-w-0">
+                {/* Only "Categories" is a button */}
+                <button
+                  onClick={() => setShowAllCategories(!showAllCategories)}
+                  className={`category-tab flex items-center space-x-1.5 px-3 py-2 rounded-lg border flex-shrink-0 text-sm ${
+                    showAllCategories ? 'active border-green-200 shadow-sm' : 'border-gray-200 hover:border-green-200'
+                  }`}
                 >
-                  <div className="p-6">
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <h3 className="font-bold text-gray-900 text-lg mb-4">Popular Categories</h3>
-                        {categories.filter(cat => cat.featured).map((category) => {
-                          const Icon = category.icon;
-                          return (
-                            <Link
-                              key={category.id}
-                              href={`/categories/${category.id}`}
-                              className="flex items-center p-4 hover:bg-gray-50 rounded-xl transition-all duration-300 category-card"
-                              onClick={() => setCategoriesOpen(false)}
-                              onMouseEnter={() => setActiveCategory(category.id)}
-                            >
-                              <div className={`p-3 rounded-lg ${category.color} mr-4`}>
-                                <Icon size={20} />
-                              </div>
-                              <div>
-                                <div className="font-semibold text-gray-900">{category.name}</div>
-                                <div className="text-sm text-gray-500 mt-1">
-                                  {category.subcategories.slice(0, 2).map(sc => sc.name).join(', ')}
-                                </div>
-                              </div>
-                            </Link>
-                          );
-                        })}
+                  <Package size={14} className="text-green-600" />
+                  <span className="font-medium text-gray-900">Categories</span>
+                  <ChevronDown size={12} className="text-gray-500" />
+                </button>
+
+                {/* Categories Scroll - All other categories are Links */}
+                <div className="category-scroll">
+                  <div className="flex items-center space-x-1.5">
+                    {isLoadingCategories ? (
+                      <div className="flex space-x-1.5">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <div key={i} className="h-9 w-28 bg-gray-200 animate-pulse rounded-lg"></div>
+                        ))}
                       </div>
-                      <div className="space-y-4">
-                        <h3 className="font-bold text-gray-900 text-lg mb-4">All Departments</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          {categories.map((category) => {
-                            const Icon = category.icon;
-                            return (
-                              <Link
-                                key={category.id}
-                                href={`/categories/${category.id}`}
-                                className={`flex items-center p-3 rounded-lg transition-colors ${activeCategory === category.id ? 'bg-green-50' : 'hover:bg-gray-50'}`}
-                                onClick={() => setCategoriesOpen(false)}
-                                onMouseEnter={() => setActiveCategory(category.id)}
-                              >
-                                <div className={`p-2 rounded-md ${category.color} mr-3`}>
-                                  <Icon size={16} />
-                                </div>
-                                <span className="text-sm font-medium">{category.name}</span>
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
+                    ) : (
+                      topCategories.map((category) => (
+                        <Link
+                          key={category.id}
+                          href={`/categories/${category.slug}`}
+                          onMouseEnter={() => handleCategoryHover(category)}
+                          onMouseLeave={handleCategoryLeave}
+                          className={`category-tab flex items-center space-x-1.5 px-3 py-2 rounded-lg border flex-shrink-0 text-sm transition-all duration-300 ${
+                            activeCategory === category.slug 
+                              ? 'active border-green-200 shadow-sm bg-gradient-to-r from-green-50/50 to-orange-50/50' 
+                              : 'border-gray-200 hover:border-green-200 hover:bg-gradient-to-r hover:from-green-50/30 hover:to-orange-50/30'
+                          }`}
+                        >
+                          <div className={`${activeCategory === category.slug ? 'text-green-700' : 'text-green-600'}`}>
+                            {getCategoryIcon(category.name)}
+                          </div>
+                          <div className="text-left min-w-0">
+                            <div className={`font-medium truncate ${
+                              activeCategory === category.slug ? 'text-green-800' : 'text-gray-900'
+                            }`}>
+                              {category.name}
+                            </div>
+                          </div>
+                        </Link>
+                      ))
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
+
+              {/* Right side: Quick Info */}
+              <div className="flex items-center space-x-4 flex-shrink-0">
+                <div className="flex items-center space-x-2">
+                  <Phone size={14} className="text-green-500 animate-float" />
+                  <div>
+                    <div className="text-xs text-gray-500">Need help?</div>
+                    <div className="text-xs font-bold text-gray-900">+254 716 354589</div>
+                  </div>
+                </div>
+                <Link 
+                  href="/track-order"
+                  className="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-medium hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-sm hover:shadow text-xs whitespace-nowrap"
+                >
+                  Track Order
+                </Link>
+              </div>
             </div>
 
-            {/* Navigation Links */}
-            <nav className="flex items-center space-x-8">
-              {navItems.map((item) => (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className={`nav-link font-medium text-gray-700 hover:text-green-600 transition-colors ${isActive(item.href) ? 'active text-green-600' : ''}`}
-                >
-                  {item.featured && (
-                    <span className="absolute -top-2 -right-3 px-1.5 py-0.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-bold rounded">
-                      HOT
-                    </span>
-                  )}
-                  {item.name}
-                </Link>
-              ))}
-            </nav>
-
-            {/* Quick Info */}
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-3">
-                <Phone size={20} className="text-green-500 animate-float" />
-                <div>
-                  <div className="text-xs text-gray-500">Need help?</div>
-                  <div className="text-sm font-bold text-gray-900">+254 716 354589</div>
+            {/* All Categories Dropdown */}
+            {showAllCategories && (
+              <div 
+                className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-50 animate-fadeIn dropdown-shadow"
+                onMouseLeave={() => setShowAllCategories(false)}
+              >
+                <div className="p-4">
+                  <h3 className="font-bold text-gray-900 text-sm mb-3">All Categories</h3>
+                  <div className="grid grid-cols-4 gap-3">
+                    {allCategories
+                      .filter(cat => cat.parent_id === null)
+                      .map((category) => (
+                        <Link
+                          key={category.id}
+                          href={`/categories/${category.slug}`}
+                          className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 transition-colors group text-sm"
+                          onClick={() => setShowAllCategories(false)}
+                        >
+                          <div className="text-green-600">
+                            {getCategoryIcon(category.name)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-gray-900 truncate">
+                              {category.name}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                  </div>
                 </div>
               </div>
-              <Link 
-                href="/track-order"
-                className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-medium hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-md hover:shadow-lg"
+            )}
+
+            {/* Category Products Dropdown */}
+            {activeCategory && categoryProducts.length > 0 && (
+              <div 
+                className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50 animate-fadeIn dropdown-shadow"
+                onMouseEnter={() => {
+                  if (categoryHoverTimeoutRef.current) {
+                    clearTimeout(categoryHoverTimeoutRef.current);
+                  }
+                }}
+                onMouseLeave={handleCategoryLeave}
               >
-                Track Order
-              </Link>
-            </div>
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Products in {topCategories.find(c => c.slug === activeCategory)?.name}
+                      </h3>
+                    </div>
+                    <Link
+                      href={`/categories/${activeCategory}`}
+                      className="text-green-600 hover:text-green-700 font-medium text-xs flex items-center space-x-1"
+                      onClick={() => {
+                        setActiveCategory(null);
+                        setCategoryProducts([]);
+                      }}
+                    >
+                      <span>View All</span>
+                      <ArrowRight size={12} />
+                    </Link>
+                  </div>
+
+                  <div className="product-grid">
+                    {categoryProducts.slice(0, 8).map((product) => {
+                      // Custom Product Item Component with Image
+                      const ProductItem = ({ product }: { product: Product }) => {
+                        const [imageLoaded, setImageLoaded] = useState(false);
+                        const [imageError, setImageError] = useState(false);
+                        
+                        const imageUrl = product.thumbnail || product.images?.[0] || '/images/placeholder.jpg';
+                        
+                        return (
+                          <div
+                            onClick={() => handleProductClick(product.slug)}
+                            className="product-item bg-white rounded border border-gray-200 hover:border-green-200 hover:shadow transition-all duration-300 overflow-hidden group"
+                          >
+                            {/* Product Image - Using Next.js Image component */}
+                            <div className="aspect-square bg-gray-100 overflow-hidden relative">
+                              {!imageError ? (
+                                <Image
+                                  src={imageUrl}
+                                  alt={product.name || 'Product image'}
+                                  fill
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                  className={`object-cover transition-transform duration-500 ${
+                                    imageLoaded ? 'group-hover:scale-105 opacity-100' : 'opacity-0'
+                                  }`}
+                                  onLoad={() => {
+                                    console.log(`Product ${product.id}: Image loaded successfully`);
+                                    setImageLoaded(true);
+                                  }}
+                                  onError={(e) => {
+                                    console.error(`Product ${product.id}: Failed to load image:`, imageUrl, e);
+                                    setImageError(true);
+                                    setImageLoaded(true);
+                                  }}
+                                  loading="lazy"
+                                  quality={85}
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-orange-50">
+                                  <ShoppingBasket size={32} className="text-gray-400" />
+                                </div>
+                              )}
+                              {!imageLoaded && !imageError && (
+                                <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse"></div>
+                              )}
+                            </div>
+
+                            {/* Product Info */}
+                            <div className="p-2">
+                              <h4 className="font-medium text-gray-900 text-xs line-clamp-2 mb-1">
+                                {product.name}
+                              </h4>
+                              
+                              {/* Price */}
+                              <div className="space-y-0.5">
+                                <div className="font-bold text-gray-900">
+                                  {formatPrice(product.price)}
+                                </div>
+                                {product.discounted_price && product.discounted_price < product.price && (
+                                  <div className="flex items-center space-x-1">
+                                    <span className="text-xs text-gray-500 line-through">
+                                      {formatPrice(product.price)}
+                                    </span>
+                                    <span className="px-1 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded">
+                                      SAVE {Math.round((1 - product.discounted_price / product.price) * 100)}%
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Rating */}
+                              {product.rating && Number(product.rating) > 0 && (
+                                <div className="flex items-center space-x-1 mt-1">
+                                  <Star size={12} className="fill-yellow-400 text-yellow-400" />
+                                  <span className="text-xs font-medium">{Number(product.rating).toFixed(1)}</span>
+                                </div>
+                              )}
+                              
+                              {/* Click to view text */}
+                              <div className="text-xs text-green-600 font-medium mt-1 group-hover:text-green-700 transition-colors">
+                                View details →
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      };
+
+                      return <ProductItem key={product.id} product={product} />;
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Quick Links Bar - Mobile */}
         <div className="lg:hidden bg-gradient-to-r from-green-50 to-orange-50 border-t border-gray-200">
-          <div className="overflow-x-auto scrollbar-thin">
-            <div className="flex px-4 py-2 space-x-4 min-w-max">
-              {quickLinks.map((link) => {
-                const Icon = link.icon;
-                return (
-                  <Link
-                    key={link.id}
-                    href={`/${link.id}`}
-                    className={`${link.bgColor} ${link.color} px-4 py-3 rounded-xl quick-link-card flex items-center space-x-2 min-w-[140px]`}
-                  >
-                    <Icon size={18} />
-                    <div className="text-left">
-                      <div className="text-sm font-semibold">{link.name}</div>
-                      <div className="text-xs opacity-75">{link.desc}</div>
-                    </div>
-                  </Link>
-                );
-              })}
+          <div className="max-w-7xl mx-auto px-4"> {/* Added container with padding */}
+            <div className="overflow-x-auto scrollbar-thin">
+              <div className="flex py-1.5 space-x-3 min-w-max">
+                {quickLinks.map((link) => {
+                  const Icon = link.icon;
+                  return (
+                    <Link
+                      key={link.id}
+                      href={`/${link.id}`}
+                      className={`${link.bgColor} ${link.color} px-3 py-2 rounded-lg flex items-center space-x-1.5 min-w-[120px] text-xs`}
+                    >
+                      <Icon size={14} />
+                      <div className="text-left">
+                        <div className="font-semibold">{link.name}</div>
+                        <div className="opacity-75">{link.desc}</div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -1015,14 +1181,14 @@ const Header: React.FC = () => {
           <div className="lg:hidden fixed inset-0 z-50 bg-white animate-slideInLeft">
             <div className="h-full flex flex-col">
               {/* Header */}
-              <div className="p-4 border-b">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-lg font-bold text-gray-900">Search Products</div>
+              <div className="p-3 border-b">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="font-bold text-gray-900">Search Products</div>
                   <button 
                     onClick={() => setMobileSearchOpen(false)}
-                    className="p-2 hover:bg-gray-100 rounded-lg"
+                    className="p-1.5 hover:bg-gray-100 rounded-lg"
                   >
-                    <X size={24} />
+                    <X size={20} />
                   </button>
                 </div>
                 
@@ -1031,28 +1197,28 @@ const Header: React.FC = () => {
                     <input
                       ref={searchInputRef}
                       type="search"
-                      placeholder="What are you looking for today?"
+                      placeholder="What are you looking for?"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-4 py-3 pl-12 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full px-3 py-2.5 pl-10 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                       autoFocus
                     />
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
                   </div>
                 </form>
               </div>
               
               {/* Content */}
-              <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex-1 overflow-y-auto p-3">
                 {/* Popular Searches */}
-                <div className="mb-8">
-                  <h3 className="font-semibold text-gray-900 mb-3 text-lg">Popular Searches</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {quickSearches.map((item) => (
+                <div className="mb-6">
+                  <h3 className="font-semibold text-gray-900 mb-2 text-sm">Popular Searches</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {quickSearches.slice(0, 9).map((item) => (
                       <button
                         key={item}
                         onClick={() => handleQuickSearch(item)}
-                        className="px-4 py-3 bg-gray-50 hover:bg-green-50 text-gray-700 rounded-lg text-sm font-medium transition-colors text-left hover:border-green-200 hover:border"
+                        className="px-3 py-2 bg-gray-50 hover:bg-green-50 text-gray-700 rounded text-xs font-medium transition-colors text-left hover:border-green-200 hover:border"
                       >
                         {item}
                       </button>
@@ -1062,24 +1228,21 @@ const Header: React.FC = () => {
                 
                 {/* Categories */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3 text-lg">Shop by Category</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {categories.slice(0, 6).map((category) => {
-                      const Icon = category.icon;
-                      return (
-                        <Link
-                          key={category.id}
-                          href={`/categories/${category.id}`}
-                          className="flex items-center p-3 bg-gray-50 hover:bg-green-50 rounded-lg transition-colors"
-                          onClick={() => setMobileSearchOpen(false)}
-                        >
-                          <div className={`p-2 rounded-lg ${category.color} mr-3`}>
-                            <Icon size={18} />
-                          </div>
-                          <span className="font-medium text-sm">{category.name}</span>
-                        </Link>
-                      );
-                    })}
+                  <h3 className="font-semibold text-gray-900 mb-2 text-sm">Shop by Category</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {topCategories.slice(0, 6).map((category) => (
+                      <Link
+                        key={category.id}
+                        href={`/categories/${category.slug}`}
+                        className="flex items-center p-2 bg-gray-50 hover:bg-green-50 rounded-lg transition-colors text-sm"
+                        onClick={() => setMobileSearchOpen(false)}
+                      >
+                        <div className="text-green-600 mr-2">
+                          {getCategoryIcon(category.name)}
+                        </div>
+                        <span className="font-medium">{category.name}</span>
+                      </Link>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1097,53 +1260,53 @@ const Header: React.FC = () => {
             />
             
             {/* Menu Panel */}
-            <div className="absolute left-0 top-0 h-full w-[85%] max-w-sm mobile-menu-bg shadow-2xl animate-slideInLeft">
+            <div className="absolute left-0 top-0 h-full w-[85%] max-w-sm bg-white shadow-2xl animate-slideInLeft">
               <div className="h-full flex flex-col">
                 {/* Header */}
-                <div className="p-6 border-b border-gray-200">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-orange-500 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold">MH</span>
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-orange-500 rounded flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">MH</span>
                       </div>
                       <div>
-                        <div className="font-bold text-gray-900 text-lg">MarketHub</div>
+                        <div className="font-bold text-gray-900">MarketHub</div>
                         <div className="text-xs text-gray-500">Your Fresh Market</div>
                       </div>
                     </div>
                     <button 
                       onClick={() => setMobileMenuOpen(false)}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                      <X size={24} />
+                      <X size={20} />
                     </button>
                   </div>
                   
                   {/* User Info */}
                   {isAuthenticated ? (
-                    <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-green-50 to-orange-50 rounded-xl">
-                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-green-500 to-orange-500 flex items-center justify-center text-white font-bold text-lg">
+                    <div className="flex items-center space-x-2 p-3 bg-gradient-to-r from-green-50 to-orange-50 rounded-lg">
+                      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-green-500 to-orange-500 flex items-center justify-center text-white font-bold">
                         {userInitial}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-gray-900 truncate">{user?.name}</div>
-                        <div className="text-sm text-gray-600 truncate">{user?.email}</div>
+                        <div className="font-semibold text-gray-900 text-sm truncate">{user?.name}</div>
+                        <div className="text-xs text-gray-600 truncate">{user?.email}</div>
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <Link 
                         href="/auth/login" 
-                        className="block py-3 text-center bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold shadow-lg"
+                        className="block py-2 text-center bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold text-sm"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Sign In
                       </Link>
                       <div className="text-center">
-                        <span className="text-sm text-gray-600">New customer? </span>
+                        <span className="text-xs text-gray-600">New customer? </span>
                         <Link 
                           href="/auth/register" 
-                          className="text-green-600 font-semibold hover:underline"
+                          className="text-green-600 font-semibold hover:underline text-sm"
                           onClick={() => setMobileMenuOpen(false)}
                         >
                           Register
@@ -1154,54 +1317,29 @@ const Header: React.FC = () => {
                 </div>
 
                 {/* Menu Content */}
-                <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
-                  <div className="space-y-8">
+                <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
+                  <div className="space-y-6">
                     {/* Categories */}
                     <div>
-                      <h3 className="font-bold text-gray-900 text-lg mb-4 flex items-center">
-                        <Menu size={20} className="mr-2" />
+                      <h3 className="font-bold text-gray-900 mb-3 flex items-center text-sm">
+                        <Package size={16} className="mr-2" />
                         Categories
                       </h3>
-                      <div className="space-y-2">
-                        {categories.map((category) => {
-                          const Icon = category.icon;
-                          return (
-                            <Link
-                              key={category.id}
-                              href={`/categories/${category.id}`}
-                              className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors group"
-                              onClick={() => setMobileMenuOpen(false)}
-                            >
-                              <div className="flex items-center">
-                                <div className={`p-2 rounded-lg ${category.color} mr-3`}>
-                                  <Icon size={18} />
-                                </div>
-                                <span className="font-medium text-gray-900">{category.name}</span>
-                              </div>
-                              <ChevronRight size={16} className="text-gray-400 group-hover:text-green-500" />
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Navigation */}
-                    <div>
-                      <h3 className="font-bold text-gray-900 text-lg mb-4">Quick Links</h3>
-                      <div className="space-y-2">
-                        {navItems.map((item) => (
+                      <div className="space-y-1">
+                        {topCategories.slice(0, 10).map((category) => (
                           <Link
-                            key={item.id}
-                            href={item.href}
-                            className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors group"
+                            key={category.id}
+                            href={`/categories/${category.slug}`}
+                            className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors group text-sm"
                             onClick={() => setMobileMenuOpen(false)}
                           >
-                            <span className="font-medium text-gray-900">{item.name}</span>
-                            {item.featured && (
-                              <span className="px-2 py-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-bold rounded">
-                                HOT
-                              </span>
-                            )}
+                            <div className="flex items-center">
+                              <div className="text-green-600 mr-2">
+                                {getCategoryIcon(category.name)}
+                              </div>
+                              <span className="font-medium text-gray-900">{category.name}</span>
+                            </div>
+                            <ChevronRight size={14} className="text-gray-400 group-hover:text-green-500" />
                           </Link>
                         ))}
                       </div>
@@ -1209,22 +1347,22 @@ const Header: React.FC = () => {
 
                     {/* Services */}
                     <div>
-                      <h3 className="font-bold text-gray-900 text-lg mb-4">Our Services</h3>
-                      <div className="grid grid-cols-2 gap-3">
+                      <h3 className="font-bold text-gray-900 mb-3 text-sm">Our Services</h3>
+                      <div className="grid grid-cols-2 gap-2">
                         {quickLinks.map((link) => {
                           const Icon = link.icon;
                           return (
                             <Link
                               key={link.id}
                               href={`/${link.id}`}
-                              className="p-4 rounded-xl border border-gray-200 hover:border-green-200 hover:shadow-md transition-all duration-300 text-center"
+                              className="p-3 rounded-lg border border-gray-200 hover:border-green-200 hover:shadow transition-all duration-300 text-center text-xs"
                               onClick={() => setMobileMenuOpen(false)}
                             >
-                              <div className={`${link.color} mb-2`}>
-                                <Icon size={20} className="mx-auto" />
+                              <div className={`${link.color} mb-1`}>
+                                <Icon size={16} className="mx-auto" />
                               </div>
-                              <div className="font-medium text-sm">{link.name}</div>
-                              <div className="text-xs text-gray-500 mt-1">{link.desc}</div>
+                              <div className="font-medium">{link.name}</div>
+                              <div className="text-gray-500 mt-0.5">{link.desc}</div>
                             </Link>
                           );
                         })}
@@ -1234,34 +1372,34 @@ const Header: React.FC = () => {
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t border-gray-200">
-                  <div className="space-y-4">
+                <div className="p-4 border-t border-gray-200">
+                  <div className="space-y-3">
                     <Link 
                       href="/cart" 
-                      className="flex items-center justify-between p-4 bg-gradient-to-r from-green-500 to-orange-500 text-white rounded-xl shadow-lg"
+                      className="flex items-center justify-between p-3 bg-gradient-to-r from-green-500 to-orange-500 text-white rounded-lg shadow text-sm"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <div className="flex items-center">
-                        <ShoppingCart size={20} className="mr-3" />
+                        <ShoppingCart size={16} className="mr-2" />
                         <div>
                           <div className="font-semibold">View Cart</div>
-                          <div className="text-sm opacity-90">KSh 0.00</div>
+                          <div className="opacity-90">KSh 0.00</div>
                         </div>
                       </div>
                       {cartCount > 0 && (
-                        <span className="bg-white text-green-600 px-3 py-1 rounded-full text-sm font-bold">
+                        <span className="bg-white text-green-600 px-2 py-0.5 rounded-full text-xs font-bold">
                           {cartCount} items
                         </span>
                       )}
                     </Link>
                     
-                    <div className="text-center text-sm text-gray-600 pt-4 border-t border-gray-200">
-                      <div className="flex items-center justify-center space-x-2 mb-2">
-                        <Phone size={16} className="text-green-500" />
-                        <span className="font-medium">Need help? Call +254 716 354589</span>
+                    <div className="text-center text-xs text-gray-600 pt-3 border-t border-gray-200">
+                      <div className="flex items-center justify-center space-x-1 mb-1.5">
+                        <Phone size={12} className="text-green-500" />
+                        <span className="font-medium">Help: +254 716 354589</span>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        © {new Date().getFullYear()} MarketHub. All rights reserved.
+                      <div className="text-gray-500">
+                        © {new Date().getFullYear()} MarketHub
                       </div>
                     </div>
                   </div>
