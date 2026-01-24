@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; // Added Image import
+import Image from 'next/image';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { 
@@ -224,8 +224,8 @@ const Header: React.FC = () => {
   // Get top categories (with products, limited to 5 to prevent overlap)
   const topCategories = useMemo(() => {
     return allCategories
-      .filter(cat => cat.active_products_count > 0 && cat.parent_id === null)
-      .sort((a, b) => b.active_products_count - a.active_products_count)
+      .filter(cat => (cat.active_products_count || 0) > 0 && cat.parent_id === null)
+      .sort((a, b) => (b.active_products_count || 0) - (a.active_products_count || 0))
       .slice(0, 5);
   }, [allCategories]);
 
@@ -453,6 +453,42 @@ const Header: React.FC = () => {
     router.push(`/products/${productSlug}`);
   };
 
+  // Helper function to get complete image URL
+  const getImageUrl = (product: Product) => {
+    // Priority 1: Use main_image from API (already a complete URL)
+    if (product.main_image) {
+      return product.main_image;
+    }
+    
+    // Priority 2: Use thumbnail or gallery URLs if they're complete URLs
+    const imageUrl = product.thumbnail || product.gallery?.[0] || product.images?.[0];
+    
+    if (!imageUrl) {
+      return '/images/placeholder.jpg';
+    }
+    
+    // If it's already a full URL, return it
+    if (imageUrl.startsWith('http')) {
+      return imageUrl;
+    }
+    
+    // Otherwise, construct the URL
+    const cleanPath = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl;
+    
+    // Check if it's a storage path
+    if (cleanPath.startsWith('storage/')) {
+      return `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke'}/${cleanPath}`;
+    }
+    
+    // Check if it's a products path
+    if (cleanPath.startsWith('products/')) {
+      return `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke'}/storage/${cleanPath}`;
+    }
+    
+    // Default case
+    return `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke'}/storage/${cleanPath}`;
+  };
+
   return (
     <>
       <style jsx global>{`
@@ -622,7 +658,7 @@ const Header: React.FC = () => {
 
       {/* COMPACT DELIVERY BANNER - Matches other navbar padding */}
       <div className="hidden lg:block delivery-banner py-2">
-        <div className="max-w-7xl mx-auto px-4"> {/* Added px-4 to match main header */}
+        <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between">
             {/* Left: Vehicle Images and Compact Text */}
             <div className="flex items-center space-x-4">
@@ -1061,7 +1097,8 @@ const Header: React.FC = () => {
                         const [imageLoaded, setImageLoaded] = useState(false);
                         const [imageError, setImageError] = useState(false);
                         
-                        const imageUrl = product.thumbnail || product.images?.[0] || '/images/placeholder.jpg';
+                        // Get the complete image URL using the helper function
+                        const imageUrl = getImageUrl(product);
                         
                         return (
                           <div
@@ -1080,7 +1117,7 @@ const Header: React.FC = () => {
                                     imageLoaded ? 'group-hover:scale-105 opacity-100' : 'opacity-0'
                                   }`}
                                   onLoad={() => {
-                                    console.log(`Product ${product.id}: Image loaded successfully`);
+                                    console.log(`Product ${product.id}: Image loaded successfully`, imageUrl);
                                     setImageLoaded(true);
                                   }}
                                   onError={(e) => {
@@ -1110,15 +1147,15 @@ const Header: React.FC = () => {
                               {/* Price */}
                               <div className="space-y-0.5">
                                 <div className="font-bold text-gray-900">
-                                  {formatPrice(product.price)}
+                                  {formatPrice(Number(product.price))}
                                 </div>
-                                {product.discounted_price && product.discounted_price < product.price && (
+                                {product.discounted_price && Number(product.discounted_price) < Number(product.price) && (
                                   <div className="flex items-center space-x-1">
                                     <span className="text-xs text-gray-500 line-through">
-                                      {formatPrice(product.price)}
+                                      {formatPrice(Number(product.price))}
                                     </span>
                                     <span className="px-1 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded">
-                                      SAVE {Math.round((1 - product.discounted_price / product.price) * 100)}%
+                                      SAVE {Math.round((1 - Number(product.discounted_price) / Number(product.price)) * 100)}%
                                     </span>
                                   </div>
                                 )}
@@ -1152,7 +1189,7 @@ const Header: React.FC = () => {
 
         {/* Quick Links Bar - Mobile */}
         <div className="lg:hidden bg-gradient-to-r from-green-50 to-orange-50 border-t border-gray-200">
-          <div className="max-w-7xl mx-auto px-4"> {/* Added container with padding */}
+          <div className="max-w-7xl mx-auto px-4">
             <div className="overflow-x-auto scrollbar-thin">
               <div className="flex py-1.5 space-x-3 min-w-max">
                 {quickLinks.map((link) => {
