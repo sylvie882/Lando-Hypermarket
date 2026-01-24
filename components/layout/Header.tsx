@@ -1304,11 +1304,11 @@ const Header: React.FC = () => {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-2">
                       <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-orange-500 rounded flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">MH</span>
+                        <span className="text-white font-bold text-sm">LH</span>
                       </div>
                       <div>
-                        <div className="font-bold text-gray-900">MarketHub</div>
-                        <div className="text-xs text-gray-500">Your Fresh Market</div>
+                        <div className="font-bold text-gray-900">Lando</div>
+                        <div className="text-xs text-gray-500">Hypermarket</div>
                       </div>
                     </div>
                     <button 
