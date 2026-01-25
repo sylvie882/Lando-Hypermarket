@@ -1,48 +1,126 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Truck, Bike, Clock, Shield, MapPin, Package, Star } from "lucide-react";
 
 export default function DeliveryModeToggle() {
   return (
-    <div className="flex items-center gap-6">
-      
-      {/* Scheduled */}
-      <Link
-        href="/"
-        className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white hover:bg-gray-50 transition"
-      >
-        <Image
-          src="/truck.png"
-          alt="Scheduled delivery"
-          width={60}
-          height={60}
-          className="shrink-0"
-          priority
-        />
+    <div className="flex items-center justify-between w-full">
+      {/* Left side: Delivery mode selection */}
+      <div className="flex items-center gap-4">
+        {/* Scheduled */}
+        <Link
+          href="/delivery/scheduled"
+          className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white hover:bg-gray-50 transition-all duration-300 border border-gray-200 hover:border-green-300 hover:shadow-md group"
+        >
+          <div className="relative">
+            <Image
+              src="/truck.png"
+              alt="Scheduled delivery"
+              width={50}
+              height={50}
+              className="shrink-0 transition-transform duration-300 group-hover:scale-105"
+              priority
+            />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-gray-800 group-hover:text-green-700">
+              Scheduled
+            </span>
+            <span className="text-xs text-gray-500">Next day delivery</span>
+          </div>
+        </Link>
 
-        <span className="text-base font-semibold text-gray-800">
-          Scheduled
-        </span>
-      </Link>
+        {/* Express */}
+        <Link
+          href="/delivery/express"
+          className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white hover:bg-gray-50 transition-all duration-300 border border-gray-200 hover:border-orange-300 hover:shadow-md group"
+        >
+          <div className="relative">
+            <Image
+              src="/bike.png"
+              alt="Express delivery"
+              width={50}
+              height={50}
+              className="shrink-0 transition-transform duration-300 group-hover:scale-105"
+              priority
+            />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-gray-800 group-hover:text-orange-700">
+              Express
+            </span>
+            <span className="text-xs text-gray-500">Same day delivery</span>
+          </div>
+        </Link>
 
-      {/* Express */}
-      <Link
-        href="/"
-        className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white hover:bg-gray-50 transition"
-      >
-        <Image
-          src="/bike.png"
-          alt="Express delivery"
-          width={60}
-          height={60}
-          className="shrink-0"
-          priority
-        />
+        {/* Mobile View: Quick info */}
+        <div className="md:hidden ml-4">
+          <div className="flex items-center gap-2">
+            <Truck size={14} className="text-green-600" />
+            <span className="text-xs font-medium text-gray-700">Free Delivery*</span>
+          </div>
+        </div>
+      </div>
 
-        <span className="text-base font-semibold text-gray-800">
-          Express
-        </span>
-      </Link>
+      {/* Right side: Delivery information and links */}
+      <div className="flex items-center gap-6">
+        {/* Delivery Stats */}
+        <div className="hidden md:flex items-center gap-4">
+          <div className="text-center">
+            <div className="flex items-center gap-1">
+              <Package size={14} className="text-green-600" />
+              <span className="text-sm font-bold text-gray-900">10,000+</span>
+            </div>
+            <div className="text-xs text-gray-600">Products</div>
+          </div>
+          
+          <div className="h-6 w-px bg-gray-300"></div>
+          
+          <div className="text-center">
+            <div className="flex items-center gap-1">
+              <Star size={14} className="text-yellow-500" />
+              <span className="text-sm font-bold text-gray-900">4.8</span>
+            </div>
+            <div className="text-xs text-gray-600">Rating</div>
+          </div>
+        </div>
 
+        {/* Quick Links */}
+        <div className="hidden lg:flex items-center gap-4">
+          <Link
+            href="/delivery-info"
+            className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors px-3 py-1.5 hover:bg-green-50 rounded-lg"
+          >
+            <Clock size={14} />
+            <span>Delivery Times</span>
+          </Link>
+          
+          <Link
+            href="/track-order"
+            className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors px-3 py-1.5 hover:bg-green-50 rounded-lg"
+          >
+            <MapPin size={14} />
+            <span>Track Order</span>
+          </Link>
+          
+          <Link
+            href="/secure-delivery"
+            className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors px-3 py-1.5 hover:bg-green-50 rounded-lg"
+          >
+            <Shield size={14} />
+            <span>Secure Delivery</span>
+          </Link>
+        </div>
+
+        {/* Delivery Info - Desktop */}
+        <div className="hidden md:flex flex-col items-end">
+          <div className="flex items-center gap-2">
+            <Truck size={16} className="text-green-600" />
+            <span className="text-sm font-semibold text-gray-900">Free Delivery</span>
+          </div>
+    
+        </div>
+      </div>
     </div>
   );
 }
