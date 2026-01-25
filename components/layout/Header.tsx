@@ -626,20 +626,20 @@ const Header: React.FC = () => {
                 >
                   <div className="relative">
                     <div className="h-10 w-10 rounded-2xl overflow-hidden border-3 border-white shadow-lg group-hover:shadow-xl transition-shadow">
-                      {user?.profile_picture ? (
-                        <Image
-                          src={user.profile_picture}
-                          alt="Profile"
-                          width={40}
-                          height={40}
-                          className="object-cover w-full h-full"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-green-400 via-yellow-400 to-orange-400 flex items-center justify-center">
-                          <User size={20} className="text-white" />
-                        </div>
-                      )}
-                    </div>
+  {user?.profile_picture_url ? (  // CHANGED: profile_picture → profile_picture_url
+    <Image
+      src={user.profile_picture_url}  // CHANGED: profile_picture → profile_picture_url
+      alt="Profile"
+      width={40}
+      height={40}
+      className="object-cover w-full h-full"
+    />
+  ) : (
+    <div className="w-full h-full bg-gradient-to-br from-green-400 via-yellow-400 to-orange-400 flex items-center justify-center">
+      <User size={20} className="text-white" />
+    </div>
+  )}
+</div>
                     {isAuthenticated && (
                       <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white shadow"></div>
                     )}
@@ -1086,9 +1086,9 @@ const Header: React.FC = () => {
                   {isAuthenticated ? (
                     <div className="flex items-center space-x-2 p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-2xl border border-green-200">
                       <div className="h-12 w-12 rounded-2xl overflow-hidden border-4 border-white shadow">
-                        {user?.profile_picture ? (
+                        {user?.profile_picture_url ? (  // CHANGED: profile_picture → profile_picture_url
                           <Image
-                            src={user.profile_picture}
+                            src={user.profile_picture_url}  // CHANGED: profile_picture → profile_picture_url
                             alt="Profile"
                             width={48}
                             height={48}
