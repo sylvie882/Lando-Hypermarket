@@ -303,7 +303,7 @@ const HomePage: React.FC = () => {
       `}</style>
 
       {/* Banner Section - Adjusted to remove gap with navbar */}
-      <section className="pt-0 pb-0 px-0">
+      <section className="pt-0 pb-0 px-0 sm:px-2">
         <div className="w-full">
           <BannerCarousel
             height={{ mobile: '280px', desktop: '380px' }}
@@ -489,7 +489,7 @@ const HomePage: React.FC = () => {
       )}
 
       {/* New Arrivals Section - 12 PRODUCTS */}
-      <section 
+      <section id="new-arrivals"
         ref={newArrivalsSectionRef}
         className="py-12 bg-white px-4 sm:px-6"
       >

@@ -528,7 +528,7 @@ const Header: React.FC = () => {
     
       {/* Main Header */}
       <header className={`sticky top-0 z-50 gradient-bg transition-all duration-300 ${scrolled ? 'header-shadow' : ''}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-1">
           {/* First Row: Logo, Search, Actions */}
           <div className="flex items-center justify-between py-3">
             {/* Logo */}
@@ -676,7 +676,7 @@ const Header: React.FC = () => {
                               <div className="font-semibold text-sm">Orders</div>
                             </Link>
                             <Link 
-                              href="/wishlist" 
+                              href="/profile/wishlist" 
                               className="flex flex-col items-center p-3 hover:bg-yellow-50 rounded-xl transition-colors group border border-gray-100 hover:border-yellow-200"
                               onClick={() => setUserMenuOpen(false)}
                             >
@@ -769,10 +769,10 @@ const Header: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  <div className="hidden lg:block">
+                  {/* <div className="hidden lg:block">
                     <div className="text-xs text-gray-600">Total</div>
                     <div className="text-md font-bold text-gray-900">KSh 0.00</div>
-                  </div>
+                  </div> */}
                 </div>
               </Link>
             </div>
@@ -879,7 +879,7 @@ const Header: React.FC = () => {
                   Hot Deals
                 </Link>
                 <Link
-                  href="/new-arrivals"
+                  href="#new-arrivals"
                   className={`font-bold text-sm px-3 py-2 rounded-xl transition-all duration-300 flex items-center ${
                     isActive('/new-arrivals') 
                       ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg' 
