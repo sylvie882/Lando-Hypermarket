@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import PersonalizedRecommendations from '@/components/ui/PersonalizedRecommendations';
-import { useAuth } from '@/lib/auth'; // Add this import
+import { useAuth } from '@/lib/auth';
 
 interface CategoryData {
   id: number;
@@ -53,7 +53,7 @@ const HomePage: React.FC = () => {
   const [showCustomerSupport, setShowCustomerSupport] = useState(false);
   
   // Get authentication status from auth context
-  const { isAuthenticated, user, token } = useAuth(); // Use the actual auth hook
+  const { isAuthenticated, user, token } = useAuth();
 
   console.log('HomePage - Auth status:', { 
     isAuthenticated, 
@@ -71,12 +71,12 @@ const HomePage: React.FC = () => {
 
   // Colors - QuickMart style
   const colors = {
-    primary: '#e30613',
-    primaryDark: '#b3050f',
-    primaryLight: '#fce8e9',
+    primary: '#90EE90', // Light Green
+    primaryDark: '#5CD65C', // Darker Green
+    gold: '#FFD700', // Gold
+    orange: '#FFA500', // Warm Orange
     secondary: '#333333',
     green: '#28a745',
-    orange: '#ff6b35',
     yellow: '#ffc107',
     lightGray: '#f8f9fa',
     dark: '#2c3e50'
@@ -237,7 +237,7 @@ const HomePage: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -285,11 +285,26 @@ const HomePage: React.FC = () => {
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
         }
+        
+        @keyframes slide-up {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out forwards;
+        }
       `}</style>
 
-      {/* Banner Section - Adjusted padding */}
-      <section className="pt-4 pb-0 px-4 md:px-6 lg:px-8">
-        <div className="container mx-auto max-w-7xl">
+      {/* Banner Section - Adjusted to remove gap with navbar */}
+      <section className="pt-0 pb-0 px-0">
+        <div className="w-full">
           <BannerCarousel
             height={{ mobile: '280px', desktop: '380px' }}
             rounded={false}
@@ -301,15 +316,15 @@ const HomePage: React.FC = () => {
       {categories.length > 0 && (
         <section 
           ref={categoriesSectionRef}
-          className="pt-2 pb-12 bg-white"
+          className="py-8 bg-white px-4 sm:px-6"
         >
-          <div className="container mx-auto px-4">
+          <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Best-Selling Categories</h2>
               <div className="flex items-center space-x-4">
                 <Link 
                   href="/categories" 
-                  className="text-red-600 hover:text-red-700 font-medium flex items-center"
+                  className="text-green-600 hover:text-green-700 font-medium flex items-center"
                 >
                   View All <ArrowRight size={16} className="ml-1" />
                 </Link>
@@ -346,7 +361,7 @@ const HomePage: React.FC = () => {
                     href={`/categories/${category.slug}`}
                     className="flex-shrink-0 w-36 sm:w-40 md:w-44 bg-white rounded-lg p-4 hover:shadow-lg transition-all duration-300 text-center group border border-gray-100"
                   >
-                    <div className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-4 bg-gray-50 rounded-full flex items-center justify-center group-hover:bg-red-50 transition-colors">
+                    <div className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-4 bg-gray-50 rounded-full flex items-center justify-center group-hover:bg-green-50 transition-colors">
                       {category.image ? (
                         <img 
                           src={getImageUrl(category.image)} 
@@ -355,10 +370,10 @@ const HomePage: React.FC = () => {
                           loading="lazy"
                         />
                       ) : (
-                        <ShoppingBag size={28} className="text-gray-600 group-hover:text-red-600" />
+                        <ShoppingBag size={28} className="text-gray-600 group-hover:text-green-600" />
                       )}
                     </div>
-                    <h3 className="font-medium text-gray-900 text-sm md:text-base group-hover:text-red-600 line-clamp-2">
+                    <h3 className="font-medium text-gray-900 text-sm md:text-base group-hover:text-green-600 line-clamp-2">
                       {category.name}
                     </h3>
                     {category.products_count && (
@@ -379,14 +394,14 @@ const HomePage: React.FC = () => {
       {/* Featured Products Section - 12 PRODUCTS */}
       <section 
         ref={featuredSectionRef}
-        className="py-12 bg-gray-50"
+        className="py-12 bg-gray-50 px-4 sm:px-6"
       >
-        <div className="container mx-auto px-4">
+        <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold text-gray-900">Featured Products</h2>
             <Link 
               href="/products?featured=true" 
-              className="text-red-600 hover:text-red-700 font-medium flex items-center"
+              className="text-green-600 hover:text-green-700 font-medium flex items-center"
             >
               View All <ArrowRight size={16} className="ml-1" />
             </Link>
@@ -427,13 +442,8 @@ const HomePage: React.FC = () => {
 
       {/* PERSONALIZED RECOMMENDATIONS SECTION - FIXED */}
       {isAuthenticated ? (
-        <section className="py-12 bg-white border-t border-gray-100">
-          <div className="container mx-auto px-4">
-            {/* <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
-              <p className="text-sm text-green-800">
-                ✅ Authenticated as {user?.name || 'User'} | Showing personalized recommendations
-              </p>
-            </div> */}
+        <section className="py-12 bg-white border-t border-gray-100 px-4 sm:px-6">
+          <div className="max-w-7xl mx-auto">
             <PersonalizedRecommendations 
               title="Recommended For You"
               limit={12}
@@ -443,8 +453,8 @@ const HomePage: React.FC = () => {
           </div>
         </section>
       ) : (
-        <section className="py-12 bg-white border-t border-gray-100">
-          <div className="container mx-auto px-4">
+        <section className="py-12 bg-white border-t border-gray-100 px-4 sm:px-6">
+          <div className="max-w-7xl mx-auto">
             <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-sm text-blue-800">
                 ℹ️ Sign in to see personalized recommendations tailored just for you
@@ -461,7 +471,7 @@ const HomePage: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
                   href="/auth/login"
-                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
                 >
                   Sign In
                   <ArrowRight size={18} className="ml-2" />
@@ -481,14 +491,14 @@ const HomePage: React.FC = () => {
       {/* New Arrivals Section - 12 PRODUCTS */}
       <section 
         ref={newArrivalsSectionRef}
-        className="py-12 bg-white"
+        className="py-12 bg-white px-4 sm:px-6"
       >
-        <div className="container mx-auto px-4">
+        <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold text-gray-900">New Arrivals</h2>
             <Link 
               href="/products?new=true" 
-              className="text-red-600 hover:text-red-700 font-medium flex items-center"
+              className="text-green-600 hover:text-green-700 font-medium flex items-center"
             >
               View All <ArrowRight size={16} className="ml-1" />
             </Link>
@@ -506,7 +516,7 @@ const HomePage: React.FC = () => {
                     }}
                   >
                     <div className="absolute top-2 left-2 z-10">
-                      <span className="bg-red-600 text-white text-xs px-2 py-1 rounded">NEW</span>
+                      <span className="bg-green-600 text-white text-xs px-2 py-1 rounded">NEW</span>
                     </div>
                     <ProductCard 
                       product={product} 
@@ -531,10 +541,10 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* Promotional Banner */}
-      <section className="py-12 bg-white">
-        <div className="container mx-auto px-4">
+      <section className="py-12 bg-white px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto">
           <div className="relative rounded-xl overflow-hidden">
-            <div className="bg-gradient-to-r from-red-600 to-red-700 p-8 md:p-12">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-8 md:p-12">
               <div className="flex flex-col md:flex-row items-center justify-between">
                 <div className="text-white mb-6 md:mb-0 md:mr-8">
                   <div className="inline-flex items-center px-4 py-2 bg-white/20 rounded-full mb-4">
@@ -545,7 +555,7 @@ const HomePage: React.FC = () => {
                   <p className="text-lg mb-6">Up to 50% off on fresh produce</p>
                   <Link
                     href="/deals"
-                    className="inline-flex items-center bg-white text-red-600 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+                    className="inline-flex items-center bg-white text-green-600 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors"
                   >
                     Shop Now
                     <ArrowRight className="ml-2" size={18} />

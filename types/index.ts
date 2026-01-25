@@ -16,6 +16,7 @@ export interface User {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  profile_picture_url?: string; // Full URL
 }
 // types/index.ts
 // types/index.ts - Update the Product interface

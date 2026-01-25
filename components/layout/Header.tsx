@@ -11,11 +11,9 @@ import {
   Package, Star, Home, ChevronRight,
   ShoppingBasket,
   Smartphone,
-  Globe,
   Award,
   RefreshCw,
   ShieldCheck,
-  Trash2,
   Apple, Carrot, Coffee, Utensils, Leaf,
   Baby, Droplets, Bug, RefreshCw as RefreshCwIcon,
   PawPrint,
@@ -26,7 +24,17 @@ import {
   Sprout,
   HeartPulse,
   Pill,
-  Shirt
+  Shirt,
+  Flame,
+  MapPin,
+  Clock,
+  Shield,
+  Zap,
+  Sparkles,
+  Percent,
+  Gift,
+  Sun,
+  ShoppingBag
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { debounce } from 'lodash';
@@ -62,23 +70,32 @@ const Header: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Light Green & Warm Orange Color Scheme
+  // Updated Color Scheme with Light Green as Primary, Gold and Warm Orange as accents
   const colors = useMemo(() => ({
-    primary: '#22c55e', // Light Green
-    primaryLight: '#4ade80',
-    primaryDark: '#16a34a',
-    secondary: '#f97316', // Warm Orange
-    secondaryLight: '#fb923c',
-    secondaryDark: '#ea580c',
-    accent: '#3b82f6', // Blue for contrast
-    accentLight: '#60a5fa',
-    warning: '#f59e0b',
-    success: '#22c55e',
-    dark: '#1f2937',
-    light: '#ffffff',
-    gray: '#6b7280',
-    grayLight: '#f9fafb',
-    grayMedium: '#e5e7eb'
+    primary: '#90EE90',           // Light Green - Primary
+    primaryLight: '#C1FFC1',      // Lighter Green
+    primaryDark: '#5CD65C',       // Darker Green
+    
+    gold: '#FFD700',              // Gold - Accent
+    goldLight: '#FFE55C',         // Light Gold
+    goldDark: '#B8860B',          // Dark Gold
+    
+    orange: '#FFA500',            // Warm Orange - Secondary
+    orangeLight: '#FFC966',       // Light Orange
+    orangeDark: '#CC8400',        // Dark Orange
+    
+    accent: '#A78BFA',            // Purple - Tertiary
+    accentLight: '#C4B5FD',       // Light Purple
+    
+    warning: '#F59E0B',           // Amber
+    success: '#10b981',           // Emerald
+    
+    dark: '#1f2937',              // Dark Gray
+    light: '#ffffff',             // White
+    gray: '#6b7280',              // Gray
+    grayLight: '#f8fafc',         // Light Gray
+    grayMedium: '#e2e8f0',        // Medium Gray
+    grayDark: '#94a3b8'           // Dark Gray
   }), []);
 
   // ========== FETCH CATEGORIES ==========
@@ -116,117 +133,12 @@ const Header: React.FC = () => {
     fetchCategories();
   }, [fetchCategories]);
 
-  // ========== FETCH PROMOTIONAL PRODUCTS ==========
-  const fetchPromotionalProducts = useCallback(async () => {
-    try {
-      setIsPromoLoading(true);
-      
-      const response = await api.products.getAll({ 
-        per_page: 10,
-        sort: 'discount',
-        order: 'desc',
-        discount_min: 10
-      });
-      
-      let products: Product[] = response.data?.data || response.data || [];
-      
-      if (products.length < 4) {
-        const featuredRes = await api.products.getFeatured();
-        const featuredProducts = featuredRes.data || [];
-        const existingIds = new Set(products.map(p => p.id));
-        const additionalProducts = featuredProducts.filter((p: Product) => !existingIds.has(p.id));
-        products = [...products, ...additionalProducts].slice(0, 10);
-      }
-      
-      if (products.length < 4) {
-        const newArrivalsRes = await api.products.getAll({ 
-          per_page: 4,
-          sort: 'created_at',
-          order: 'desc'
-        });
-        const newProducts = newArrivalsRes.data?.data || newArrivalsRes.data || [];
-        products = [...products, ...newProducts].slice(0, 10);
-      }
-      
-      setPromoProducts(products);
-      
-      if (products.length > 1) {
-        if (promoIntervalRef.current) {
-          clearInterval(promoIntervalRef.current);
-        }
-        
-        promoIntervalRef.current = setInterval(() => {
-          setCurrentPromoIndex(prev => (prev + 1) % Math.min(products.length, 4));
-        }, 5000);
-      }
-      
-    } catch (error) {
-      console.error('Failed to fetch promotional products:', error);
-    } finally {
-      setIsPromoLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchPromotionalProducts();
-    
-    return () => {
-      if (promoIntervalRef.current) {
-        clearInterval(promoIntervalRef.current);
-      }
-    };
-  }, [fetchPromotionalProducts]);
-
-  // Category icon mapping
-  const getCategoryIcon = (categoryName: string) => {
-    const iconMap: Record<string, React.ReactNode> = {
-      'Fruits': <Apple size={16} />,
-      'Vegetables': <Carrot size={16} />,
-      'Beverages': <Coffee size={16} />,
-      'Cleaning': <Home size={16} />,
-      'Household': <Home size={16} />,
-      'Disposables': <Utensils size={16} />,
-      'Garbage': <Trash2 size={16} />,
-      'Insect': <Bug size={16} />,
-      'Pest': <Bug size={16} />,
-      'Laundry': <RefreshCwIcon size={16} />,
-      'Detergents': <RefreshCwIcon size={16} />,
-      'Tissues': <Pill size={16} />,
-      'Eco': <Leaf size={16} />,
-      'Green': <Sprout size={16} />,
-      'Baby': <Baby size={16} />,
-      'Health': <HeartPulse size={16} />,
-      'Wellness': <HeartPulse size={16} />,
-      'Beauty': <Droplets size={16} />,
-      'Personal Care': <Droplets size={16} />,
-      'Pet': <PawPrint size={16} />,
-      'Office': <Briefcase size={16} />,
-      'School': <Briefcase size={16} />,
-      'Automotive': <Car size={16} />,
-      'Sports': <Dumbbell size={16} />,
-      'Outdoors': <Dumbbell size={16} />,
-      'Electronics': <Smartphone size={16} />,
-      'Clothing': <Shirt size={16} />,
-      'Accessories': <Shirt size={16} />,
-      'Home': <TreePine size={16} />,
-      'Garden': <TreePine size={16} />,
-      'Default': <Package size={16} />
-    };
-
-    for (const [key, icon] of Object.entries(iconMap)) {
-      if (categoryName.toLowerCase().includes(key.toLowerCase())) {
-        return icon;
-      }
-    }
-    return iconMap['Default'];
-  };
-
-  // Get top categories (with products, limited to 5 to prevent overlap)
+  // Get top categories
   const topCategories = useMemo(() => {
     return allCategories
       .filter(cat => (cat.active_products_count || 0) > 0 && cat.parent_id === null)
       .sort((a, b) => (b.active_products_count || 0) - (a.active_products_count || 0))
-      .slice(0, 5);
+      .slice(0, 6);
   }, [allCategories]);
 
   // Handle category hover with delay
@@ -253,46 +165,10 @@ const Header: React.FC = () => {
     }, 300);
   }, []);
 
-  // Quick Links with Icons
-  const quickLinks = useMemo(() => [
-    { 
-      id: 'delivery', 
-      name: 'Fast Delivery', 
-      icon: Truck,
-      desc: '1-2 Hour Delivery',
-      color: 'text-green-500',
-      bgColor: 'bg-green-50'
-    },
-    { 
-      id: 'pickup', 
-      name: 'Store Pickup', 
-      icon: Package,
-      desc: 'Pickup in 30min',
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-50'
-    },
-    { 
-      id: 'quality', 
-      name: 'Quality Promise', 
-      icon: Award,
-      desc: '100% Fresh',
-      color: 'text-blue-500',
-      bgColor: 'bg-blue-50'
-    },
-    { 
-      id: 'returns', 
-      name: 'Easy Returns', 
-      icon: RefreshCw,
-      desc: '30-Day Returns',
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-50'
-    },
-  ], []);
-
   // Handle scroll effect
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setScrolled(window.scrollY > 10);
     };
     
     const throttledScroll = debounce(handleScroll, 50);
@@ -455,55 +331,87 @@ const Header: React.FC = () => {
 
   // Helper function to get complete image URL
   const getImageUrl = (product: Product) => {
-    // Priority 1: Use main_image from API (already a complete URL)
     if (product.main_image) {
       return product.main_image;
     }
     
-    // Priority 2: Use thumbnail or gallery URLs if they're complete URLs
     const imageUrl = product.thumbnail || product.gallery?.[0] || product.images?.[0];
     
     if (!imageUrl) {
       return '/images/placeholder.jpg';
     }
     
-    // If it's already a full URL, return it
     if (imageUrl.startsWith('http')) {
       return imageUrl;
     }
     
-    // Otherwise, construct the URL
     const cleanPath = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl;
     
-    // Check if it's a storage path
     if (cleanPath.startsWith('storage/')) {
       return `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke'}/${cleanPath}`;
     }
     
-    // Check if it's a products path
     if (cleanPath.startsWith('products/')) {
       return `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke'}/storage/${cleanPath}`;
     }
     
-    // Default case
     return `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke'}/storage/${cleanPath}`;
+  };
+
+  // Category icon mapping
+  const getCategoryIcon = (categoryName: string) => {
+    const iconMap: Record<string, React.ReactNode> = {
+      'Fruits': <Apple size={18} />,
+      'Vegetables': <Carrot size={18} />,
+      'Beverages': <Coffee size={18} />,
+      'Cleaning': <Sparkles size={18} />,
+      'Household': <Home size={18} />,
+      'Disposables': <Utensils size={18} />,
+      'Garbage': <Package size={18} />,
+      'Insect': <Bug size={18} />,
+      'Pest': <Bug size={18} />,
+      'Laundry': <RefreshCwIcon size={18} />,
+      'Detergents': <RefreshCwIcon size={18} />,
+      'Tissues': <Package size={18} />,
+      'Eco': <Leaf size={18} />,
+      'Green': <Sprout size={18} />,
+      'Baby': <Baby size={18} />,
+      'Health': <HeartPulse size={18} />,
+      'Wellness': <HeartPulse size={18} />,
+      'Beauty': <Droplets size={18} />,
+      'Personal Care': <Droplets size={18} />,
+      'Pet': <PawPrint size={18} />,
+      'Office': <Briefcase size={18} />,
+      'School': <Briefcase size={18} />,
+      'Automotive': <Car size={18} />,
+      'Sports': <Dumbbell size={18} />,
+      'Outdoors': <Dumbbell size={18} />,
+      'Electronics': <Smartphone size={18} />,
+      'Clothing': <Shirt size={18} />,
+      'Accessories': <Shirt size={18} />,
+      'Home': <TreePine size={18} />,
+      'Garden': <TreePine size={18} />,
+      'Default': <Package size={18} />
+    };
+
+    for (const [key, icon] of Object.entries(iconMap)) {
+      if (categoryName.toLowerCase().includes(key.toLowerCase())) {
+        return icon;
+      }
+    }
+    return iconMap['Default'];
   };
 
   return (
     <>
       <style jsx global>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
+          from { opacity: 0; transform: translateY(-8px); }
           to { opacity: 1; transform: translateY(0); }
         }
         
-        @keyframes slideInRight {
+        @keyframes slideIn {
           from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        
-        @keyframes slideInLeft {
-          from { transform: translateX(-100%); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
         }
         
@@ -514,29 +422,28 @@ const Header: React.FC = () => {
         
         @keyframes float {
           0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-3px); }
+          50% { transform: translateY(-4px); }
         }
         
-        @keyframes gradientShift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+        @keyframes glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(144, 238, 144, 0.3); }
+          50% { box-shadow: 0 0 30px rgba(144, 238, 144, 0.5); }
         }
         
-        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
-        .animate-slideInRight { animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .animate-slideInLeft { animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .animate-fadeIn { animation: fadeIn 0.25s ease-out; }
+        .animate-slideIn { animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .animate-pulse-slow { animation: pulse 2s infinite; }
-        .animate-float { animation: float 2.5s ease-in-out infinite; }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        .animate-glow { animation: glow 2s ease-in-out infinite; }
         
         .cart-badge {
           position: absolute;
-          top: -8px;
-          right: -8px;
-          background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+          top: -6px;
+          right: -6px;
+          background: linear-gradient(135deg, #FFA500 0%, #CC8400 100%);
           color: white;
-          font-size: 11px;
-          font-weight: 700;
+          font-size: 10px;
+          font-weight: 800;
           min-width: 18px;
           height: 18px;
           border-radius: 50%;
@@ -545,253 +452,137 @@ const Header: React.FC = () => {
           justify-content: center;
           z-index: 10;
           border: 2px solid white;
-          box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+          box-shadow: 0 2px 8px rgba(255, 165, 0, 0.4);
         }
         
-        .search-glow {
-          box-shadow: 0 0 0 1px #e5e7eb, 0 4px 12px rgba(34, 197, 94, 0.1);
-        }
-        
-        .search-glow:focus-within {
-          box-shadow: 0 0 0 2px #22c55e, 0 6px 20px rgba(34, 197, 94, 0.15);
+        .header-shadow {
+          box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+          backdrop-filter: blur(10px);
         }
         
         .dropdown-shadow {
-          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          backdrop-filter: blur(20px);
         }
         
-        .scrollbar-thin::-webkit-scrollbar {
-          width: 4px;
-        }
-        
-        .scrollbar-thin::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 4px;
-        }
-        
-        .scrollbar-thin::-webkit-scrollbar-thumb {
-          background: #22c55e;
-          border-radius: 4px;
-        }
-
-        /* Category Display Styles */
-        .category-scroll {
-          display: flex;
-          overflow-x: auto;
-          scrollbar-width: thin;
-          scrollbar-color: #22c55e #f3f4f6;
-          gap: 8px;
-          flex: 1;
-          min-width: 0;
-        }
-        
-        .category-scroll::-webkit-scrollbar {
-          height: 6px;
-        }
-        
-        .category-scroll::-webkit-scrollbar-track {
-          background: #f3f4f6;
-          border-radius: 3px;
-        }
-        
-        .category-scroll::-webkit-scrollbar-thumb {
-          background: #22c55e;
-          border-radius: 3px;
-        }
-        
-        .category-tab {
-          position: relative;
-          transition: all 0.2s ease;
-          white-space: nowrap;
-          min-width: 160px;
-        }
-        
-        .category-tab:hover {
-          background: linear-gradient(135deg, #f0fdf4 0%, #fff7ed 100%);
-          transform: translateY(-2px);
-        }
-        
-        .category-tab.active {
-          background: linear-gradient(135deg, #dcfce7 0%, #ffedd5 100%);
-          border-color: #22c55e;
-        }
-        
-        .category-tab.active::after {
-          content: '';
-          position: absolute;
-          bottom: -1px;
-          left: 0;
-          right: 0;
-          height: 2px;
-          background: linear-gradient(90deg, #22c55e 0%, #f97316 100%);
-        }
-
         .product-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
           gap: 16px;
           animation: fadeIn 0.3s ease-in-out;
         }
 
         .product-item {
-          transition: all 0.2s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           cursor: pointer;
+          border-radius: 12px;
+          overflow: hidden;
+          border: 1px solid rgba(226, 232, 240, 0.5);
+          background: white;
         }
 
         .product-item:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          transform: translateY(-6px);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+          border-color: #90EE90;
         }
 
-        /* Delivery Banner Styles - REDUCED HEIGHT */
-        .delivery-banner {
-          background: linear-gradient(135deg, #f0fdf4 0%, #ffedd5 50%, #dbeafe 100%);
-          background-size: 200% 200%;
-          animation: gradientShift 6s ease infinite;
-          border-bottom: 1px solid #e5e7eb;
+        .category-scroll {
+          display: flex;
+          overflow-x: auto;
+          scrollbar-width: none;
+          gap: 12px;
+          flex: 1;
+          min-width: 0;
+          padding: 4px 0;
+        }
+        
+        .category-scroll::-webkit-scrollbar {
+          display: none;
         }
 
-        .vehicle-glow {
-          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+        .search-glow {
+          box-shadow: 0 8px 30px rgba(144, 238, 144, 0.15);
+          border: 2px solid rgba(144, 238, 144, 0.2);
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+        }
+        
+        .search-glow:focus-within {
+          box-shadow: 0 12px 40px rgba(144, 238, 144, 0.25);
+          border-color: #90EE90;
+        }
+
+        .gradient-bg {
+          background: linear-gradient(135deg, #F0FFF0 0%, #FFFAF0 100%);
+        }
+
+        .glass-effect {
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
         }
       `}</style>
 
-      {/* COMPACT DELIVERY BANNER - Matches other navbar padding */}
-      <div className="hidden lg:block delivery-banner py-2">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between">
-            {/* Left: Vehicle Images and Compact Text */}
-            <div className="flex items-center space-x-4">
-              {/* Compact Vehicle Images */}
-              <div className="flex items-center space-x-1">
-                <div className="vehicle-glow animate-float" style={{ animationDelay: '0s' }}>
-                  <svg width="50" height="25" viewBox="0 0 200 100" className="text-green-600">
-                    <g transform="translate(0, 20)">
-                      <rect x="20" y="30" width="140" height="40" rx="5" fill="currentColor" opacity="0.9"/>
-                      <rect x="30" y="15" width="60" height="25" rx="3" fill="currentColor" opacity="0.9"/>
-                      <rect x="35" y="18" width="50" height="10" rx="2" fill="#93c5fd" opacity="0.8"/>
-                      <circle cx="50" cy="75" r="10" fill="#1f2937"/>
-                      <circle cx="50" cy="75" r="4" fill="#6b7280"/>
-                      <circle cx="130" cy="75" r="10" fill="#1f2937"/>
-                      <circle cx="130" cy="75" r="4" fill="#6b7280"/>
-                      <circle cx="165" cy="45" r="5" fill="#fbbf24"/>
-                      <circle cx="165" cy="55" r="5" fill="#fbbf24"/>
-                    </g>
-                  </svg>
-                </div>
-                
-                <div className="vehicle-glow animate-float" style={{ animationDelay: '0.5s' }}>
-                  <svg width="40" height="25" viewBox="0 0 150 100" className="text-orange-500">
-                    <g transform="translate(0, 30)">
-                      <path d="M20,40 Q40,20 70,20 Q100,20 120,40" stroke="currentColor" strokeWidth="5" fill="none"/>
-                      <circle cx="40" cy="45" r="12" fill="currentColor"/>
-                      <circle cx="40" cy="45" r="4" fill="#6b7280"/>
-                      <circle cx="100" cy="45" r="12" fill="currentColor"/>
-                      <circle cx="100" cy="45" r="4" fill="#6b7280"/>
-                      <circle cx="60" cy="15" r="8" fill="#374151"/>
-                      <path d="M60,23 L60,40 L40,50" stroke="#374151" strokeWidth="3" fill="none"/>
-                      <path d="M60,40 L80,50" stroke="#374151" strokeWidth="3" fill="none"/>
-                      <line x1="70" y1="15" x2="90" y2="25" stroke="#374151" strokeWidth="3"/>
-                      <line x1="90" y1="25" x2="95" y2="20" stroke="#374151" strokeWidth="3"/>
-                    </g>
-                  </svg>
-                </div>
-              </div>
-              
-              {/* Compact Delivery Text */}
-              <div className="text-left">
-                <div className="flex items-center space-x-2">
-                  <Truck size={16} className="text-green-600" />
-                  <span className="text-sm font-semibold text-gray-900">Instant Delivery</span>
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse-slow"></div>
-                </div>
-                <p className="text-xs text-gray-700 mt-0.5">
-                  <span className="font-medium text-green-700">Van & Motorcycle delivery</span> • 
-                  <span className="font-medium text-orange-600"> Order before 4 PM</span>
-                </p>
-              </div>
-            </div>
-            
-            {/* Right: Compact Delivery Info */}
-            <div className="flex items-center space-x-6">
-              <div className="text-center">
-                <div className="text-lg font-bold text-green-700">1-2 HRS</div>
-                <div className="text-xs text-gray-600">Van</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-orange-600">30-60 MIN</div>
-                <div className="text-xs text-gray-600">Motorcycle</div>
-              </div>
-              <div>
-                <Link 
-                  href="/delivery-info"
-                  className="px-4 py-1.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-semibold hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-sm hover:shadow text-xs flex items-center space-x-1"
-                >
-                  <Truck size={12} />
-                  <span>Zones</span>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    
       {/* Main Header */}
-      <header className={`sticky top-0 z-50 bg-white transition-all duration-300 ${scrolled ? 'shadow-xl' : 'shadow-sm'}`}>
-        <div className="max-w-7xl mx-auto px-4">
+      <header className={`sticky top-0 z-50 gradient-bg transition-all duration-300 ${scrolled ? 'header-shadow' : ''}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           {/* First Row: Logo, Search, Actions */}
           <div className="flex items-center justify-between py-3">
             {/* Logo */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <button 
-                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="lg:hidden p-2 rounded-xl bg-white/80 hover:bg-white shadow-sm transition-all duration-300"
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Open menu"
               >
-                <Menu size={22} className="text-gray-700" />
+                <Menu size={22} className="text-gray-800" />
               </button>
 
               <Link href="/" className="flex items-center space-x-2 group">
-                <div className="relative w-10 h-10">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-lg shadow group-hover:shadow-md transition-shadow duration-300 overflow-hidden">
-                    <img 
-                      src="/logo.jpeg" 
-                      alt="Lando Ranch Logo" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                <div className="relative w-12 h-12 rounded-2xl overflow-hidden shadow-lg group-hover:shadow-xl transition-all duration-500 border-4 border-white animate-glow">
+                  <Image 
+                    src="/logo.jpeg" 
+                    alt="Lando Ranch Logo" 
+                    fill
+                    className="object-cover"
+                    sizes="48px"
+                    priority
+                  />
                 </div>
                 <div className="hidden sm:block">
-                  <div className="text-xl font-black text-gray-900 tracking-tight">
+                  <div className="text-2xl font-black text-gray-900 tracking-tight bg-gradient-to-r from-green-400 to-yellow-500 bg-clip-text text-transparent">
                     Lando
                   </div>
-                  <div className="text-xs font-medium text-green-500 -mt-1">Hypermarket</div>
+                  <div className="text-xs font-bold text-gray-600 -mt-1 tracking-wider">Hypermarket</div>
                 </div>
               </Link>
             </div>
 
-            {/* Desktop Search Bar */}
+            {/* Desktop Search Bar - Centered and Bright */}
             <div className="hidden lg:flex flex-1 max-w-2xl mx-6">
               <form onSubmit={handleSearch} className="relative w-full">
-                <div className="search-glow rounded-lg overflow-hidden transition-all duration-300">
+                <div className="search-glow rounded-2xl overflow-hidden transition-all duration-500">
                   <div className="relative flex items-center">
-                    <div className="absolute left-3 flex items-center justify-center pointer-events-none">
-                      <Search size={18} className="text-gray-400" />
+                    <div className="absolute left-4 flex items-center justify-center pointer-events-none">
+                      <Search size={20} className="text-green-500" />
                     </div>
                     <input
                       type="search"
-                      placeholder="Search products..."
+                      placeholder="Discover amazing products... Search groceries, electronics, home essentials and more!"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-4 py-2.5 pl-10 bg-gray-50 focus:outline-none text-gray-900 placeholder-gray-500 text-sm"
+                      className="w-full px-5 py-3 pl-12 bg-transparent focus:outline-none text-gray-900 placeholder-gray-500 text-sm placeholder:font-medium"
                       aria-label="Search products"
                     />
                     <button
                       type="submit"
-                      className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all duration-300 font-semibold text-xs flex items-center space-x-1"
+                      className="px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white hover:from-green-500 hover:to-emerald-600 transition-all duration-300 font-bold text-sm flex items-center space-x-2 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={!searchQuery.trim()}
                     >
-                      <Search size={16} />
+                      <Search size={18} />
                       <span>SEARCH</span>
                     </button>
                   </div>
@@ -800,23 +591,25 @@ const Header: React.FC = () => {
             </div>
 
             {/* Right Actions */}
-            <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center space-x-2">
               {/* Mobile Search */}
               <button 
-                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="lg:hidden p-2 rounded-xl bg-white/80 hover:bg-white shadow-sm transition-colors"
                 onClick={() => setMobileSearchOpen(true)}
                 aria-label="Search"
               >
-                <Search size={20} className="text-gray-700" />
+                <Search size={20} className="text-gray-800" />
               </button>
 
               {/* Wishlist */}
               <Link 
                 href="/wishlist" 
-                className="hidden lg:flex relative p-2 hover:bg-gray-100 rounded-lg transition-colors group"
+                className="hidden lg:flex relative p-2 hover:scale-110 transition-all duration-300 group"
                 aria-label="Wishlist"
               >
-                <Heart size={20} className="text-gray-700 group-hover:text-red-500 transition-colors" />
+                <div className="relative p-2 rounded-xl bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 group-hover:border-yellow-300 transition-colors">
+                  <Heart size={20} className="text-yellow-500 group-hover:text-yellow-600 transition-colors" />
+                </div>
                 {wishlistCount > 0 && (
                   <div className="cart-badge">
                     {wishlistCount}
@@ -828,90 +621,121 @@ const Header: React.FC = () => {
               <div className="hidden lg:block relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center space-x-2 p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="flex items-center space-x-2 p-1 hover:scale-105 transition-all duration-300 group"
                   aria-label="Account menu"
                 >
-                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-green-500 to-orange-500 flex items-center justify-center text-white font-bold shadow-sm">
-                    {isAuthenticated ? userInitial : <User size={16} />}
+                  <div className="relative">
+                    <div className="h-10 w-10 rounded-2xl overflow-hidden border-3 border-white shadow-lg group-hover:shadow-xl transition-shadow">
+                      {user?.profile_picture ? (
+                        <Image
+                          src={user.profile_picture}
+                          alt="Profile"
+                          width={40}
+                          height={40}
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-green-400 via-yellow-400 to-orange-400 flex items-center justify-center">
+                          <User size={20} className="text-white" />
+                        </div>
+                      )}
+                    </div>
+                    {isAuthenticated && (
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white shadow"></div>
+                    )}
                   </div>
-                  <div className="text-left hidden xl:block">
-                    <div className="text-xs text-gray-500">Welcome!</div>
-                    <div className="text-sm font-semibold text-gray-900">
+                  <div className="text-left">
+                    <div className="text-xs text-gray-600">Welcome back!</div>
+                    <div className="text-sm font-bold text-gray-900 flex items-center">
                       {isAuthenticated ? userFirstName : 'Sign In'}
+                      <ChevronDown size={14} className="ml-1.5 text-gray-500 group-hover:text-green-500" />
                     </div>
                   </div>
-                  <ChevronDown size={14} className="text-gray-400" />
                 </button>
                 
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-60 bg-white border border-gray-200 rounded-lg shadow-xl z-50 animate-fadeIn dropdown-shadow overflow-hidden">
-                    <div className="p-3 bg-gradient-to-r from-green-50 to-orange-50 border-b">
-                      <div className="font-semibold text-gray-900 text-sm">My Account</div>
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-white/95 rounded-2xl z-50 animate-fadeIn dropdown-shadow overflow-hidden backdrop-blur-lg">
+                    <div className="p-4 bg-gradient-to-r from-green-50 to-yellow-50 border-b border-gray-100/50">
+                      <div className="font-bold text-gray-900 text-lg">My Account</div>
                       {isAuthenticated && user?.email && (
-                        <div className="text-xs text-gray-600 mt-0.5 truncate">{user.email}</div>
+                        <div className="text-sm text-gray-600 mt-1 truncate">{user.email}</div>
                       )}
                     </div>
-                    <div className="p-1.5">
+                    <div className="p-3">
                       {isAuthenticated ? (
                         <>
-                          <Link 
-                            href="/orders" 
-                            className="flex items-center px-3 py-2 hover:bg-gray-50 rounded text-sm transition-colors group"
-                            onClick={() => setUserMenuOpen(false)}
-                          >
-                            <Package size={16} className="mr-2 text-gray-500 group-hover:text-green-500" />
-                            <div>
-                              <div className="font-medium">My Orders</div>
-                              <div className="text-xs text-gray-500">Track & manage</div>
-                            </div>
-                          </Link>
-                          <Link 
-                            href="/wishlist" 
-                            className="flex items-center px-3 py-2 hover:bg-gray-50 rounded text-sm transition-colors group"
-                            onClick={() => setUserMenuOpen(false)}
-                          >
-                            <Heart size={16} className="mr-2 text-gray-500 group-hover:text-red-500" />
-                            <div>
-                              <div className="font-medium">Wishlist</div>
-                              <div className="text-xs text-gray-500">Saved items</div>
-                            </div>
-                          </Link>
-                          <Link 
-                            href="/profile" 
-                            className="flex items-center px-3 py-2 hover:bg-gray-50 rounded text-sm transition-colors group"
-                            onClick={() => setUserMenuOpen(false)}
-                          >
-                            <User size={16} className="mr-2 text-gray-500 group-hover:text-blue-500" />
-                            <div>
-                              <div className="font-medium">Profile</div>
-                              <div className="text-xs text-gray-500">Settings</div>
-                            </div>
-                          </Link>
-                          <div className="border-t my-1.5"></div>
+                          <div className="grid grid-cols-2 gap-3 p-2">
+                            <Link 
+                              href="/orders" 
+                              className="flex flex-col items-center p-3 hover:bg-green-50 rounded-xl transition-colors group border border-gray-100 hover:border-green-200"
+                              onClick={() => setUserMenuOpen(false)}
+                            >
+                              <div className="p-2 rounded-lg bg-gradient-to-br from-green-100 to-emerald-100 mb-2">
+                                <ShoppingBag size={18} className="text-green-600" />
+                              </div>
+                              <div className="font-semibold text-sm">Orders</div>
+                            </Link>
+                            <Link 
+                              href="/wishlist" 
+                              className="flex flex-col items-center p-3 hover:bg-yellow-50 rounded-xl transition-colors group border border-gray-100 hover:border-yellow-200"
+                              onClick={() => setUserMenuOpen(false)}
+                            >
+                              <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-100 to-amber-100 mb-2">
+                                <Heart size={18} className="text-yellow-600" />
+                              </div>
+                              <div className="font-semibold text-sm">Wishlist</div>
+                            </Link>
+                          </div>
+                          
+                          <div className="space-y-2 p-2">
+                            <Link 
+                              href="/profile" 
+                              className="flex items-center px-3 py-2.5 hover:bg-gray-50 rounded-xl text-sm transition-colors group"
+                              onClick={() => setUserMenuOpen(false)}
+                            >
+                              <User size={16} className="mr-3 text-gray-500 group-hover:text-green-600" />
+                              <span className="font-semibold">My Profile</span>
+                            </Link>
+                            <Link 
+                              href="/addresses" 
+                              className="flex items-center px-3 py-2.5 hover:bg-gray-50 rounded-xl text-sm transition-colors group"
+                              onClick={() => setUserMenuOpen(false)}
+                            >
+                              <MapPin size={16} className="mr-3 text-gray-500 group-hover:text-green-600" />
+                              <span className="font-semibold">Addresses</span>
+                            </Link>
+                          </div>
+                          
+                          <div className="border-t border-gray-100/50 my-3"></div>
+                          
                           <button 
                             onClick={handleLogout}
-                            className="w-full flex items-center justify-center px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded text-sm font-medium transition-colors"
+                            className="w-full flex items-center justify-center px-3 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600 rounded-xl text-sm font-bold transition-all duration-300 shadow hover:shadow-lg mt-1"
                           >
-                            <span>Sign Out</span>
+                            Sign Out
                           </button>
                         </>
                       ) : (
                         <>
-                          <Link 
-                            href="/auth/login" 
-                            className="block px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded text-sm text-center font-semibold mb-1.5 hover:from-green-600 hover:to-green-700 transition-all duration-300"
-                            onClick={() => setUserMenuOpen(false)}
-                          >
-                            Sign In
-                          </Link>
-                          <div className="text-center text-xs text-gray-600 mb-1.5">New customer?</div>
-                          <Link 
-                            href="/auth/register" 
-                            className="block px-3 py-2 border border-green-500 text-green-600 rounded text-sm text-center font-semibold hover:bg-green-50 transition-colors"
-                            onClick={() => setUserMenuOpen(false)}
-                          >
-                            Create Account
-                          </Link>
+                          <div className="p-3 space-y-4">
+                            <Link 
+                              href="/auth/login" 
+                              className="block px-3 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl text-sm font-bold text-center hover:from-green-600 hover:to-emerald-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+                              onClick={() => setUserMenuOpen(false)}
+                            >
+                              Sign In to Your Account
+                            </Link>
+                            <div className="text-center text-sm text-gray-600">
+                              New customer?{' '}
+                              <Link 
+                                href="/auth/register" 
+                                className="text-green-600 font-bold hover:underline"
+                                onClick={() => setUserMenuOpen(false)}
+                              >
+                                Create Account
+                              </Link>
+                            </div>
+                          </div>
                         </>
                       )}
                     </div>
@@ -922,147 +746,168 @@ const Header: React.FC = () => {
               {/* User Account - Mobile */}
               <Link 
                 href={isAuthenticated ? "/profile" : "/auth/login"}
-                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="lg:hidden p-2 rounded-xl bg-white/80 hover:bg-white shadow-sm transition-colors"
                 aria-label="Account"
               >
-                <User size={20} className="text-gray-700" />
+                <User size={20} className="text-gray-800" />
               </Link>
 
-              {/* Cart */}
+              {/* Cart - Bright and Prominent */}
               <Link 
                 href="/cart" 
-                className="relative p-1.5 hover:bg-gray-100 rounded-lg transition-colors group"
+                className="relative group"
                 aria-label="Shopping cart"
               >
-                <div className="relative">
-                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 group-hover:from-orange-100 group-hover:to-orange-200 transition-all duration-300">
-                    <ShoppingCart size={20} className="text-orange-600" />
-                  </div>
-                  {cartCount > 0 && (
-                    <div className="cart-badge">
-                      {displayCartCount}
+                <div className="flex items-center space-x-2 p-1 hover:scale-105 transition-all duration-300">
+                  <div className="relative">
+                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 group-hover:from-orange-500 group-hover:to-amber-600 transition-all duration-300 shadow-lg group-hover:shadow-xl">
+                      <ShoppingCart size={22} className="text-white" />
                     </div>
-                  )}
-                </div>
-                <div className="hidden lg:block ml-1.5">
-                  <div className="text-xs text-gray-500">Cart</div>
-                  <div className="text-xs font-bold text-gray-900">KSh 0.00</div>
+                    {cartCount > 0 && (
+                      <div className="cart-badge">
+                        {displayCartCount}
+                      </div>
+                    )}
+                  </div>
+                  <div className="hidden lg:block">
+                    <div className="text-xs text-gray-600">Total</div>
+                    <div className="text-md font-bold text-gray-900">KSh 0.00</div>
+                  </div>
                 </div>
               </Link>
             </div>
           </div>
 
-          {/* ========== CATEGORIES WITH PRODUCTS DISPLAY ========== */}
-          <div className="hidden lg:block py-2 border-t border-gray-100 relative">
+          {/* ========== NAVIGATION BAR - Bright & Attractive ========== */}
+          <div className="hidden lg:block py-2 border-t border-gray-100/50 relative">
             <div className="flex items-center justify-between">
-              {/* Left side: Categories */}
-              <div className="flex items-center space-x-3 flex-1 min-w-0">
-                {/* Only "Categories" is a button */}
+              {/* Left: All Categories */}
+              <div className="relative" ref={categoriesMenuRef}>
                 <button
                   onClick={() => setShowAllCategories(!showAllCategories)}
-                  className={`category-tab flex items-center space-x-1.5 px-3 py-2 rounded-lg border flex-shrink-0 text-sm ${
-                    showAllCategories ? 'active border-green-200 shadow-sm' : 'border-gray-200 hover:border-green-200'
+                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl ${
+                    showAllCategories 
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' 
+                      : 'bg-gradient-to-r from-white to-gray-50 text-gray-800 hover:from-green-50 hover:to-emerald-50 border border-gray-200'
                   }`}
                 >
-                  <Package size={14} className="text-green-600" />
-                  <span className="font-medium text-gray-900">Categories</span>
-                  <ChevronDown size={12} className="text-gray-500" />
+                  <Menu size={20} />
+                  <span className="font-bold text-sm">ALL CATEGORIES</span>
+                  <ChevronDown size={16} />
                 </button>
 
-                {/* Categories Scroll - All other categories are Links */}
-                <div className="category-scroll">
-                  <div className="flex items-center space-x-1.5">
-                    {isLoadingCategories ? (
-                      <div className="flex space-x-1.5">
-                        {[1, 2, 3, 4, 5].map((i) => (
-                          <div key={i} className="h-9 w-28 bg-gray-200 animate-pulse rounded-lg"></div>
-                        ))}
+                {/* All Categories Dropdown */}
+                {showAllCategories && (
+                  <div 
+                    className="absolute top-full left-0 mt-2 w-96 bg-white/95 rounded-2xl z-50 animate-fadeIn dropdown-shadow overflow-hidden backdrop-blur-lg"
+                    onMouseLeave={() => setShowAllCategories(false)}
+                  >
+                    <div className="p-5">
+                      <h3 className="font-bold text-xl text-gray-900 mb-1 bg-gradient-to-r from-green-500 to-yellow-500 bg-clip-text text-transparent">Shop Categories</h3>
+                      <p className="text-gray-600 text-sm mb-6">Browse our extensive collection</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {allCategories
+                          .filter(cat => cat.parent_id === null)
+                          .slice(0, 12)
+                          .map((category) => (
+                            <Link
+                              key={category.id}
+                              href={`/categories/${category.slug}`}
+                              className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-yellow-50 transition-all duration-300 group border border-gray-100 hover:border-green-200"
+                              onClick={() => setShowAllCategories(false)}
+                            >
+                              <div className="p-2 rounded-lg bg-gradient-to-br from-green-100 to-emerald-100 group-hover:from-green-200 group-hover:to-emerald-200 transition-all">
+                                <div className="text-green-600 group-hover:text-green-700">
+                                  {getCategoryIcon(category.name)}
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-bold text-gray-900 text-sm group-hover:text-green-700 transition-colors">
+                                  {category.name}
+                                </div>
+                              </div>
+                              <ChevronRight size={14} className="text-gray-400 group-hover:text-green-500" />
+                            </Link>
+                          ))}
                       </div>
-                    ) : (
-                      topCategories.map((category) => (
+                      <div className="mt-6 pt-6 border-t border-gray-100/50">
                         <Link
-                          key={category.id}
-                          href={`/categories/${category.slug}`}
-                          onMouseEnter={() => handleCategoryHover(category)}
-                          onMouseLeave={handleCategoryLeave}
-                          className={`category-tab flex items-center space-x-1.5 px-3 py-2 rounded-lg border flex-shrink-0 text-sm transition-all duration-300 ${
-                            activeCategory === category.slug 
-                              ? 'active border-green-200 shadow-sm bg-gradient-to-r from-green-50/50 to-orange-50/50' 
-                              : 'border-gray-200 hover:border-green-200 hover:bg-gradient-to-r hover:from-green-50/30 hover:to-orange-50/30'
-                          }`}
-                        >
-                          <div className={`${activeCategory === category.slug ? 'text-green-700' : 'text-green-600'}`}>
-                            {getCategoryIcon(category.name)}
-                          </div>
-                          <div className="text-left min-w-0">
-                            <div className={`font-medium truncate ${
-                              activeCategory === category.slug ? 'text-green-800' : 'text-gray-900'
-                            }`}>
-                              {category.name}
-                            </div>
-                          </div>
-                        </Link>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right side: Quick Info */}
-              <div className="flex items-center space-x-4 flex-shrink-0">
-                <div className="flex items-center space-x-2">
-                  <Phone size={14} className="text-green-500 animate-float" />
-                  <div>
-                    <div className="text-xs text-gray-500">Need help?</div>
-                    <div className="text-xs font-bold text-gray-900">+254 716 354589</div>
-                  </div>
-                </div>
-                <Link 
-                  href="/track-order"
-                  className="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-medium hover:from-orange-600 hover:to-orange-700 transition-all duration-300 shadow-sm hover:shadow text-xs whitespace-nowrap"
-                >
-                  Track Order
-                </Link>
-              </div>
-            </div>
-
-            {/* All Categories Dropdown */}
-            {showAllCategories && (
-              <div 
-                className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-50 animate-fadeIn dropdown-shadow"
-                onMouseLeave={() => setShowAllCategories(false)}
-              >
-                <div className="p-4">
-                  <h3 className="font-bold text-gray-900 text-sm mb-3">All Categories</h3>
-                  <div className="grid grid-cols-4 gap-3">
-                    {allCategories
-                      .filter(cat => cat.parent_id === null)
-                      .map((category) => (
-                        <Link
-                          key={category.id}
-                          href={`/categories/${category.slug}`}
-                          className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 transition-colors group text-sm"
+                          href="/categories"
+                          className="flex items-center justify-center px-5 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 shadow hover:shadow-lg font-bold text-sm"
                           onClick={() => setShowAllCategories(false)}
                         >
-                          <div className="text-green-600">
-                            {getCategoryIcon(category.name)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-gray-900 truncate">
-                              {category.name}
-                            </div>
-                          </div>
+                          Explore All Categories
+                          <ArrowRight size={16} className="ml-2" />
                         </Link>
-                      ))}
+                      </div>
+                    </div>
                   </div>
+                )}
+              </div>
+
+              {/* Center: Navigation Links - Bright & Vibrant */}
+              <div className="flex items-center space-x-6">
+                <Link
+                  href="/"
+                  className={`font-bold text-sm px-3 py-2 rounded-xl transition-all duration-300 ${
+                    isActive('/') 
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg' 
+                      : 'text-gray-700 hover:text-green-600 hover:bg-green-50'
+                  }`}
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/products"
+                  className={`font-bold text-sm px-3 py-2 rounded-xl transition-all duration-300 ${
+                    isActive('/products') 
+                      ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg' 
+                      : 'text-gray-700 hover:text-yellow-600 hover:bg-yellow-50'
+                  }`}
+                >
+                  Shop All
+                </Link>
+                <Link
+                  href="/deals"
+                  className={`font-bold text-sm px-3 py-2 rounded-xl transition-all duration-300 flex items-center ${
+                    isActive('/deals') 
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg' 
+                      : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
+                  }`}
+                >
+                  <Zap size={16} className="mr-2" />
+                  Hot Deals
+                </Link>
+                <Link
+                  href="/new-arrivals"
+                  className={`font-bold text-sm px-3 py-2 rounded-xl transition-all duration-300 flex items-center ${
+                    isActive('/new-arrivals') 
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg' 
+                      : 'text-gray-700 hover:text-emerald-600 hover:bg-emerald-50'
+                  }`}
+                >
+                  <Sparkles size={16} className="mr-2" />
+                  New Arrivals
+                </Link>
+              </div>
+
+              {/* Right: Quick Info */}
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-1 text-sm">
+                  <ShieldCheck size={16} className="text-green-500" />
+                  <span className="font-semibold text-gray-700">Secure</span>
+                </div>
+                <div className="flex items-center space-x-1 text-sm">
+                  <Phone size={16} className="text-yellow-500" />
+                  <span className="font-semibold text-gray-700">+254 716 354589</span>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Category Products Dropdown */}
             {activeCategory && categoryProducts.length > 0 && (
               <div 
-                className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50 animate-fadeIn dropdown-shadow"
+                className="absolute top-full left-0 right-0 mt-2 bg-white/95 rounded-2xl z-50 animate-fadeIn dropdown-shadow backdrop-blur-lg"
                 onMouseEnter={() => {
                   if (categoryHoverTimeoutRef.current) {
                     clearTimeout(categoryHoverTimeoutRef.current);
@@ -1070,109 +915,121 @@ const Header: React.FC = () => {
                 }}
                 onMouseLeave={handleCategoryLeave}
               >
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-3">
+                <div className="p-5">
+                  <div className="flex items-center justify-between mb-5">
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-900">
-                        Products in {topCategories.find(c => c.slug === activeCategory)?.name}
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {topCategories.find(c => c.slug === activeCategory)?.name}
                       </h3>
+                      <p className="text-gray-600 mt-1 text-sm">
+                        Discover our premium collection
+                      </p>
                     </div>
                     <Link
                       href={`/categories/${activeCategory}`}
-                      className="text-green-600 hover:text-green-700 font-medium text-xs flex items-center space-x-1"
+                      className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 font-bold text-sm rounded-xl transition-all duration-300 shadow hover:shadow-lg flex items-center space-x-2"
                       onClick={() => {
                         setActiveCategory(null);
                         setCategoryProducts([]);
                       }}
                     >
                       <span>View All</span>
-                      <ArrowRight size={12} />
+                      <ArrowRight size={16} />
                     </Link>
                   </div>
 
                   <div className="product-grid">
-                    {categoryProducts.slice(0, 8).map((product) => {
-                      // Custom Product Item Component with Image
+                    {categoryProducts.slice(0, 6).map((product) => {
                       const ProductItem = ({ product }: { product: Product }) => {
                         const [imageLoaded, setImageLoaded] = useState(false);
                         const [imageError, setImageError] = useState(false);
-                        
-                        // Get the complete image URL using the helper function
                         const imageUrl = getImageUrl(product);
                         
                         return (
                           <div
                             onClick={() => handleProductClick(product.slug)}
-                            className="product-item bg-white rounded border border-gray-200 hover:border-green-200 hover:shadow transition-all duration-300 overflow-hidden group"
+                            className="product-item group"
                           >
-                            {/* Product Image - Using Next.js Image component */}
-                            <div className="aspect-square bg-gray-100 overflow-hidden relative">
+                            {/* Product Image */}
+                            <div className="aspect-square bg-gradient-to-br from-green-50 to-yellow-50 overflow-hidden relative rounded-t-xl">
                               {!imageError ? (
                                 <Image
                                   src={imageUrl}
                                   alt={product.name || 'Product image'}
                                   fill
                                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                  className={`object-cover transition-transform duration-500 ${
-                                    imageLoaded ? 'group-hover:scale-105 opacity-100' : 'opacity-0'
+                                  className={`object-cover transition-transform duration-700 ${
+                                    imageLoaded ? 'group-hover:scale-110 opacity-100' : 'opacity-0'
                                   }`}
                                   onLoad={() => {
-                                    console.log(`Product ${product.id}: Image loaded successfully`, imageUrl);
                                     setImageLoaded(true);
                                   }}
-                                  onError={(e) => {
-                                    console.error(`Product ${product.id}: Failed to load image:`, imageUrl, e);
+                                  onError={() => {
                                     setImageError(true);
                                     setImageLoaded(true);
                                   }}
                                   loading="lazy"
-                                  quality={85}
+                                  quality={90}
                                 />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-orange-50">
-                                  <ShoppingBasket size={32} className="text-gray-400" />
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-yellow-100">
+                                  <Package size={40} className="text-gray-400" />
                                 </div>
                               )}
                               {!imageLoaded && !imageError && (
-                                <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse"></div>
+                                <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-yellow-100 animate-pulse"></div>
+                              )}
+                              
+                              {/* Discount Badge */}
+                              {product.discounted_price && Number(product.discounted_price) < Number(product.price) && (
+                                <div className="absolute top-3 left-3 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold rounded-lg shadow-lg">
+                                  -{Math.round((1 - Number(product.discounted_price) / Number(product.price)) * 100)}% OFF
+                                </div>
                               )}
                             </div>
 
                             {/* Product Info */}
-                            <div className="p-2">
-                              <h4 className="font-medium text-gray-900 text-xs line-clamp-2 mb-1">
+                            <div className="p-4">
+                              <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 mb-3 h-10">
                                 {product.name}
                               </h4>
                               
                               {/* Price */}
-                              <div className="space-y-0.5">
-                                <div className="font-bold text-gray-900">
-                                  {formatPrice(Number(product.price))}
+                              <div className="space-y-2">
+                                <div className="font-bold text-gray-900 text-lg">
+                                  {formatPrice(Number(product.discounted_price || product.price))}
                                 </div>
                                 {product.discounted_price && Number(product.discounted_price) < Number(product.price) && (
-                                  <div className="flex items-center space-x-1">
-                                    <span className="text-xs text-gray-500 line-through">
-                                      {formatPrice(Number(product.price))}
-                                    </span>
-                                    <span className="px-1 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded">
-                                      SAVE {Math.round((1 - Number(product.discounted_price) / Number(product.price)) * 100)}%
-                                    </span>
+                                  <div className="text-sm text-gray-500 line-through">
+                                    {formatPrice(Number(product.price))}
                                   </div>
                                 )}
                               </div>
                               
                               {/* Rating */}
                               {product.rating && Number(product.rating) > 0 && (
-                                <div className="flex items-center space-x-1 mt-1">
-                                  <Star size={12} className="fill-yellow-400 text-yellow-400" />
-                                  <span className="text-xs font-medium">{Number(product.rating).toFixed(1)}</span>
+                                <div className="flex items-center space-x-2 mt-3">
+                                  <div className="flex">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star 
+                                        key={i} 
+                                        size={14} 
+                                        className={`${
+                                          i < Math.floor(Number(product.rating)) 
+                                            ? 'fill-yellow-400 text-yellow-400' 
+                                            : 'fill-gray-200 text-gray-200'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                  <span className="text-xs font-semibold text-gray-700">{Number(product.rating).toFixed(1)}</span>
                                 </div>
                               )}
                               
-                              {/* Click to view text */}
-                              <div className="text-xs text-green-600 font-medium mt-1 group-hover:text-green-700 transition-colors">
-                                View details →
-                              </div>
+                              {/* CTA */}
+                              <button className="w-full mt-4 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 rounded-lg text-sm font-bold transition-all duration-300 shadow hover:shadow-md">
+                                Add to Cart
+                              </button>
                             </div>
                           </div>
                         );
@@ -1187,45 +1044,171 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Links Bar - Mobile */}
-        <div className="lg:hidden bg-gradient-to-r from-green-50 to-orange-50 border-t border-gray-200">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="overflow-x-auto scrollbar-thin">
-              <div className="flex py-1.5 space-x-3 min-w-max">
-                {quickLinks.map((link) => {
-                  const Icon = link.icon;
-                  return (
-                    <Link
-                      key={link.id}
-                      href={`/${link.id}`}
-                      className={`${link.bgColor} ${link.color} px-3 py-2 rounded-lg flex items-center space-x-1.5 min-w-[120px] text-xs`}
-                    >
-                      <Icon size={14} />
-                      <div className="text-left">
-                        <div className="font-semibold">{link.name}</div>
-                        <div className="opacity-75">{link.desc}</div>
+        {/* Mobile Menu - Bright & Modern */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-50">
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-gradient-to-br from-green-500/20 via-yellow-500/20 to-orange-500/20 backdrop-blur-sm" 
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            
+            {/* Menu Panel */}
+            <div className="absolute left-0 top-0 h-full w-[85%] max-w-sm bg-white/95 shadow-2xl animate-slideIn backdrop-blur-lg">
+              <div className="h-full flex flex-col">
+                {/* Header */}
+                <div className="p-5 border-b border-gray-100/50">
+                  <div className="flex items-center justify-between mb-5">
+                    <Link href="/" className="flex items-center space-x-2" onClick={() => setMobileMenuOpen(false)}>
+                      <div className="w-10 h-10 rounded-2xl overflow-hidden border-4 border-white shadow">
+                        <Image 
+                          src="/logo.jpeg" 
+                          alt="Logo"
+                          width={40}
+                          height={40}
+                          className="object-cover"
+                        />
+                      </div>
+                      <div>
+                        <div className="font-black text-gray-900 text-md">Lando</div>
+                        <div className="text-xs text-green-600 font-bold">Hypermarket</div>
                       </div>
                     </Link>
-                  );
-                })}
+                    <button 
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+                    >
+                      <X size={22} />
+                    </button>
+                  </div>
+                  
+                  {/* User Info */}
+                  {isAuthenticated ? (
+                    <div className="flex items-center space-x-2 p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-2xl border border-green-200">
+                      <div className="h-12 w-12 rounded-2xl overflow-hidden border-4 border-white shadow">
+                        {user?.profile_picture ? (
+                          <Image
+                            src={user.profile_picture}
+                            alt="Profile"
+                            width={48}
+                            height={48}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-green-400 to-yellow-400 flex items-center justify-center">
+                            <User size={22} className="text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-gray-900 truncate">{user?.name}</div>
+                        <div className="text-sm text-gray-600 truncate">{user?.email}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <Link 
+                        href="/auth/login" 
+                        className="block py-3 text-center bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-2xl font-bold text-sm shadow-lg"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Sign In / Register
+                      </Link>
+                    </div>
+                  )}
+                </div>
+
+                {/* Menu Content */}
+                <div className="flex-1 overflow-y-auto p-5">
+                  <div className="space-y-6">
+                    {/* Quick Actions */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <Link
+                        href="/deals"
+                        className="p-3 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 text-center group"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 w-fit mx-auto mb-2">
+                          <Flame size={22} className="text-white" />
+                        </div>
+                        <div className="font-bold text-gray-900">Hot Deals</div>
+                        <div className="text-xs text-gray-600 mt-1">Limited time offers</div>
+                      </Link>
+                      <Link
+                        href="/cart"
+                        className="p-3 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 text-center group"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <div className="p-2 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 w-fit mx-auto mb-2">
+                          <ShoppingCart size={22} className="text-white" />
+                        </div>
+                        <div className="font-bold text-gray-900">My Cart</div>
+                        <div className="text-xs text-gray-600 mt-1">{cartCount} items</div>
+                      </Link>
+                    </div>
+
+                    {/* Navigation */}
+                    <div className="space-y-2">
+                      <h3 className="font-bold text-gray-900 text-sm mb-2 uppercase tracking-wider text-gray-500">Shop</h3>
+                      <Link
+                        href="/products"
+                        className="flex items-center justify-between p-3 hover:bg-green-50 rounded-xl transition-colors group border border-gray-100 hover:border-green-200"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <div className="flex items-center">
+                          <div className="p-2 rounded-lg bg-green-100 mr-3">
+                            <ShoppingBag size={18} className="text-green-600" />
+                          </div>
+                          <span className="font-bold">All Products</span>
+                        </div>
+                        <ChevronRight size={16} className="text-gray-400 group-hover:text-green-500" />
+                      </Link>
+                      <Link
+                        href="/categories"
+                        className="flex items-center justify-between p-3 hover:bg-yellow-50 rounded-xl transition-colors group border border-gray-100 hover:border-yellow-200"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <div className="flex items-center">
+                          <div className="p-2 rounded-lg bg-yellow-100 mr-3">
+                            <Package size={18} className="text-yellow-600" />
+                          </div>
+                          <span className="font-bold">Categories</span>
+                        </div>
+                        <ChevronRight size={16} className="text-gray-400 group-hover:text-yellow-500" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-5 border-t border-gray-100/50">
+                  <div className="flex items-center justify-center space-x-4 text-sm font-semibold text-gray-700">
+                    <Link href="/terms" onClick={() => setMobileMenuOpen(false)}>Terms</Link>
+                    <Link href="/privacy" onClick={() => setMobileMenuOpen(false)}>Privacy</Link>
+                    <Link href="/help" onClick={() => setMobileMenuOpen(false)}>Help</Link>
+                  </div>
+                  <div className="text-center text-xs text-gray-500 mt-3 font-medium">
+                    © {new Date().getFullYear()} Lando Ranch Premium Supermarket
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Mobile Search Overlay */}
         {mobileSearchOpen && (
-          <div className="lg:hidden fixed inset-0 z-50 bg-white animate-slideInLeft">
+          <div className="lg:hidden fixed inset-0 z-50 bg-gradient-to-b from-white to-green-50">
             <div className="h-full flex flex-col">
               {/* Header */}
-              <div className="p-3 border-b">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="font-bold text-gray-900">Search Products</div>
+              <div className="p-5 border-b border-gray-100/50">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="font-bold text-xl text-gray-900">Search</div>
                   <button 
                     onClick={() => setMobileSearchOpen(false)}
-                    className="p-1.5 hover:bg-gray-100 rounded-lg"
+                    className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200"
                   >
-                    <X size={20} />
+                    <X size={22} />
                   </button>
                 </div>
                 
@@ -1237,208 +1220,53 @@ const Header: React.FC = () => {
                       placeholder="What are you looking for?"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-3 py-2.5 pl-10 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                      className="w-full px-4 py-3 pl-12 bg-white rounded-2xl focus:outline-none focus:ring-4 focus:ring-green-500/20 border-2 border-gray-200 focus:border-green-500 text-sm shadow-lg"
                       autoFocus
                     />
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-green-500" />
                   </div>
                 </form>
               </div>
               
               {/* Content */}
-              <div className="flex-1 overflow-y-auto p-3">
+              <div className="flex-1 overflow-y-auto p-5">
                 {/* Popular Searches */}
-                <div className="mb-6">
-                  <h3 className="font-semibold text-gray-900 mb-2 text-sm">Popular Searches</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {quickSearches.slice(0, 9).map((item) => (
-                      <button
-                        key={item}
-                        onClick={() => handleQuickSearch(item)}
-                        className="px-3 py-2 bg-gray-50 hover:bg-green-50 text-gray-700 rounded text-xs font-medium transition-colors text-left hover:border-green-200 hover:border"
-                      >
-                        {item}
-                      </button>
-                    ))}
+                {searchQuery.trim() === '' && (
+                  <div className="mb-6">
+                    <h3 className="font-bold text-gray-900 mb-3 text-lg">Popular Searches</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {quickSearches.slice(0, 8).map((item) => (
+                        <button
+                          key={item}
+                          onClick={() => handleQuickSearch(item)}
+                          className="px-3 py-2.5 bg-white hover:bg-green-50 text-gray-700 rounded-xl text-sm font-bold transition-all duration-300 text-left border border-gray-200 hover:border-green-300 hover:shadow-lg"
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
                 
                 {/* Categories */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2 text-sm">Shop by Category</h3>
+                  <h3 className="font-bold text-gray-900 mb-3 text-lg">Categories</h3>
                   <div className="grid grid-cols-2 gap-2">
                     {topCategories.slice(0, 6).map((category) => (
                       <Link
                         key={category.id}
                         href={`/categories/${category.slug}`}
-                        className="flex items-center p-2 bg-gray-50 hover:bg-green-50 rounded-lg transition-colors text-sm"
+                        className="flex items-center p-3 bg-white hover:bg-gradient-to-r hover:from-green-50 hover:to-yellow-50 rounded-xl transition-all duration-300 border border-gray-200 hover:border-green-300 hover:shadow-lg"
                         onClick={() => setMobileSearchOpen(false)}
                       >
-                        <div className="text-green-600 mr-2">
-                          {getCategoryIcon(category.name)}
+                        <div className="p-2 rounded-lg bg-gradient-to-br from-green-100 to-emerald-100 mr-2">
+                          <div className="text-green-600">
+                            {getCategoryIcon(category.name)}
+                          </div>
                         </div>
-                        <span className="font-medium">{category.name}</span>
+                        <span className="font-bold text-sm">{category.name}</span>
                       </Link>
                     ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden fixed inset-0 z-50">
-            {/* Backdrop */}
-            <div 
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            
-            {/* Menu Panel */}
-            <div className="absolute left-0 top-0 h-full w-[85%] max-w-sm bg-white shadow-2xl animate-slideInLeft">
-              <div className="h-full flex flex-col">
-                {/* Header */}
-                <div className="p-4 border-b border-gray-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-orange-500 rounded flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">LH</span>
-                      </div>
-                      <div>
-                        <div className="font-bold text-gray-900">Lando</div>
-                        <div className="text-xs text-gray-500">Hypermarket</div>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-                  
-                  {/* User Info */}
-                  {isAuthenticated ? (
-                    <div className="flex items-center space-x-2 p-3 bg-gradient-to-r from-green-50 to-orange-50 rounded-lg">
-                      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-green-500 to-orange-500 flex items-center justify-center text-white font-bold">
-                        {userInitial}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-gray-900 text-sm truncate">{user?.name}</div>
-                        <div className="text-xs text-gray-600 truncate">{user?.email}</div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Link 
-                        href="/auth/login" 
-                        className="block py-2 text-center bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold text-sm"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Sign In
-                      </Link>
-                      <div className="text-center">
-                        <span className="text-xs text-gray-600">New customer? </span>
-                        <Link 
-                          href="/auth/register" 
-                          className="text-green-600 font-semibold hover:underline text-sm"
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          Register
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Menu Content */}
-                <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
-                  <div className="space-y-6">
-                    {/* Categories */}
-                    <div>
-                      <h3 className="font-bold text-gray-900 mb-3 flex items-center text-sm">
-                        <Package size={16} className="mr-2" />
-                        Categories
-                      </h3>
-                      <div className="space-y-1">
-                        {topCategories.slice(0, 10).map((category) => (
-                          <Link
-                            key={category.id}
-                            href={`/categories/${category.slug}`}
-                            className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors group text-sm"
-                            onClick={() => setMobileMenuOpen(false)}
-                          >
-                            <div className="flex items-center">
-                              <div className="text-green-600 mr-2">
-                                {getCategoryIcon(category.name)}
-                              </div>
-                              <span className="font-medium text-gray-900">{category.name}</span>
-                            </div>
-                            <ChevronRight size={14} className="text-gray-400 group-hover:text-green-500" />
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Services */}
-                    <div>
-                      <h3 className="font-bold text-gray-900 mb-3 text-sm">Our Services</h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        {quickLinks.map((link) => {
-                          const Icon = link.icon;
-                          return (
-                            <Link
-                              key={link.id}
-                              href={`/${link.id}`}
-                              className="p-3 rounded-lg border border-gray-200 hover:border-green-200 hover:shadow transition-all duration-300 text-center text-xs"
-                              onClick={() => setMobileMenuOpen(false)}
-                            >
-                              <div className={`${link.color} mb-1`}>
-                                <Icon size={16} className="mx-auto" />
-                              </div>
-                              <div className="font-medium">{link.name}</div>
-                              <div className="text-gray-500 mt-0.5">{link.desc}</div>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="p-4 border-t border-gray-200">
-                  <div className="space-y-3">
-                    <Link 
-                      href="/cart" 
-                      className="flex items-center justify-between p-3 bg-gradient-to-r from-green-500 to-orange-500 text-white rounded-lg shadow text-sm"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <div className="flex items-center">
-                        <ShoppingCart size={16} className="mr-2" />
-                        <div>
-                          <div className="font-semibold">View Cart</div>
-                          <div className="opacity-90">KSh 0.00</div>
-                        </div>
-                      </div>
-                      {cartCount > 0 && (
-                        <span className="bg-white text-green-600 px-2 py-0.5 rounded-full text-xs font-bold">
-                          {cartCount} items
-                        </span>
-                      )}
-                    </Link>
-                    
-                    <div className="text-center text-xs text-gray-600 pt-3 border-t border-gray-200">
-                      <div className="flex items-center justify-center space-x-1 mb-1.5">
-                        <Phone size={12} className="text-green-500" />
-                        <span className="font-medium">Help: +254 716 354589</span>
-                      </div>
-                      <div className="text-gray-500">
-                        © {new Date().getFullYear()} MarketHub
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>

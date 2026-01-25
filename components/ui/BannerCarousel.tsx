@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
-import { api } from '@/lib/api';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Banner {
   id: number;
@@ -44,8 +43,6 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
   const [banners, setBanners] = useState<Banner[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     fetchBanners();
@@ -54,138 +51,56 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
   const fetchBanners = async () => {
     try {
       setIsLoading(true);
-      setError(null);
-      setImageErrors(new Set());
       
-      console.log('🚀 Fetching banners from API...');
+      // Fetch banners from your API
+      const response = await fetch('https://api.hypermarket.co.ke/api/banners/homepage');
       
-      // Try multiple endpoints
-      let response;
-      try {
-        response = await api.banners.getHomepage();
-      } catch (apiError) {
-        console.log('Trying alternative endpoint...');
-        // Fallback: try a direct fetch
-        response = await fetch('https://api.hypermarket.co.ke/api/banners/homepage');
-        if (!response.ok) throw new Error(`API responded with ${response.status}`);
-        response = await response.json();
+      if (!response.ok) {
+        throw new Error(`API responded with ${response.status}`);
       }
       
-      console.log('📦 API Response:', response);
+      const data = await response.json();
       
+      // Process the response based on your API structure
       let bannerData: Banner[] = [];
       
-      // Handle different response formats
-      if (response.data) {
-        if (Array.isArray(response.data)) {
-          bannerData = response.data;
-        } else if (response.data.data && Array.isArray(response.data.data)) {
-          bannerData = response.data.data;
-        } else if (response.data.success && Array.isArray(response.data.data)) {
-          bannerData = response.data.data;
-        } else if (response.data.banners && Array.isArray(response.data.banners)) {
-          bannerData = response.data.banners;
-        }
-      } else if (Array.isArray(response)) {
-        bannerData = response;
+      if (Array.isArray(data)) {
+        bannerData = data;
+      } else if (data.data && Array.isArray(data.data)) {
+        bannerData = data.data;
+      } else if (data.success && Array.isArray(data.data)) {
+        bannerData = data.data;
+      } else if (data.banners && Array.isArray(data.banners)) {
+        bannerData = data.banners;
       }
       
-      console.log(`✅ Processed ${bannerData.length} banners`);
-      
-      // Filter active homepage banners
-      const homepageBanners = bannerData
+      // Filter active homepage banners only
+      const activeHomepageBanners = bannerData
         .filter(banner => {
-          const isActive = banner.is_active === true || banner.is_active === undefined;
-          const isHomepage = banner.type === 'homepage' || !banner.type;
+          const isActive = banner.is_active === true;
+          const isHomepage = banner.type === 'homepage';
           const hasImage = banner.image || banner.image_url;
-          return isActive && hasImage;
+          const isCurrent = !banner.start_date || new Date(banner.start_date) <= new Date();
+          const notExpired = !banner.end_date || new Date(banner.end_date) >= new Date();
+          
+          return isActive && isHomepage && hasImage && isCurrent && notExpired;
         })
-        .sort((a, b) => (a.order || 0) - (b.order || 0))
-        .slice(0, 5); // Limit to 5 banners
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
       
-      console.log(`🎯 ${homepageBanners.length} active homepage banners found`);
+      setBanners(activeHomepageBanners);
       
-      if (homepageBanners.length === 0) {
-        // Create fallback banners if no banners are returned
-        console.log('⚠️ No banners found, creating fallback banners');
-        setBanners([
-          {
-            id: 1,
-            title: "Fresh Farm Produce",
-            subtitle: "Organic vegetables delivered to your doorstep",
-            image: "https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
-            mobile_image: "https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-            button_text: "Shop Now",
-            button_link: "/products",
-            order: 1,
-            is_active: true,
-            start_date: null,
-            end_date: null,
-            type: 'homepage',
-            category_slug: null,
-            clicks: 0,
-            impressions: 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: 2,
-            title: "Free Delivery",
-            subtitle: "On orders over KES 2,000",
-            image: "https://images.unsplash.com/photo-1561715276-a2d087060f1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
-            mobile_image: "https://images.unsplash.com/photo-1561715276-a2d087060f1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-            button_text: "View Products",
-            button_link: "/products?category=vegetables",
-            order: 2,
-            is_active: true,
-            start_date: null,
-            end_date: null,
-            type: 'homepage',
-            category_slug: null,
-            clicks: 0,
-            impressions: 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ]);
-      } else {
-        setBanners(homepageBanners);
-      }
-      
-    } catch (error: any) {
-      console.error('❌ Failed to fetch banners:', error);
-      setError(error.message || 'Failed to load banners');
-      
-      // Even on error, set some fallback banners
-      setBanners([
-        {
-          id: 999,
-          title: "Welcome to Lando Ranch",
-          subtitle: "Fresh farm products delivered daily",
-          image: "https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
-          mobile_image: "https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-          button_text: "Start Shopping",
-          button_link: "/products",
-          order: 1,
-          is_active: true,
-          start_date: null,
-          end_date: null,
-          type: 'homepage',
-          category_slug: null,
-          clicks: 0,
-          impressions: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ]);
+    } catch (error) {
+      console.error('Failed to fetch banners:', error);
+      // Set empty array instead of fallback banners
+      setBanners([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Get the correct image URL with fallback
+  // Get the correct image URL
   const getImageUrl = (banner: Banner, isMobile = false): string => {
-    // Try image_url from API first
+    // Use image_url from API if available
     if (!isMobile && banner.image_url) {
       return banner.image_url;
     }
@@ -194,14 +109,11 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
       return banner.mobile_image_url;
     }
     
-    // Use image path
+    // Use mobile image for mobile, fallback to regular image
     const imagePath = isMobile ? banner.mobile_image || banner.image : banner.image;
     
     if (!imagePath) {
-      console.warn(`No image path for banner ${banner.id}, using fallback`);
-      return isMobile 
-        ? "https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-        : "https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80";
+      return '';
     }
     
     // Check if already a full URL
@@ -209,7 +121,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
       return imagePath;
     }
     
-    // Construct full URL
+    // Construct full URL for relative paths
     const baseUrl = 'https://api.hypermarket.co.ke';
     let cleanPath = imagePath;
     
@@ -230,28 +142,15 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
     setActiveIndex((prev) => (prev === 0 ? banners.length - 1 : prev - 1));
   };
 
-  const handleBannerClick = async (bannerId: number) => {
-    try {
-      await api.banners.trackClick(bannerId);
-    } catch (error) {
-      console.error('Failed to track banner click:', error);
-    }
-  };
-
-  const handleImageError = (bannerId: number) => {
-    console.error(`Image failed to load for banner ${bannerId}`);
-    setImageErrors(prev => new Set(prev).add(bannerId));
-  };
-
   // Get link for banner click
   const getBannerLink = (banner: Banner): string => {
-    if (banner.category_slug) {
-      return `/category/${banner.category_slug}`;
-    }
     if (banner.button_link) {
-      return banner.button_link;
+      return banner.button_link.startsWith('/') ? banner.button_link : `/${banner.button_link}`;
     }
-    // Default fallback
+    if (banner.category_slug) {
+      return `/categories/${banner.category_slug}`;
+    }
+    // Default to products page
     return '/products';
   };
 
@@ -266,49 +165,35 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
     return () => clearInterval(interval);
   }, [banners.length, activeIndex]);
 
+  // Show nothing if loading or no banners
   if (isLoading) {
     return (
       <div 
-        className={`relative ${rounded ? 'rounded-2xl' : ''} overflow-hidden bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse border-2 border-gray-300`}
+        className={`relative ${rounded ? 'rounded-2xl' : ''} overflow-hidden bg-gray-100 animate-pulse`}
         style={{ height: typeof window !== 'undefined' && window.innerWidth < 768 ? height.mobile : height.desktop }}
       >
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
         </div>
       </div>
     );
   }
 
-  if (error && banners.length === 0) {
-    return (
-      <div 
-        className={`relative ${rounded ? 'rounded-2xl' : ''} overflow-hidden bg-gradient-to-r from-emerald-500 to-emerald-600 border-2 border-emerald-400`}
-        style={{ height: typeof window !== 'undefined' && window.innerWidth < 768 ? height.mobile : height.desktop }}
-      >
-        <div className="absolute inset-0 flex items-center justify-center p-8">
-          <div className="text-center text-white max-w-md">
-            <button
-              onClick={fetchBanners}
-              className="inline-flex items-center gap-2 bg-white text-emerald-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-            >
-              <RefreshCw size={18} />
-              Try Again
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  // Return null if no banners (component will be invisible)
+  if (banners.length === 0) {
+    return null;
   }
 
   return (
-    <div className={`relative overflow-hidden ${rounded ? 'rounded-2xl' : ''} shadow-lg border-2 border-gray-200`}>
+    <div className={`relative overflow-hidden ${rounded ? 'rounded-2xl' : ''} shadow-lg`}>
       {/* Desktop Banners */}
       <div className="hidden md:block" style={{ height: height.desktop }}>
         {banners.map((banner, index) => {
           const imageUrl = getImageUrl(banner, false);
           const isActive = index === activeIndex;
-          const hasImageError = imageErrors.has(banner.id);
           const bannerLink = getBannerLink(banner);
+          
+          if (!imageUrl) return null;
           
           return (
             <div
@@ -317,30 +202,26 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
                 isActive ? 'opacity-100 z-10 scale-100' : 'opacity-0 z-0 scale-105'
               }`}
             >
-              {hasImageError ? (
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-emerald-600 flex items-center justify-center">
-                  <div className="text-white text-center p-8 max-w-2xl">
-                    <h1 className="text-4xl font-bold mb-4">{banner.title}</h1>
+              <a
+                href={bannerLink}
+                className="absolute inset-0 w-full h-full block"
+              >
+                <img
+                  src={imageUrl}
+                  alt={banner.title}
+                  className="w-full h-full object-cover"
+                  loading={isActive ? "eager" : "lazy"}
+                />
+                {/* Optional: Add text overlay if banner has title */}
+                {banner.title && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6">
+                    <h2 className="text-white text-2xl font-bold">{banner.title}</h2>
+                    {banner.subtitle && (
+                      <p className="text-white/90 mt-1">{banner.subtitle}</p>
+                    )}
                   </div>
-                </div>
-              ) : (
-                <>
-                  {/* Clickable Image */}
-                  <a
-                    href={bannerLink}
-                    onClick={() => handleBannerClick(banner.id)}
-                    className="absolute inset-0 w-full h-full block cursor-pointer"
-                  >
-                    <img
-                      src={imageUrl}
-                      alt={banner.title}
-                      className="w-full h-full object-cover"
-                      onError={() => handleImageError(banner.id)}
-                      loading={isActive ? "eager" : "lazy"}
-                    />
-                  </a>
-                </>
-              )}
+                )}
+              </a>
             </div>
           );
         })}
@@ -351,8 +232,9 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
         {banners.map((banner, index) => {
           const mobileImageUrl = getImageUrl(banner, true);
           const isActive = index === activeIndex;
-          const hasImageError = imageErrors.has(banner.id);
           const bannerLink = getBannerLink(banner);
+          
+          if (!mobileImageUrl) return null;
           
           return (
             <div
@@ -361,36 +243,29 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
                 isActive ? 'opacity-100 z-10 scale-100' : 'opacity-0 z-0 scale-105'
               }`}
             >
-              {hasImageError ? (
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-emerald-600 flex items-end pb-8">
-                  <div className="text-white p-6">
-                    <h2 className="text-2xl font-bold mb-2">{banner.title}</h2>
+              <a
+                href={bannerLink}
+                className="absolute inset-0 w-full h-full block"
+              >
+                <img
+                  src={mobileImageUrl}
+                  alt={banner.title}
+                  className="w-full h-full object-cover"
+                  loading={isActive ? "eager" : "lazy"}
+                />
+                {/* Optional: Add text overlay for mobile */}
+                {banner.title && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                    <h2 className="text-white text-lg font-bold">{banner.title}</h2>
                   </div>
-                </div>
-              ) : (
-                <>
-                  {/* Clickable Image */}
-                  <a
-                    href={bannerLink}
-                    onClick={() => handleBannerClick(banner.id)}
-                    className="absolute inset-0 w-full h-full block cursor-pointer"
-                  >
-                    <img
-                      src={mobileImageUrl}
-                      alt={banner.title}
-                      className="w-full h-full object-cover"
-                      onError={() => handleImageError(banner.id)}
-                      loading={isActive ? "eager" : "lazy"}
-                    />
-                  </a>
-                </>
-              )}
+                )}
+              </a>
             </div>
           );
         })}
       </div>
 
-      {/* Navigation Controls */}
+      {/* Navigation Controls - Only show if more than 1 banner */}
       {banners.length > 1 && (
         <>
           <button
@@ -414,9 +289,9 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
               <button
                 key={index}
                 onClick={() => setActiveIndex(index)}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
                   index === activeIndex 
-                    ? 'bg-white scale-125 shadow-lg' 
+                    ? 'bg-white scale-125' 
                     : 'bg-white/50 hover:bg-white/70'
                 }`}
                 aria-label={`Go to slide ${index + 1}`}

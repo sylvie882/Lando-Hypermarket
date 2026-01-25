@@ -93,9 +93,9 @@ export const metadata: Metadata = {
     site: '@hypermarket_ke',
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
+    icon: '/favicon.png',  // CHANGED from '/favicon.ico'
+    shortcut: '/favicon.png',  // CHANGED from '/favicon-16x16.png'
+    apple: '/favicon.png',  // CHANGED from '/apple-touch-icon.png'
   },
   category: 'E-commerce & Grocery',
   applicationName: SITE_NAME,
@@ -232,10 +232,10 @@ export default function RootLayout({
           }}
         />
         
-        {/* Favicon */}
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        {/* Favicon - Updated to use PNG */}
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="shortcut icon" href="/favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
         <link rel="manifest" href="/manifest.json" />
         
         {/* Mobile meta */}
