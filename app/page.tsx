@@ -303,7 +303,7 @@ const HomePage: React.FC = () => {
       `}</style>
 
       {/* Banner Section - Adjusted to remove gap with navbar */}
-      <section className="pt-0 pb-0 px-4 sm:px-1">
+      <section className="pt-0 pb-0 px-4 sm:px-12">
         <div className="w-full">
           <BannerCarousel
             height={{ mobile: '280px', desktop: '380px' }}
