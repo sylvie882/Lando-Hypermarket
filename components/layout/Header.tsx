@@ -39,6 +39,7 @@ import {
 import { usePathname, useRouter } from 'next/navigation';
 import { debounce } from 'lodash';
 import { Product, Category } from '@/types';
+import DeliveryModeToggle from '../DeliveryModeToggle';
 
 const Header: React.FC = () => {
   const { user, isAuthenticated, logout, isLoading: authLoading } = useAuth();
@@ -514,18 +515,25 @@ const Header: React.FC = () => {
           border-color: #90EE90;
         }
 
+        /* Changed from gradient to solid white */
         .gradient-bg {
-          background: linear-gradient(135deg, #F0FFF0 0%, #FFFAF0 100%);
+          background: #ffffff;
         }
 
         .glass-effect {
-          background: rgba(255, 255, 255, 0.9);
+          background: rgba(255, 255, 255, 0.98);
           backdrop-filter: blur(10px);
           border: 1px solid rgba(255, 255, 255, 0.2);
         }
       `}</style>
 
-    
+      {/* Delivery Mode Selector */}
+      <div className="w-full bg-[#f9fafb]"> {/* Lightened from #e9eef5 to #f9fafb */}
+        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center">
+          <DeliveryModeToggle />
+        </div>
+      </div>
+
       {/* Main Header */}
       <header className={`sticky top-0 z-50 gradient-bg transition-all duration-300 ${scrolled ? 'header-shadow' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-1">
@@ -534,7 +542,7 @@ const Header: React.FC = () => {
             {/* Logo */}
             <div className="flex items-center space-x-3">
               <button 
-                className="lg:hidden p-2 rounded-xl bg-white/80 hover:bg-white shadow-sm transition-all duration-300"
+                className="lg:hidden p-2 rounded-xl bg-white hover:bg-gray-50 shadow-sm transition-all duration-300"
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Open menu"
               >
@@ -574,7 +582,7 @@ const Header: React.FC = () => {
                       placeholder="Discover amazing products... Search groceries, electronics, home essentials and more!"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-5 py-3 pl-12 bg-transparent focus:outline-none text-gray-900 placeholder-gray-500 text-sm placeholder:font-medium"
+                      className="w-full px-5 py-3 pl-12 bg-white focus:outline-none text-gray-900 placeholder-gray-500 text-sm placeholder:font-medium"
                       aria-label="Search products"
                     />
                     <button
@@ -594,7 +602,7 @@ const Header: React.FC = () => {
             <div className="flex items-center space-x-2">
               {/* Mobile Search */}
               <button 
-                className="lg:hidden p-2 rounded-xl bg-white/80 hover:bg-white shadow-sm transition-colors"
+                className="lg:hidden p-2 rounded-xl bg-white hover:bg-gray-50 shadow-sm transition-colors"
                 onClick={() => setMobileSearchOpen(true)}
                 aria-label="Search"
               >
@@ -607,7 +615,7 @@ const Header: React.FC = () => {
                 className="hidden lg:flex relative p-2 hover:scale-110 transition-all duration-300 group"
                 aria-label="Wishlist"
               >
-                <div className="relative p-2 rounded-xl bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 group-hover:border-yellow-300 transition-colors">
+                <div className="relative p-2 rounded-xl bg-white border border-gray-200 group-hover:border-yellow-300 transition-colors">
                   <Heart size={20} className="text-yellow-500 group-hover:text-yellow-600 transition-colors" />
                 </div>
                 {wishlistCount > 0 && (
@@ -626,9 +634,9 @@ const Header: React.FC = () => {
                 >
                   <div className="relative">
                     <div className="h-10 w-10 rounded-2xl overflow-hidden border-3 border-white shadow-lg group-hover:shadow-xl transition-shadow">
-  {user?.profile_picture_url ? (  // CHANGED: profile_picture → profile_picture_url
+  {user?.profile_picture_url ? (
     <Image
-      src={user.profile_picture_url}  // CHANGED: profile_picture → profile_picture_url
+      src={user.profile_picture_url}
       alt="Profile"
       width={40}
       height={40}
@@ -654,14 +662,14 @@ const Header: React.FC = () => {
                 </button>
                 
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-72 bg-white/95 rounded-2xl z-50 animate-fadeIn dropdown-shadow overflow-hidden backdrop-blur-lg">
-                    <div className="p-4 bg-gradient-to-r from-green-50 to-yellow-50 border-b border-gray-100/50">
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl z-50 animate-fadeIn dropdown-shadow overflow-hidden border border-gray-200">
+                    <div className="p-4 bg-white border-b border-gray-100">
                       <div className="font-bold text-gray-900 text-lg">My Account</div>
                       {isAuthenticated && user?.email && (
                         <div className="text-sm text-gray-600 mt-1 truncate">{user.email}</div>
                       )}
                     </div>
-                    <div className="p-3">
+                    <div className="p-3 bg-white">
                       {isAuthenticated ? (
                         <>
                           <div className="grid grid-cols-2 gap-3 p-2">
@@ -670,7 +678,7 @@ const Header: React.FC = () => {
                               className="flex flex-col items-center p-3 hover:bg-green-50 rounded-xl transition-colors group border border-gray-100 hover:border-green-200"
                               onClick={() => setUserMenuOpen(false)}
                             >
-                              <div className="p-2 rounded-lg bg-gradient-to-br from-green-100 to-emerald-100 mb-2">
+                              <div className="p-2 rounded-lg bg-green-50 mb-2">
                                 <ShoppingBag size={18} className="text-green-600" />
                               </div>
                               <div className="font-semibold text-sm">Orders</div>
@@ -680,7 +688,7 @@ const Header: React.FC = () => {
                               className="flex flex-col items-center p-3 hover:bg-yellow-50 rounded-xl transition-colors group border border-gray-100 hover:border-yellow-200"
                               onClick={() => setUserMenuOpen(false)}
                             >
-                              <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-100 to-amber-100 mb-2">
+                              <div className="p-2 rounded-lg bg-yellow-50 mb-2">
                                 <Heart size={18} className="text-yellow-600" />
                               </div>
                               <div className="font-semibold text-sm">Wishlist</div>
@@ -706,7 +714,7 @@ const Header: React.FC = () => {
                             </Link>
                           </div>
                           
-                          <div className="border-t border-gray-100/50 my-3"></div>
+                          <div className="border-t border-gray-100 my-3"></div>
                           
                           <button 
                             onClick={handleLogout}
@@ -746,7 +754,7 @@ const Header: React.FC = () => {
               {/* User Account - Mobile */}
               <Link 
                 href={isAuthenticated ? "/profile" : "/auth/login"}
-                className="lg:hidden p-2 rounded-xl bg-white/80 hover:bg-white shadow-sm transition-colors"
+                className="lg:hidden p-2 rounded-xl bg-white hover:bg-gray-50 shadow-sm transition-colors"
                 aria-label="Account"
               >
                 <User size={20} className="text-gray-800" />
@@ -769,17 +777,13 @@ const Header: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  {/* <div className="hidden lg:block">
-                    <div className="text-xs text-gray-600">Total</div>
-                    <div className="text-md font-bold text-gray-900">KSh 0.00</div>
-                  </div> */}
                 </div>
               </Link>
             </div>
           </div>
 
           {/* ========== NAVIGATION BAR - Bright & Attractive ========== */}
-          <div className="hidden lg:block py-2 border-t border-gray-100/50 relative">
+          <div className="hidden lg:block py-2 border-t border-gray-100 relative">
             <div className="flex items-center justify-between">
               {/* Left: All Categories */}
               <div className="relative" ref={categoriesMenuRef}>
@@ -788,7 +792,7 @@ const Header: React.FC = () => {
                   className={`flex items-center space-x-2 px-4 py-2.5 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl ${
                     showAllCategories 
                       ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' 
-                      : 'bg-gradient-to-r from-white to-gray-50 text-gray-800 hover:from-green-50 hover:to-emerald-50 border border-gray-200'
+                      : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'
                   }`}
                 >
                   <Menu size={20} />
@@ -799,10 +803,10 @@ const Header: React.FC = () => {
                 {/* All Categories Dropdown */}
                 {showAllCategories && (
                   <div 
-                    className="absolute top-full left-0 mt-2 w-96 bg-white/95 rounded-2xl z-50 animate-fadeIn dropdown-shadow overflow-hidden backdrop-blur-lg"
+                    className="absolute top-full left-0 mt-2 w-96 bg-white rounded-2xl z-50 animate-fadeIn dropdown-shadow overflow-hidden border border-gray-200"
                     onMouseLeave={() => setShowAllCategories(false)}
                   >
-                    <div className="p-5">
+                    <div className="p-5 bg-white">
                       <h3 className="font-bold text-xl text-gray-900 mb-1 bg-gradient-to-r from-green-500 to-yellow-500 bg-clip-text text-transparent">Shop Categories</h3>
                       <p className="text-gray-600 text-sm mb-6">Browse our extensive collection</p>
                       <div className="grid grid-cols-2 gap-3">
@@ -813,10 +817,10 @@ const Header: React.FC = () => {
                             <Link
                               key={category.id}
                               href={`/categories/${category.slug}`}
-                              className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-yellow-50 transition-all duration-300 group border border-gray-100 hover:border-green-200"
+                              className="flex items-center space-x-3 p-3 rounded-xl hover:bg-green-50 transition-all duration-300 group border border-gray-100 hover:border-green-200"
                               onClick={() => setShowAllCategories(false)}
                             >
-                              <div className="p-2 rounded-lg bg-gradient-to-br from-green-100 to-emerald-100 group-hover:from-green-200 group-hover:to-emerald-200 transition-all">
+                              <div className="p-2 rounded-lg bg-green-50 group-hover:bg-green-100 transition-all">
                                 <div className="text-green-600 group-hover:text-green-700">
                                   {getCategoryIcon(category.name)}
                                 </div>
@@ -830,7 +834,7 @@ const Header: React.FC = () => {
                             </Link>
                           ))}
                       </div>
-                      <div className="mt-6 pt-6 border-t border-gray-100/50">
+                      <div className="mt-6 pt-6 border-t border-gray-100">
                         <Link
                           href="/categories"
                           className="flex items-center justify-center px-5 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 shadow hover:shadow-lg font-bold text-sm"
@@ -907,7 +911,7 @@ const Header: React.FC = () => {
             {/* Category Products Dropdown */}
             {activeCategory && categoryProducts.length > 0 && (
               <div 
-                className="absolute top-full left-0 right-0 mt-2 bg-white/95 rounded-2xl z-50 animate-fadeIn dropdown-shadow backdrop-blur-lg"
+                className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl z-50 animate-fadeIn dropdown-shadow border border-gray-200"
                 onMouseEnter={() => {
                   if (categoryHoverTimeoutRef.current) {
                     clearTimeout(categoryHoverTimeoutRef.current);
@@ -915,7 +919,7 @@ const Header: React.FC = () => {
                 }}
                 onMouseLeave={handleCategoryLeave}
               >
-                <div className="p-5">
+                <div className="p-5 bg-white">
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h3 className="text-xl font-bold text-gray-900">
@@ -1049,15 +1053,15 @@ const Header: React.FC = () => {
           <div className="lg:hidden fixed inset-0 z-50">
             {/* Backdrop */}
             <div 
-              className="absolute inset-0 bg-gradient-to-br from-green-500/20 via-yellow-500/20 to-orange-500/20 backdrop-blur-sm" 
+              className="absolute inset-0 bg-white/95 backdrop-blur-sm" 
               onClick={() => setMobileMenuOpen(false)}
             />
             
             {/* Menu Panel */}
-            <div className="absolute left-0 top-0 h-full w-[85%] max-w-sm bg-white/95 shadow-2xl animate-slideIn backdrop-blur-lg">
+            <div className="absolute left-0 top-0 h-full w-[85%] max-w-sm bg-white shadow-2xl animate-slideIn">
               <div className="h-full flex flex-col">
                 {/* Header */}
-                <div className="p-5 border-b border-gray-100/50">
+                <div className="p-5 border-b border-gray-100">
                   <div className="flex items-center justify-between mb-5">
                     <Link href="/" className="flex items-center space-x-2" onClick={() => setMobileMenuOpen(false)}>
                       <div className="w-10 h-10 rounded-2xl overflow-hidden border-4 border-white shadow">
@@ -1084,11 +1088,11 @@ const Header: React.FC = () => {
                   
                   {/* User Info */}
                   {isAuthenticated ? (
-                    <div className="flex items-center space-x-2 p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-2xl border border-green-200">
+                    <div className="flex items-center space-x-2 p-3 bg-green-50 rounded-2xl border border-green-200">
                       <div className="h-12 w-12 rounded-2xl overflow-hidden border-4 border-white shadow">
-                        {user?.profile_picture_url ? (  // CHANGED: profile_picture → profile_picture_url
+                        {user?.profile_picture_url ? (
                           <Image
-                            src={user.profile_picture_url}  // CHANGED: profile_picture → profile_picture_url
+                            src={user.profile_picture_url}
                             alt="Profile"
                             width={48}
                             height={48}
@@ -1119,13 +1123,13 @@ const Header: React.FC = () => {
                 </div>
 
                 {/* Menu Content */}
-                <div className="flex-1 overflow-y-auto p-5">
+                <div className="flex-1 overflow-y-auto p-5 bg-white">
                   <div className="space-y-6">
                     {/* Quick Actions */}
                     <div className="grid grid-cols-2 gap-3">
                       <Link
                         href="/deals"
-                        className="p-3 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 text-center group"
+                        className="p-3 rounded-2xl bg-orange-50 border border-orange-200 text-center group"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 w-fit mx-auto mb-2">
@@ -1136,7 +1140,7 @@ const Header: React.FC = () => {
                       </Link>
                       <Link
                         href="/cart"
-                        className="p-3 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 text-center group"
+                        className="p-3 rounded-2xl bg-green-50 border border-green-200 text-center group"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <div className="p-2 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 w-fit mx-auto mb-2">
@@ -1181,7 +1185,7 @@ const Header: React.FC = () => {
                 </div>
 
                 {/* Footer */}
-                <div className="p-5 border-t border-gray-100/50">
+                <div className="p-5 border-t border-gray-100 bg-white">
                   <div className="flex items-center justify-center space-x-4 text-sm font-semibold text-gray-700">
                     <Link href="/terms" onClick={() => setMobileMenuOpen(false)}>Terms</Link>
                     <Link href="/privacy" onClick={() => setMobileMenuOpen(false)}>Privacy</Link>
@@ -1198,10 +1202,10 @@ const Header: React.FC = () => {
 
         {/* Mobile Search Overlay */}
         {mobileSearchOpen && (
-          <div className="lg:hidden fixed inset-0 z-50 bg-gradient-to-b from-white to-green-50">
+          <div className="lg:hidden fixed inset-0 z-50 bg-white">
             <div className="h-full flex flex-col">
               {/* Header */}
-              <div className="p-5 border-b border-gray-100/50">
+              <div className="p-5 border-b border-gray-100 bg-white">
                 <div className="flex items-center justify-between mb-5">
                   <div className="font-bold text-xl text-gray-900">Search</div>
                   <button 
@@ -1223,13 +1227,13 @@ const Header: React.FC = () => {
                       className="w-full px-4 py-3 pl-12 bg-white rounded-2xl focus:outline-none focus:ring-4 focus:ring-green-500/20 border-2 border-gray-200 focus:border-green-500 text-sm shadow-lg"
                       autoFocus
                     />
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-green-500" />
+                    <Search className="absolute left-4 top-1/2 transform -translateY-1/2 h-5 w-5 text-green-500" />
                   </div>
                 </form>
               </div>
               
               {/* Content */}
-              <div className="flex-1 overflow-y-auto p-5">
+              <div className="flex-1 overflow-y-auto p-5 bg-white">
                 {/* Popular Searches */}
                 {searchQuery.trim() === '' && (
                   <div className="mb-6">
@@ -1256,10 +1260,10 @@ const Header: React.FC = () => {
                       <Link
                         key={category.id}
                         href={`/categories/${category.slug}`}
-                        className="flex items-center p-3 bg-white hover:bg-gradient-to-r hover:from-green-50 hover:to-yellow-50 rounded-xl transition-all duration-300 border border-gray-200 hover:border-green-300 hover:shadow-lg"
+                        className="flex items-center p-3 bg-white hover:bg-green-50 rounded-xl transition-all duration-300 border border-gray-200 hover:border-green-300 hover:shadow-lg"
                         onClick={() => setMobileSearchOpen(false)}
                       >
-                        <div className="p-2 rounded-lg bg-gradient-to-br from-green-100 to-emerald-100 mr-2">
+                        <div className="p-2 rounded-lg bg-green-100 mr-2">
                           <div className="text-green-600">
                             {getCategoryIcon(category.name)}
                           </div>
