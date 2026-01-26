@@ -6,35 +6,10 @@ import Image from 'next/image';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { 
-  ShoppingCart, User, Search, Menu, X, Heart, Truck, 
-  Phone, ChevronDown, ArrowRight,
-  Package, Star, Home, ChevronRight,
-  ShoppingBasket,
-  Smartphone,
-  Award,
-  RefreshCw,
-  ShieldCheck,
-  Apple, Carrot, Coffee, Utensils, Leaf,
-  Baby, Droplets, Bug, RefreshCw as RefreshCwIcon,
-  PawPrint,
-  Briefcase,
-  Dumbbell,
-  Car,
-  TreePine,
-  Sprout,
-  HeartPulse,
-  Pill,
-  Shirt,
-  Flame,
-  MapPin,
-  Clock,
-  Shield,
-  Zap,
-  Sparkles,
-  Percent,
-  Gift,
-  Sun,
-  ShoppingBag
+  ShoppingCart, User, Search, Menu, X, Heart, 
+  ChevronDown, ArrowRight, ChevronRight,
+  Package, ShoppingBag, MapPin, Phone, ShieldCheck,
+  Zap, Sparkles, Flame, Star
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { debounce } from 'lodash';
@@ -44,62 +19,30 @@ import DeliveryModeToggle from '../DeliveryModeToggle';
 const Header: React.FC = () => {
   const { user, isAuthenticated, logout, isLoading: authLoading } = useAuth();
   const [cartCount, setCartCount] = useState(0);
-  const [wishlistCount, setWishlistCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [promoProducts, setPromoProducts] = useState<Product[]>([]);
-  const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
-  const [isPromoLoading, setIsPromoLoading] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
-  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
-  const [showAllCategories, setShowAllCategories] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [isHoveringCategory, setIsHoveringCategory] = useState(false);
   
+  // Refs
   const userMenuRef = useRef<HTMLDivElement>(null);
   const categoriesMenuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const promoIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const categoriesScrollRef = useRef<HTMLDivElement>(null);
   const categoryHoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
   
   const pathname = usePathname();
   const router = useRouter();
 
-  // Updated Color Scheme with Light Green as Primary, Gold and Warm Orange as accents
-  const colors = useMemo(() => ({
-    primary: '#90EE90',           // Light Green - Primary
-    primaryLight: '#C1FFC1',      // Lighter Green
-    primaryDark: '#5CD65C',       // Darker Green
-    
-    gold: '#FFD700',              // Gold - Accent
-    goldLight: '#FFE55C',         // Light Gold
-    goldDark: '#B8860B',          // Dark Gold
-    
-    orange: '#FFA500',            // Warm Orange - Secondary
-    orangeLight: '#FFC966',       // Light Orange
-    orangeDark: '#CC8400',        // Dark Orange
-    
-    accent: '#A78BFA',            // Purple - Tertiary
-    accentLight: '#C4B5FD',       // Light Purple
-    
-    warning: '#F59E0B',           // Amber
-    success: '#10b981',           // Emerald
-    
-    dark: '#1f2937',              // Dark Gray
-    light: '#ffffff',             // White
-    gray: '#6b7280',              // Gray
-    grayLight: '#f8fafc',         // Light Gray
-    grayMedium: '#e2e8f0',        // Medium Gray
-    grayDark: '#94a3b8'           // Dark Gray
-  }), []);
-
-  // ========== FETCH CATEGORIES ==========
+  // Fetch categories
   const fetchCategories = useCallback(async () => {
     try {
       setIsLoadingCategories(true);
@@ -113,12 +56,12 @@ const Header: React.FC = () => {
     }
   }, []);
 
-  // ========== FETCH PRODUCTS FOR CATEGORY ==========
+  // Fetch products for category
   const fetchProductsForCategory = useCallback(async (categoryId: string | number) => {
     try {
       const response = await api.products.getAll({ 
         category_id: categoryId,
-        per_page: 100,
+        per_page: 8,
         sort: 'created_at',
         order: 'desc'
       });
@@ -129,17 +72,12 @@ const Header: React.FC = () => {
     }
   }, []);
 
-  // Fetch categories on mount
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
-
-  // Get top categories
+  // Get top categories for horizontal display (limit to 6)
   const topCategories = useMemo(() => {
     return allCategories
       .filter(cat => (cat.active_products_count || 0) > 0 && cat.parent_id === null)
       .sort((a, b) => (b.active_products_count || 0) - (a.active_products_count || 0))
-      .slice(0, 6);
+      .slice(0, 15); // Limit to 6 categories
   }, [allCategories]);
 
   // Handle category hover with delay
@@ -148,6 +86,8 @@ const Header: React.FC = () => {
       clearTimeout(categoryHoverTimeoutRef.current);
     }
 
+    setIsHoveringCategory(true);
+    
     categoryHoverTimeoutRef.current = setTimeout(() => {
       setActiveCategory(category.slug);
       fetchProductsForCategory(category.id);
@@ -160,11 +100,38 @@ const Header: React.FC = () => {
       clearTimeout(categoryHoverTimeoutRef.current);
     }
 
+    setIsHoveringCategory(false);
+    
     categoryHoverTimeoutRef.current = setTimeout(() => {
       setActiveCategory(null);
       setCategoryProducts([]);
     }, 300);
   }, []);
+
+  // Handle mouse move in dropdown
+  const handleDropdownMouseEnter = useCallback(() => {
+    setIsHoveringCategory(true);
+    if (categoryHoverTimeoutRef.current) {
+      clearTimeout(categoryHoverTimeoutRef.current);
+    }
+  }, []);
+
+  const handleDropdownMouseLeave = useCallback(() => {
+    setIsHoveringCategory(false);
+    if (categoryHoverTimeoutRef.current) {
+      clearTimeout(categoryHoverTimeoutRef.current);
+    }
+    
+    categoryHoverTimeoutRef.current = setTimeout(() => {
+      setActiveCategory(null);
+      setCategoryProducts([]);
+    }, 300);
+  }, []);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   // Handle scroll effect
   useEffect(() => {
@@ -188,7 +155,11 @@ const Header: React.FC = () => {
         setUserMenuOpen(false);
       }
       if (categoriesMenuRef.current && !categoriesMenuRef.current.contains(event.target as Node)) {
-        setCategoriesOpen(false);
+        setShowAllCategories(false);
+      }
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+        setActiveCategory(null);
+        setCategoryProducts([]);
       }
     };
 
@@ -198,7 +169,7 @@ const Header: React.FC = () => {
 
   // Handle body overflow
   useEffect(() => {
-    if (mobileMenuOpen || searchOpen || mobileSearchOpen) {
+    if (mobileMenuOpen || mobileSearchOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'auto';
@@ -207,21 +178,11 @@ const Header: React.FC = () => {
     return () => {
       document.body.style.overflow = 'auto';
     };
-  }, [mobileMenuOpen, searchOpen, mobileSearchOpen]);
-
-  // Focus search input when search opens
-  useEffect(() => {
-    if (searchOpen && searchInputRef.current) {
-      setTimeout(() => searchInputRef.current?.focus(), 100);
-    }
-  }, [searchOpen]);
+  }, [mobileMenuOpen, mobileSearchOpen]);
 
   // Fetch user data
   useEffect(() => {
     const fetchData = async () => {
-      if (isLoading) return;
-      
-      setIsLoading(true);
       try {
         if (isAuthenticated && !authLoading) {
           // Fetch user-specific data
@@ -241,8 +202,6 @@ const Header: React.FC = () => {
         }
       } catch (error) {
         console.error('Error fetching data:', error);
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -254,7 +213,6 @@ const Header: React.FC = () => {
     e.preventDefault();
     const trimmedQuery = searchQuery.trim();
     if (trimmedQuery) {
-      setSearchOpen(false);
       setMobileSearchOpen(false);
       setMobileMenuOpen(false);
       router.push(`/products?search=${encodeURIComponent(trimmedQuery)}`);
@@ -263,7 +221,6 @@ const Header: React.FC = () => {
 
   const handleQuickSearch = useCallback((query: string) => {
     setSearchQuery(query);
-    setSearchOpen(false);
     setMobileSearchOpen(false);
     setMobileMenuOpen(false);
     router.push(`/products?search=${encodeURIComponent(query)}`);
@@ -275,17 +232,18 @@ const Header: React.FC = () => {
       setUserMenuOpen(false);
       setMobileMenuOpen(false);
       setCartCount(0);
-      setWishlistCount(0);
     } catch (error) {
       console.error('Logout failed:', error);
     }
   };
 
-  // User info
-  const userInitial = useMemo(() => 
-    user?.name?.charAt(0).toUpperCase() || 'U', [user?.name]
-  );
+  // Check active link
+  const isActive = useCallback((href: string) => {
+    if (href === '/') return pathname === href;
+    return pathname.startsWith(href);
+  }, [pathname]);
 
+  // User info
   const userFirstName = useMemo(() => 
     user?.name?.split(' ')[0] || 'Guest', [user?.name]
   );
@@ -294,25 +252,11 @@ const Header: React.FC = () => {
     cartCount > 99 ? '99+' : cartCount, [cartCount]
   );
 
+  // Quick searches
   const quickSearches = useMemo(() => [
     'Fresh Vegetables', 'Organic Fruits', 'Dairy Products', 'Bakery Items',
-    'Coffee & Tea', 'Snacks', 'Cleaning Supplies', 'Personal Care',
-    'Baby Products', 'Pet Food', 'Kitchen Essentials', 'Beverages'
+    'Coffee & Tea', 'Snacks', 'Cleaning Supplies', 'Personal Care'
   ], []);
-
-  // Check active link
-  const isActive = useCallback((href: string) => {
-    if (href === '/') return pathname === href;
-    return pathname.startsWith(href);
-  }, [pathname]);
-
-  // Format price
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES'
-    }).format(price);
-  };
 
   // Clean up timeout on unmount
   useEffect(() => {
@@ -323,20 +267,19 @@ const Header: React.FC = () => {
     };
   }, []);
 
-  // Handle product click
-  const handleProductClick = (productSlug: string) => {
-    setActiveCategory(null);
-    setCategoryProducts([]);
-    router.push(`/products/${productSlug}`);
+  // Format price
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES'
+    }).format(price);
   };
 
-  // Helper function to get complete image URL
+  // Get image URL helper
   const getImageUrl = (product: Product) => {
-    if (product.main_image) {
-      return product.main_image;
-    }
+    if (!product) return '/images/placeholder.jpg';
     
-    const imageUrl = product.thumbnail || product.gallery?.[0] || product.images?.[0];
+    const imageUrl = product.main_image || product.thumbnail || product.gallery?.[0] || product.images?.[0];
     
     if (!imageUrl) {
       return '/images/placeholder.jpg';
@@ -352,55 +295,14 @@ const Header: React.FC = () => {
       return `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke'}/${cleanPath}`;
     }
     
-    if (cleanPath.startsWith('products/')) {
-      return `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke'}/storage/${cleanPath}`;
-    }
-    
     return `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke'}/storage/${cleanPath}`;
   };
 
-  // Category icon mapping
-  const getCategoryIcon = (categoryName: string) => {
-    const iconMap: Record<string, React.ReactNode> = {
-      'Fruits': <Apple size={18} />,
-      'Vegetables': <Carrot size={18} />,
-      'Beverages': <Coffee size={18} />,
-      'Cleaning': <Sparkles size={18} />,
-      'Household': <Home size={18} />,
-      'Disposables': <Utensils size={18} />,
-      'Garbage': <Package size={18} />,
-      'Insect': <Bug size={18} />,
-      'Pest': <Bug size={18} />,
-      'Laundry': <RefreshCwIcon size={18} />,
-      'Detergents': <RefreshCwIcon size={18} />,
-      'Tissues': <Package size={18} />,
-      'Eco': <Leaf size={18} />,
-      'Green': <Sprout size={18} />,
-      'Baby': <Baby size={18} />,
-      'Health': <HeartPulse size={18} />,
-      'Wellness': <HeartPulse size={18} />,
-      'Beauty': <Droplets size={18} />,
-      'Personal Care': <Droplets size={18} />,
-      'Pet': <PawPrint size={18} />,
-      'Office': <Briefcase size={18} />,
-      'School': <Briefcase size={18} />,
-      'Automotive': <Car size={18} />,
-      'Sports': <Dumbbell size={18} />,
-      'Outdoors': <Dumbbell size={18} />,
-      'Electronics': <Smartphone size={18} />,
-      'Clothing': <Shirt size={18} />,
-      'Accessories': <Shirt size={18} />,
-      'Home': <TreePine size={18} />,
-      'Garden': <TreePine size={18} />,
-      'Default': <Package size={18} />
-    };
-
-    for (const [key, icon] of Object.entries(iconMap)) {
-      if (categoryName.toLowerCase().includes(key.toLowerCase())) {
-        return icon;
-      }
-    }
-    return iconMap['Default'];
+  // Handle product click
+  const handleProductClick = (productSlug: string) => {
+    setActiveCategory(null);
+    setCategoryProducts([]);
+    router.push(`/products/${productSlug}`);
   };
 
   return (
@@ -412,30 +314,12 @@ const Header: React.FC = () => {
         }
         
         @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.8; }
-        }
-        
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-4px); }
-        }
-        
-        @keyframes glow {
-          0%, 100% { box-shadow: 0 0 20px rgba(144, 238, 144, 0.3); }
-          50% { box-shadow: 0 0 30px rgba(144, 238, 144, 0.5); }
+          from { opacity: 0; transform: translateX(-20px); }
+          to { opacity: 1; transform: translateX(0); }
         }
         
         .animate-fadeIn { animation: fadeIn 0.25s ease-out; }
-        .animate-slideIn { animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .animate-pulse-slow { animation: pulse 2s infinite; }
-        .animate-float { animation: float 3s ease-in-out infinite; }
-        .animate-glow { animation: glow 2s ease-in-out infinite; }
+        .animate-slideIn { animation: slideIn 0.3s ease-out; }
         
         .cart-badge {
           position: absolute;
@@ -458,7 +342,6 @@ const Header: React.FC = () => {
         
         .header-shadow {
           box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-          backdrop-filter: blur(10px);
         }
         
         .dropdown-shadow {
@@ -467,119 +350,389 @@ const Header: React.FC = () => {
           backdrop-filter: blur(20px);
         }
         
-        .product-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: 16px;
-          animation: fadeIn 0.3s ease-in-out;
+        /* Navigation Links Row */
+        .nav-links-row {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+          margin-left: 2rem;
         }
-
-        .product-item {
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          cursor: pointer;
-          border-radius: 12px;
-          overflow: hidden;
-          border: 1px solid rgba(226, 232, 240, 0.5);
+        
+        .nav-link {
+          font-size: 14px;
+          font-weight: 600;
+          color: #4b5563;
+          text-decoration: none;
+          padding: 0.5rem 0;
+          position: relative;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+        
+        .nav-link:hover {
+          color: #059669;
+        }
+        
+        .nav-link.active {
+          color: #059669;
+          font-weight: 700;
+        }
+        
+        .nav-link.active::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: linear-gradient(90deg, #10b981, #34d399);
+          border-radius: 1px;
+        }
+        
+        /* Horizontal Categories Row - Enhanced */
+        .categories-row-container {
+          width: 100%;
           background: white;
+          border-top: 1px solid #f1f5f9;
+          border-bottom: 1px solid #f1f5f9;
+          position: relative;
         }
-
-        .product-item:hover {
-          transform: translateY(-6px);
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-          border-color: #90EE90;
+        
+        .categories-row-inner {
+          max-width: 7xl;
+          margin: 0 auto;
+          padding: 0 1rem;
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
         }
-
-        .category-scroll {
+        
+        .all-categories-button {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
+          background: linear-gradient(135deg, #10b981, #34d399);
+          color: white;
+          border-radius: 8px;
+          text-decoration: none;
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+        
+        .all-categories-button:hover {
+          background: linear-gradient(135deg, #0da271, #2ea87a);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        .categories-row-scroll {
           display: flex;
           overflow-x: auto;
+          padding: 0.75rem 0;
+          gap: 1.5rem;
           scrollbar-width: none;
-          gap: 12px;
+          -ms-overflow-style: none;
+          -webkit-overflow-scrolling: touch;
           flex: 1;
-          min-width: 0;
-          padding: 4px 0;
         }
         
-        .category-scroll::-webkit-scrollbar {
+        .categories-row-scroll::-webkit-scrollbar {
           display: none;
         }
-
-        .search-glow {
-          box-shadow: 0 8px 30px rgba(144, 238, 144, 0.15);
-          border: 2px solid rgba(144, 238, 144, 0.2);
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(10px);
+        
+        .category-link {
+          flex: 0 0 auto;
+          color: #4b5563;
+          text-decoration: none;
+          font-size: 14px;
+          font-weight: 600;
+          white-space: nowrap;
+          padding: 0.25rem 0;
+          position: relative;
+          transition: all 0.2s ease;
+          cursor: pointer;
         }
         
-        .search-glow:focus-within {
-          box-shadow: 0 12px 40px rgba(144, 238, 144, 0.25);
-          border-color: #90EE90;
+        .category-link:hover {
+          color: #059669;
         }
-
-        /* Changed from gradient to solid white */
-        .gradient-bg {
-          background: #ffffff;
+        
+        .category-link.active {
+          color: #059669;
+          font-weight: 700;
         }
-
-        .glass-effect {
-          background: rgba(255, 255, 255, 0.98);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+        
+        .category-link.active::after {
+          content: '';
+          position: absolute;
+          bottom: -2px;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: linear-gradient(90deg, #10b981, #34d399);
+          border-radius: 1px;
+        }
+        
+        /* Category Dropdown */
+        .category-dropdown {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: white;
+          z-index: 40;
+          border-top: 1px solid #e5e7eb;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+          animation: fadeIn 0.2s ease-out;
+          overflow: hidden;
+        }
+        
+        .category-dropdown-content {
+          max-width: 7xl;
+          margin: 0 auto;
+          padding: 2rem 1rem;
+        }
+        
+        .category-products-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 1.5rem;
+          margin-bottom: 1.5rem;
+        }
+        
+        .category-product-card {
+          background: white;
+          border-radius: 12px;
+          overflow: hidden;
+          border: 1px solid #e5e7eb;
+          transition: all 0.3s ease;
+          cursor: pointer;
+        }
+        
+        .category-product-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+          border-color: #10b981;
+        }
+        
+        .product-image-container {
+          position: relative;
+          aspect-ratio: 1/1;
+          background: #f8fafc;
+          overflow: hidden;
+        }
+        
+        .product-image {
+          object-fit: cover;
+          transition: transform 0.5s ease;
+        }
+        
+        .category-product-card:hover .product-image {
+          transform: scale(1.05);
+        }
+        
+        .product-info {
+          padding: 1rem;
+        }
+        
+        .product-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 0.5rem;
+          line-height: 1.4;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        
+        .product-price {
+          font-size: 16px;
+          font-weight: 700;
+          color: #059669;
+        }
+        
+        /* Mobile specific */
+        @media (max-width: 1023px) {
+          .nav-links-row {
+            display: none;
+          }
+          
+          .categories-row-inner {
+            padding: 0 1rem;
+            flex-direction: row;
+            gap: 1rem;
+          }
+          
+          .all-categories-button {
+            padding: 0.5rem 0.75rem;
+            font-size: 13px;
+          }
+          
+          .categories-row-scroll {
+            gap: 1rem;
+            padding: 0.5rem 0;
+          }
+          
+          .category-link {
+            font-size: 13px;
+            padding: 0.25rem 0;
+          }
+          
+          .category-dropdown-content {
+            padding: 1.5rem 1rem;
+          }
+          
+          .category-products-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+          }
+        }
+        
+        /* Tablet specific */
+        @media (min-width: 769px) and (max-width: 1023px) {
+          .category-products-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+        
+        /* Desktop specific */
+        @media (min-width: 1024px) {
+          .categories-row-container {
+            border-top: none;
+          }
+          
+          .categories-row-inner {
+            padding: 0;
+            max-width: 1200px;
+            margin: 0 auto;
+          }
+          
+          .categories-row-scroll {
+            padding: 0.75rem 0;
+          }
+          
+          .category-dropdown-content {
+            padding: 2rem 0;
+            max-width: 1200px;
+          }
+        }
+        
+        /* Mobile menu categories */
+        .mobile-categories-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 0.75rem;
+          margin-top: 1rem;
+        }
+        
+        .mobile-category-item {
+          padding: 0.75rem;
+          background: #f9fafb;
+          border-radius: 8px;
+          text-align: center;
+          text-decoration: none;
+          color: #374151;
+          font-size: 12px;
+          font-weight: 500;
+          transition: all 0.2s ease;
+        }
+        
+        .mobile-category-item:hover {
+          background: #10b981;
+          color: white;
+          transform: translateY(-2px);
         }
       `}</style>
 
       {/* Delivery Mode Selector */}
-      <div className="w-full bg-[#f9fafb] hidden md:block"> {/* Lightened from #e9eef5 to #f9fafb */}
-        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center">
+      <div className="w-full bg-[#f9fafb] hidden md:block">
+        <div className="max-w-7xl mx-auto px-4 lg:px-0 py-2 flex items-center">
           <DeliveryModeToggle />
         </div>
       </div>
 
       {/* Main Header */}
-      <header className={`sticky top-0 z-50 gradient-bg transition-all duration-300 ${scrolled ? 'header-shadow' : ''}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-1">
-          {/* First Row: Logo, Search, Actions */}
+      <header className={`sticky top-0 z-50 bg-white transition-all duration-300 ${scrolled ? 'header-shadow' : ''}`}>
+        <div className="max-w-7xl mx-auto px-4 lg:px-0">
+          {/* First Row: Logo, Navigation Links, Search, Actions */}
           <div className="flex items-center justify-between py-3">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <button 
-                className="lg:hidden p-2 rounded-xl bg-white hover:bg-gray-50 shadow-sm transition-all duration-300"
-                onClick={() => setMobileMenuOpen(true)}
-                aria-label="Open menu"
-              >
-                <Menu size={22} className="text-gray-800" />
-              </button>
+            {/* Logo and Navigation Links */}
+            <div className="flex items-center">
+              <div className="flex items-center space-x-3">
+                <button 
+                  className="lg:hidden p-2 rounded-xl bg-white hover:bg-gray-50 shadow-sm transition-all duration-300"
+                  onClick={() => setMobileMenuOpen(true)}
+                  aria-label="Open menu"
+                >
+                  <Menu size={22} className="text-gray-800" />
+                </button>
 
-              <Link href="/" className="flex items-center space-x-2 group">
-                <div className="relative w-12 h-12 rounded-2xl overflow-hidden shadow-lg group-hover:shadow-xl transition-all duration-500 border-4 border-white animate-glow">
-                  <Image 
-                    src="/logo.jpeg" 
-                    alt="Lando Ranch Logo" 
-                    fill
-                    className="object-cover"
-                    sizes="48px"
-                    priority
-                  />
-                </div>
-                <div className="hidden sm:block">
-                  <div className="text-2xl font-black text-gray-900 tracking-tight bg-gradient-to-r from-green-400 to-yellow-500 bg-clip-text text-transparent">
-                    Lando
+                <Link href="/" className="flex items-center space-x-2 group">
+                  <div className="relative w-12 h-12 rounded-2xl overflow-hidden shadow-lg group-hover:shadow-xl transition-all duration-500 border-4 border-white">
+                    <Image 
+                      src="/logo.jpeg" 
+                      alt="Lando Ranch Logo" 
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                      priority
+                    />
                   </div>
-                  <div className="text-xs font-bold text-gray-600 -mt-1 tracking-wider">Hypermarket</div>
-                </div>
-              </Link>
+                  <div className="hidden sm:block">
+                    <div className="text-2xl font-black text-gray-900 tracking-tight bg-gradient-to-r from-green-400 to-yellow-500 bg-clip-text text-transparent">
+                      Lando
+                    </div>
+                    <div className="text-xs font-bold text-gray-600 -mt-1 tracking-wider">Hypermarket</div>
+                  </div>
+                </Link>
+              </div>
+
+              {/* Desktop Navigation Links - After Logo */}
+              <div className="hidden lg:block nav-links-row">
+                <Link
+                  href="/"
+                  className={`nav-link ${isActive('/') ? 'active' : ''}`}
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/products"
+                  className={`nav-link ${isActive('/products') ? 'active' : ''}`}
+                >
+                  Shop All
+                </Link>
+                <Link
+                  href="/deals"
+                  className={`nav-link ${isActive('/deals') ? 'active' : ''}`}
+                >
+                  Hot Deals
+                </Link>
+                <Link
+                  href="#new-arrivals"
+                  className={`nav-link ${isActive('/new-arrivals') ? 'active' : ''}`}
+                >
+                  New Arrivals
+                </Link>
+              </div>
             </div>
 
-            {/* Desktop Search Bar - Centered and Bright */}
+            {/* Desktop Search Bar - Centered */}
             <div className="hidden lg:flex flex-1 max-w-2xl mx-6">
               <form onSubmit={handleSearch} className="relative w-full">
-                <div className="search-glow rounded-2xl overflow-hidden transition-all duration-500">
+                <div className="rounded-2xl overflow-hidden transition-all duration-500 border-2 border-gray-200 focus-within:border-green-500 focus-within:shadow-lg">
                   <div className="relative flex items-center">
                     <div className="absolute left-4 flex items-center justify-center pointer-events-none">
                       <Search size={20} className="text-green-500" />
                     </div>
                     <input
                       type="search"
-                      placeholder="Discover amazing products... Search groceries, electronics, home essentials and more!"
+                      placeholder="Discover amazing products..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full px-5 py-3 pl-12 bg-white focus:outline-none text-gray-900 placeholder-gray-500 text-sm placeholder:font-medium"
@@ -587,7 +740,7 @@ const Header: React.FC = () => {
                     />
                     <button
                       type="submit"
-                      className="px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white hover:from-green-500 hover:to-emerald-600 transition-all duration-300 font-bold text-sm flex items-center space-x-2 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 transition-all duration-300 font-bold text-sm flex items-center space-x-2 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={!searchQuery.trim()}
                     >
                       <Search size={18} />
@@ -618,11 +771,6 @@ const Header: React.FC = () => {
                 <div className="relative p-2 rounded-xl bg-white border border-gray-200 group-hover:border-yellow-300 transition-colors">
                   <Heart size={20} className="text-yellow-500 group-hover:text-yellow-600 transition-colors" />
                 </div>
-                {wishlistCount > 0 && (
-                  <div className="cart-badge">
-                    {wishlistCount}
-                  </div>
-                )}
               </Link>
 
               {/* User Account - Desktop */}
@@ -633,21 +781,21 @@ const Header: React.FC = () => {
                   aria-label="Account menu"
                 >
                   <div className="relative">
-                    <div className="h-10 w-10 rounded-2xl overflow-hidden border-3 border-white shadow-lg group-hover:shadow-xl transition-shadow">
-  {user?.profile_picture_url ? (
-    <Image
-      src={user.profile_picture_url}
-      alt="Profile"
-      width={40}
-      height={40}
-      className="object-cover w-full h-full"
-    />
-  ) : (
-    <div className="w-full h-full bg-gradient-to-br from-green-400 via-yellow-400 to-orange-400 flex items-center justify-center">
-      <User size={20} className="text-white" />
-    </div>
-  )}
-</div>
+                    <div className="h-10 w-10 rounded-2xl overflow-hidden border-2 border-white shadow-lg group-hover:shadow-xl transition-shadow">
+                      {user?.profile_picture_url ? (
+                        <Image
+                          src={user.profile_picture_url}
+                          alt="Profile"
+                          width={40}
+                          height={40}
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-green-400 via-yellow-400 to-orange-400 flex items-center justify-center">
+                          <User size={20} className="text-white" />
+                        </div>
+                      )}
+                    </div>
                     {isAuthenticated && (
                       <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white shadow"></div>
                     )}
@@ -760,7 +908,7 @@ const Header: React.FC = () => {
                 <User size={20} className="text-gray-800" />
               </Link>
 
-              {/* Cart - Bright and Prominent */}
+              {/* Cart */}
               <Link 
                 href="/cart" 
                 className="relative group"
@@ -768,7 +916,7 @@ const Header: React.FC = () => {
               >
                 <div className="flex items-center space-x-2 p-1 hover:scale-105 transition-all duration-300">
                   <div className="relative">
-                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 group-hover:from-orange-500 group-hover:to-amber-600 transition-all duration-300 shadow-lg group-hover:shadow-xl">
+                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 group-hover:from-orange-600 group-hover:to-amber-600 transition-all duration-300 shadow-lg group-hover:shadow-xl">
                       <ShoppingCart size={22} className="text-white" />
                     </div>
                     {cartCount > 0 && (
@@ -782,151 +930,101 @@ const Header: React.FC = () => {
             </div>
           </div>
 
-          {/* ========== NAVIGATION BAR - Bright & Attractive ========== */}
-          <div className="hidden lg:block py-2 border-t border-gray-100 relative">
-            <div className="flex items-center justify-between">
-              {/* Left: All Categories */}
-              <div className="relative" ref={categoriesMenuRef}>
-                <button
-                  onClick={() => setShowAllCategories(!showAllCategories)}
-                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl ${
-                    showAllCategories 
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' 
-                      : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200'
-                  }`}
-                >
-                  <Menu size={20} />
-                  <span className="font-bold text-sm">ALL CATEGORIES</span>
-                  <ChevronDown size={16} />
-                </button>
-
-                {/* All Categories Dropdown */}
-                {showAllCategories && (
-                  <div 
-                    className="absolute top-full left-0 mt-2 w-96 bg-white rounded-2xl z-50 animate-fadeIn dropdown-shadow overflow-hidden border border-gray-200"
-                    onMouseLeave={() => setShowAllCategories(false)}
-                  >
-                    <div className="p-5 bg-white">
-                      <h3 className="font-bold text-xl text-gray-900 mb-1 bg-gradient-to-r from-green-500 to-yellow-500 bg-clip-text text-transparent">Shop Categories</h3>
-                      <p className="text-gray-600 text-sm mb-6">Browse our extensive collection</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        {allCategories
-                          .filter(cat => cat.parent_id === null)
-                          .slice(0, 12)
-                          .map((category) => (
-                            <Link
-                              key={category.id}
-                              href={`/categories/${category.slug}`}
-                              className="flex items-center space-x-3 p-3 rounded-xl hover:bg-green-50 transition-all duration-300 group border border-gray-100 hover:border-green-200"
-                              onClick={() => setShowAllCategories(false)}
-                            >
-                              <div className="p-2 rounded-lg bg-green-50 group-hover:bg-green-100 transition-all">
-                                <div className="text-green-600 group-hover:text-green-700">
-                                  {getCategoryIcon(category.name)}
-                                </div>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-bold text-gray-900 text-sm group-hover:text-green-700 transition-colors">
-                                  {category.name}
-                                </div>
-                              </div>
-                              <ChevronRight size={14} className="text-gray-400 group-hover:text-green-500" />
-                            </Link>
-                          ))}
-                      </div>
-                      <div className="mt-6 pt-6 border-t border-gray-100">
-                        <Link
-                          href="/categories"
-                          className="flex items-center justify-center px-5 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 shadow hover:shadow-lg font-bold text-sm"
-                          onClick={() => setShowAllCategories(false)}
-                        >
-                          Explore All Categories
-                          <ArrowRight size={16} className="ml-2" />
-                        </Link>
-                      </div>
-                    </div>
+          {/* Mobile Search Bar (Hidden on Desktop) */}
+          <div className="lg:hidden mt-2">
+            <form onSubmit={handleSearch} className="relative">
+              <div className="rounded-2xl overflow-hidden transition-all duration-500 border-2 border-gray-200 focus-within:border-green-500">
+                <div className="relative flex items-center">
+                  <div className="absolute left-4 flex items-center justify-center pointer-events-none">
+                    <Search size={20} className="text-green-500" />
                   </div>
-                )}
-              </div>
-
-              {/* Center: Navigation Links - Bright & Vibrant */}
-              <div className="flex items-center space-x-6">
-                <Link
-                  href="/"
-                  className={`font-bold text-sm px-3 py-2 rounded-xl transition-all duration-300 ${
-                    isActive('/') 
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg' 
-                      : 'text-gray-700 hover:text-green-600 hover:bg-green-50'
-                  }`}
-                >
-                  Home
-                </Link>
-                <Link
-                  href="/products"
-                  className={`font-bold text-sm px-3 py-2 rounded-xl transition-all duration-300 ${
-                    isActive('/products') 
-                      ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg' 
-                      : 'text-gray-700 hover:text-yellow-600 hover:bg-yellow-50'
-                  }`}
-                >
-                  Shop All
-                </Link>
-                <Link
-                  href="/deals"
-                  className={`font-bold text-sm px-3 py-2 rounded-xl transition-all duration-300 flex items-center ${
-                    isActive('/deals') 
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg' 
-                      : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50'
-                  }`}
-                >
-                  <Zap size={16} className="mr-2" />
-                  Hot Deals
-                </Link>
-                <Link
-                  href="#new-arrivals"
-                  className={`font-bold text-sm px-3 py-2 rounded-xl transition-all duration-300 flex items-center ${
-                    isActive('/new-arrivals') 
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg' 
-                      : 'text-gray-700 hover:text-emerald-600 hover:bg-emerald-50'
-                  }`}
-                >
-                  <Sparkles size={16} className="mr-2" />
-                  New Arrivals
-                </Link>
-              </div>
-
-              {/* Right: Quick Info */}
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-1 text-sm">
-                  <ShieldCheck size={16} className="text-green-500" />
-                  <span className="font-semibold text-gray-700">Secure</span>
-                </div>
-                <div className="flex items-center space-x-1 text-sm">
-                  <Phone size={16} className="text-yellow-500" />
-                  <span className="font-semibold text-gray-700">+254 716 354589</span>
+                  <input
+                    type="search"
+                    placeholder="Search products..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-4 py-3 pl-12 bg-white focus:outline-none text-gray-900 placeholder-gray-500 text-sm"
+                    aria-label="Search products"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 transition-all duration-300 font-bold text-sm flex items-center space-x-2"
+                    disabled={!searchQuery.trim()}
+                  >
+                    <Search size={18} />
+                  </button>
                 </div>
               </div>
-            </div>
+            </form>
+          </div>
 
-            {/* Category Products Dropdown */}
-            {activeCategory && categoryProducts.length > 0 && (
-              <div 
-                className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl z-50 animate-fadeIn dropdown-shadow border border-gray-200"
+          {/* ========== ENHANCED HORIZONTAL CATEGORIES ROW ========== */}
+          <div className="categories-row-container">
+            <div className="categories-row-inner">
+              {/* All Categories Button */}
+              <Link 
+                href="/categories" 
+                className="all-categories-button"
                 onMouseEnter={() => {
-                  if (categoryHoverTimeoutRef.current) {
-                    clearTimeout(categoryHoverTimeoutRef.current);
+                  const allCategoriesCat = allCategories.find(cat => cat.name.toLowerCase().includes('all'));
+                  if (allCategoriesCat) {
+                    handleCategoryHover(allCategoriesCat);
                   }
                 }}
                 onMouseLeave={handleCategoryLeave}
               >
-                <div className="p-5 bg-white">
-                  <div className="flex items-center justify-between mb-5">
+                <Menu size={18} />
+                <span>All Categories</span>
+              </Link>
+
+              {/* Horizontal Categories Scroll */}
+              <div 
+                className="categories-row-scroll"
+                ref={categoriesScrollRef}
+              >
+                {isLoadingCategories ? (
+                  // Loading skeleton
+                  Array.from({ length: 15 }).map((_, index) => (
+                    <div key={index} className="category-link">
+                      <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                  ))
+                ) : topCategories.length > 0 ? (
+                  topCategories.map((category) => (
+                    <div
+                      key={category.id}
+                      className={`category-link ${pathname.includes(category.slug) ? 'active' : ''}`}
+                      onMouseEnter={() => handleCategoryHover(category)}
+                      onMouseLeave={handleCategoryLeave}
+                      onClick={() => router.push(`/categories/${category.slug}`)}
+                    >
+                      {category.name}
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-center justify-center w-full py-2">
+                    <p className="text-gray-500 text-sm">No categories available</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Category Products Dropdown */}
+            {activeCategory && categoryProducts.length > 0 && isHoveringCategory && (
+              <div 
+                className="category-dropdown"
+                ref={categoryDropdownRef}
+                onMouseEnter={handleDropdownMouseEnter}
+                onMouseLeave={handleDropdownMouseLeave}
+              >
+                <div className="category-dropdown-content">
+                  <div className="flex items-center justify-between mb-6">
                     <div>
                       <h3 className="text-xl font-bold text-gray-900">
-                        {topCategories.find(c => c.slug === activeCategory)?.name}
+                        {topCategories.find(c => c.slug === activeCategory)?.name || 'All Categories'}
                       </h3>
                       <p className="text-gray-600 mt-1 text-sm">
-                        Discover our premium collection
+                        Popular products in this category
                       </p>
                     </div>
                     <Link
@@ -942,105 +1040,40 @@ const Header: React.FC = () => {
                     </Link>
                   </div>
 
-                  <div className="product-grid">
-                    {categoryProducts.slice(0, 6).map((product) => {
-                      const ProductItem = ({ product }: { product: Product }) => {
-                        const [imageLoaded, setImageLoaded] = useState(false);
-                        const [imageError, setImageError] = useState(false);
-                        const imageUrl = getImageUrl(product);
-                        
-                        return (
-                          <div
-                            onClick={() => handleProductClick(product.slug)}
-                            className="product-item group"
-                          >
-                            {/* Product Image */}
-                            <div className="aspect-square bg-gradient-to-br from-green-50 to-yellow-50 overflow-hidden relative rounded-t-xl">
-                              {!imageError ? (
-                                <Image
-                                  src={imageUrl}
-                                  alt={product.name || 'Product image'}
-                                  fill
-                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                  className={`object-cover transition-transform duration-700 ${
-                                    imageLoaded ? 'group-hover:scale-110 opacity-100' : 'opacity-0'
-                                  }`}
-                                  onLoad={() => {
-                                    setImageLoaded(true);
-                                  }}
-                                  onError={() => {
-                                    setImageError(true);
-                                    setImageLoaded(true);
-                                  }}
-                                  loading="lazy"
-                                  quality={90}
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-yellow-100">
-                                  <Package size={40} className="text-gray-400" />
-                                </div>
-                              )}
-                              {!imageLoaded && !imageError && (
-                                <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-yellow-100 animate-pulse"></div>
-                              )}
-                              
-                              {/* Discount Badge */}
-                              {product.discounted_price && Number(product.discounted_price) < Number(product.price) && (
-                                <div className="absolute top-3 left-3 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold rounded-lg shadow-lg">
-                                  -{Math.round((1 - Number(product.discounted_price) / Number(product.price)) * 100)}% OFF
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Product Info */}
-                            <div className="p-4">
-                              <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 mb-3 h-10">
-                                {product.name}
-                              </h4>
-                              
-                              {/* Price */}
-                              <div className="space-y-2">
-                                <div className="font-bold text-gray-900 text-lg">
-                                  {formatPrice(Number(product.discounted_price || product.price))}
-                                </div>
-                                {product.discounted_price && Number(product.discounted_price) < Number(product.price) && (
-                                  <div className="text-sm text-gray-500 line-through">
-                                    {formatPrice(Number(product.price))}
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Rating */}
-                              {product.rating && Number(product.rating) > 0 && (
-                                <div className="flex items-center space-x-2 mt-3">
-                                  <div className="flex">
-                                    {[...Array(5)].map((_, i) => (
-                                      <Star 
-                                        key={i} 
-                                        size={14} 
-                                        className={`${
-                                          i < Math.floor(Number(product.rating)) 
-                                            ? 'fill-yellow-400 text-yellow-400' 
-                                            : 'fill-gray-200 text-gray-200'
-                                        }`}
-                                      />
-                                    ))}
-                                  </div>
-                                  <span className="text-xs font-semibold text-gray-700">{Number(product.rating).toFixed(1)}</span>
-                                </div>
-                              )}
-                              
-                              {/* CTA */}
-                              <button className="w-full mt-4 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 rounded-lg text-sm font-bold transition-all duration-300 shadow hover:shadow-md">
-                                Add to Cart
-                              </button>
-                            </div>
+                  <div className="category-products-grid">
+                    {categoryProducts.map((product) => (
+                      <div
+                        key={product.id}
+                        className="category-product-card"
+                        onClick={() => handleProductClick(product.slug)}
+                      >
+                        <div className="product-image-container">
+                          <Image
+                            src={getImageUrl(product)}
+                            alt={product.name || 'Product image'}
+                            fill
+                            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                            className="product-image"
+                          />
+                        </div>
+                        <div className="product-info">
+                          <h4 className="product-title">
+                            {product.name || 'Product Name'}
+                          </h4>
+                          <div className="product-price">
+                            {formatPrice(Number(product.price || 0))}
                           </div>
-                        );
-                      };
-
-                      return <ProductItem key={product.id} product={product} />;
-                    })}
+                          {product.rating && Number(product.rating) > 0 && (
+                            <div className="flex items-center mt-2">
+                              <Star size={14} className="text-yellow-400 fill-yellow-400" />
+                              <span className="text-xs font-semibold text-gray-700 ml-1">
+                                {Number(product.rating).toFixed(1)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1048,12 +1081,12 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Menu - Bright & Modern */}
+        {/* Mobile Menu - Enhanced with Categories */}
         {mobileMenuOpen && (
           <div className="lg:hidden fixed inset-0 z-50">
             {/* Backdrop */}
             <div 
-              className="absolute inset-0 bg-white/95 backdrop-blur-sm" 
+              className="absolute inset-0 bg-black/20 backdrop-blur-sm" 
               onClick={() => setMobileMenuOpen(false)}
             />
             
@@ -1064,7 +1097,7 @@ const Header: React.FC = () => {
                 <div className="p-5 border-b border-gray-100">
                   <div className="flex items-center justify-between mb-5">
                     <Link href="/" className="flex items-center space-x-2" onClick={() => setMobileMenuOpen(false)}>
-                      <div className="w-10 h-10 rounded-2xl overflow-hidden border-4 border-white shadow">
+                      <div className="w-10 h-10 rounded-2xl overflow-hidden border-2 border-white shadow">
                         <Image 
                           src="/logo.jpeg" 
                           alt="Logo"
@@ -1089,7 +1122,7 @@ const Header: React.FC = () => {
                   {/* User Info */}
                   {isAuthenticated ? (
                     <div className="flex items-center space-x-2 p-3 bg-green-50 rounded-2xl border border-green-200">
-                      <div className="h-12 w-12 rounded-2xl overflow-hidden border-4 border-white shadow">
+                      <div className="h-12 w-12 rounded-2xl overflow-hidden border-2 border-white shadow">
                         {user?.profile_picture_url ? (
                           <Image
                             src={user.profile_picture_url}
@@ -1125,18 +1158,101 @@ const Header: React.FC = () => {
                 {/* Menu Content */}
                 <div className="flex-1 overflow-y-auto p-5 bg-white">
                   <div className="space-y-6">
+                    {/* Mobile Navigation Links */}
+                    <div className="space-y-2">
+                      <h3 className="font-bold text-gray-900 text-sm mb-2 uppercase tracking-wider text-gray-500">Navigation</h3>
+                      <Link
+                        href="/"
+                        className="flex items-center justify-between p-3 hover:bg-green-50 rounded-xl transition-colors group border border-gray-100 hover:border-green-200"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <div className="flex items-center">
+                          <div className="p-2 rounded-lg bg-green-100 mr-3">
+                            <ShoppingBag size={18} className="text-green-600" />
+                          </div>
+                          <span className="font-bold">Home</span>
+                        </div>
+                        <ChevronRight size={16} className="text-gray-400 group-hover:text-green-500" />
+                      </Link>
+                      <Link
+                        href="/products"
+                        className="flex items-center justify-between p-3 hover:bg-green-50 rounded-xl transition-colors group border border-gray-100 hover:border-green-200"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <div className="flex items-center">
+                          <div className="p-2 rounded-lg bg-green-100 mr-3">
+                            <ShoppingBag size={18} className="text-green-600" />
+                          </div>
+                          <span className="font-bold">Shop All</span>
+                        </div>
+                        <ChevronRight size={16} className="text-gray-400 group-hover:text-green-500" />
+                      </Link>
+                      <Link
+                        href="/deals"
+                        className="flex items-center justify-between p-3 hover:bg-orange-50 rounded-xl transition-colors group border border-gray-100 hover:border-orange-200"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <div className="flex items-center">
+                          <div className="p-2 rounded-lg bg-orange-100 mr-3">
+                            <Flame size={18} className="text-orange-600" />
+                          </div>
+                          <span className="font-bold">Hot Deals</span>
+                        </div>
+                        <ChevronRight size={16} className="text-gray-400 group-hover:text-orange-500" />
+                      </Link>
+                      <Link
+                        href="#new-arrivals"
+                        className="flex items-center justify-between p-3 hover:bg-blue-50 rounded-xl transition-colors group border border-gray-100 hover:border-blue-200"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <div className="flex items-center">
+                          <div className="p-2 rounded-lg bg-blue-100 mr-3">
+                            <Sparkles size={18} className="text-blue-600" />
+                          </div>
+                          <span className="font-bold">New Arrivals</span>
+                        </div>
+                        <ChevronRight size={16} className="text-gray-400 group-hover:text-blue-500" />
+                      </Link>
+                    </div>
+
+                    {/* Mobile Categories Grid */}
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-sm mb-3 uppercase tracking-wider text-gray-500">Categories</h3>
+                      <div className="mobile-categories-grid">
+                        {topCategories.map((category) => (
+                          <Link
+                            key={category.id}
+                            href={`/categories/${category.slug}`}
+                            className="mobile-category-item"
+                            onClick={() => setMobileMenuOpen(false)}
+                          >
+                            {category.name.length > 15 
+                              ? category.name.substring(0, 15) + '...' 
+                              : category.name}
+                          </Link>
+                        ))}
+                      </div>
+                      <Link
+                        href="/categories"
+                        className="block w-full mt-3 py-2.5 text-center bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold text-sm shadow-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-300"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        View All Categories
+                      </Link>
+                    </div>
+
                     {/* Quick Actions */}
                     <div className="grid grid-cols-2 gap-3">
                       <Link
-                        href="/deals"
-                        className="p-3 rounded-2xl bg-orange-50 border border-orange-200 text-center group"
+                        href="/wishlist"
+                        className="p-3 rounded-2xl bg-yellow-50 border border-yellow-200 text-center group"
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 w-fit mx-auto mb-2">
-                          <Flame size={22} className="text-white" />
+                        <div className="p-2 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-500 w-fit mx-auto mb-2">
+                          <Heart size={22} className="text-white" />
                         </div>
-                        <div className="font-bold text-gray-900">Hot Deals</div>
-                        <div className="text-xs text-gray-600 mt-1">Limited time offers</div>
+                        <div className="font-bold text-gray-900">Wishlist</div>
+                        <div className="text-xs text-gray-600 mt-1">Saved items</div>
                       </Link>
                       <Link
                         href="/cart"
@@ -1148,37 +1264,6 @@ const Header: React.FC = () => {
                         </div>
                         <div className="font-bold text-gray-900">My Cart</div>
                         <div className="text-xs text-gray-600 mt-1">{cartCount} items</div>
-                      </Link>
-                    </div>
-
-                    {/* Navigation */}
-                    <div className="space-y-2">
-                      <h3 className="font-bold text-gray-900 text-sm mb-2 uppercase tracking-wider text-gray-500">Shop</h3>
-                      <Link
-                        href="/products"
-                        className="flex items-center justify-between p-3 hover:bg-green-50 rounded-xl transition-colors group border border-gray-100 hover:border-green-200"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <div className="flex items-center">
-                          <div className="p-2 rounded-lg bg-green-100 mr-3">
-                            <ShoppingBag size={18} className="text-green-600" />
-                          </div>
-                          <span className="font-bold">All Products</span>
-                        </div>
-                        <ChevronRight size={16} className="text-gray-400 group-hover:text-green-500" />
-                      </Link>
-                      <Link
-                        href="/categories"
-                        className="flex items-center justify-between p-3 hover:bg-yellow-50 rounded-xl transition-colors group border border-gray-100 hover:border-yellow-200"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <div className="flex items-center">
-                          <div className="p-2 rounded-lg bg-yellow-100 mr-3">
-                            <Package size={18} className="text-yellow-600" />
-                          </div>
-                          <span className="font-bold">Categories</span>
-                        </div>
-                        <ChevronRight size={16} className="text-gray-400 group-hover:text-yellow-500" />
                       </Link>
                     </div>
                   </div>
@@ -1200,7 +1285,7 @@ const Header: React.FC = () => {
           </div>
         )}
 
-        {/* Mobile Search Overlay */}
+        {/* Mobile Search Overlay - Enhanced */}
         {mobileSearchOpen && (
           <div className="lg:hidden fixed inset-0 z-50 bg-white">
             <div className="h-full flex flex-col">
@@ -1224,10 +1309,10 @@ const Header: React.FC = () => {
                       placeholder="What are you looking for?"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-4 py-3 pl-12 bg-white rounded-2xl focus:outline-none focus:ring-4 focus:ring-green-500/20 border-2 border-gray-200 focus:border-green-500 text-sm shadow-lg"
+                      className="w-full px-4 py-3 pl-12 bg-white rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 border-2 border-gray-200 focus:border-green-500 text-sm"
                       autoFocus
                     />
-                    <Search className="absolute left-4 top-1/2 transform -translateY-1/2 h-5 w-5 text-green-500" />
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-green-500" />
                   </div>
                 </form>
               </div>
@@ -1243,7 +1328,7 @@ const Header: React.FC = () => {
                         <button
                           key={item}
                           onClick={() => handleQuickSearch(item)}
-                          className="px-3 py-2.5 bg-white hover:bg-green-50 text-gray-700 rounded-xl text-sm font-bold transition-all duration-300 text-left border border-gray-200 hover:border-green-300 hover:shadow-lg"
+                          className="px-3 py-2.5 bg-white hover:bg-green-50 text-gray-700 rounded-xl text-sm font-bold transition-all duration-300 text-left border border-gray-200 hover:border-green-300"
                         >
                           {item}
                         </button>
@@ -1252,23 +1337,20 @@ const Header: React.FC = () => {
                   </div>
                 )}
                 
-                {/* Categories */}
+                {/* Categories Grid in Mobile Search */}
                 <div>
                   <h3 className="font-bold text-gray-900 mb-3 text-lg">Categories</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {topCategories.slice(0, 6).map((category) => (
+                  <div className="mobile-categories-grid">
+                    {topCategories.map((category) => (
                       <Link
                         key={category.id}
                         href={`/categories/${category.slug}`}
-                        className="flex items-center p-3 bg-white hover:bg-green-50 rounded-xl transition-all duration-300 border border-gray-200 hover:border-green-300 hover:shadow-lg"
+                        className="mobile-category-item"
                         onClick={() => setMobileSearchOpen(false)}
                       >
-                        <div className="p-2 rounded-lg bg-green-100 mr-2">
-                          <div className="text-green-600">
-                            {getCategoryIcon(category.name)}
-                          </div>
-                        </div>
-                        <span className="font-bold text-sm">{category.name}</span>
+                        {category.name.length > 12 
+                          ? category.name.substring(0, 12) + '...' 
+                          : category.name}
                       </Link>
                     ))}
                   </div>
