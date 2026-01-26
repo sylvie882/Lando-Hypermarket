@@ -77,7 +77,7 @@ const Header: React.FC = () => {
     return allCategories
       .filter(cat => (cat.active_products_count || 0) > 0 && cat.parent_id === null)
       .sort((a, b) => (b.active_products_count || 0) - (a.active_products_count || 0))
-      .slice(0, 15); // Limit to 6 categories
+      .slice(0, 9); // Limit to 6 categories
   }, [allCategories]);
 
   // Handle category hover with delay
@@ -652,7 +652,7 @@ const Header: React.FC = () => {
 
       {/* Delivery Mode Selector */}
       <div className="w-full bg-[#f9fafb] hidden md:block">
-        <div className="max-w-7xl mx-auto px-4 lg:px-0 py-2 flex items-center">
+        <div className="max-w-7xl mx-auto px-4 lg:px-0 py-2 flex items-center mr-4">
           <DeliveryModeToggle />
         </div>
       </div>
@@ -960,7 +960,7 @@ const Header: React.FC = () => {
 
           {/* ========== ENHANCED HORIZONTAL CATEGORIES ROW ========== */}
           <div className="categories-row-container">
-            <div className="categories-row-inner">
+           <div className="categories-row-inner md:translate-x-[-16px] lg:translate-x-[-24px]">
               {/* All Categories Button */}
               <Link 
                 href="/categories" 

@@ -63,62 +63,23 @@ export default function DeliveryModeToggle() {
       </div>
 
       {/* Right side: Delivery information and links */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-6 ml-4">
         {/* Delivery Stats */}
         <div className="hidden md:flex items-center gap-4">
-          <div className="text-center">
-            <div className="flex items-center gap-1">
-              <Package size={14} className="text-green-600" />
-              <span className="text-sm font-bold text-gray-900">10,000+</span>
-            </div>
-            <div className="text-xs text-gray-600">Products</div>
-          </div>
-          
-          <div className="h-6 w-px bg-gray-300"></div>
-          
-          <div className="text-center">
-            <div className="flex items-center gap-1">
-              <Star size={14} className="text-yellow-500" />
-              <span className="text-sm font-bold text-gray-900">4.8</span>
-            </div>
-            <div className="text-xs text-gray-600">Rating</div>
-          </div>
+        
         </div>
 
         {/* Quick Links */}
         <div className="hidden lg:flex items-center gap-4">
-          <Link
-            href="/delivery-info"
-            className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors px-3 py-1.5 hover:bg-green-50 rounded-lg"
-          >
-            <Clock size={14} />
-            <span>Delivery Times</span>
-          </Link>
+        <div className="flex items-center gap-2">
+            <Truck size={16} className="text-green-600" />
+            <span className="text-sm font-semibold text-gray-900">Free Delivery</span>
+          </div>
           
-          <Link
-            href="/track-order"
-            className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors px-3 py-1.5 hover:bg-green-50 rounded-lg"
-          >
-            <MapPin size={14} />
-            <span>Track Order</span>
-          </Link>
-          
-          <Link
-            href="/secure-delivery"
-            className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors px-3 py-1.5 hover:bg-green-50 rounded-lg"
-          >
-            <Shield size={14} />
-            <span>Secure Delivery</span>
-          </Link>
         </div>
 
         {/* Delivery Info - Desktop */}
         <div className="hidden md:flex flex-col items-end">
-          <div className="flex items-center gap-2">
-            <Truck size={16} className="text-green-600" />
-            <span className="text-sm font-semibold text-gray-900">Free Delivery</span>
-          </div>
-    
         </div>
       </div>
     </div>
