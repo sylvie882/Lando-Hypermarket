@@ -528,7 +528,7 @@ const Header: React.FC = () => {
       `}</style>
 
       {/* Delivery Mode Selector */}
-      <div className="w-full bg-[#f9fafb]"> {/* Lightened from #e9eef5 to #f9fafb */}
+      <div className="w-full bg-[#f9fafb] hidden md:block"> {/* Lightened from #e9eef5 to #f9fafb */}
         <div className="max-w-7xl mx-auto px-4 py-2 flex items-center">
           <DeliveryModeToggle />
         </div>
