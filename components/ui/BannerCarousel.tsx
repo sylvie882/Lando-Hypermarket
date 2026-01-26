@@ -212,15 +212,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
                   className="w-full h-full object-cover"
                   loading={isActive ? "eager" : "lazy"}
                 />
-                {/* Optional: Add text overlay if banner has title */}
-                {banner.title && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6">
-                    <h2 className="text-white text-2xl font-bold">{banner.title}</h2>
-                    {banner.subtitle && (
-                      <p className="text-white/90 mt-1">{banner.subtitle}</p>
-                    )}
-                  </div>
-                )}
+                {/* REMOVED TEXT OVERLAY */}
               </a>
             </div>
           );
@@ -253,12 +245,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
                   className="w-full h-full object-cover"
                   loading={isActive ? "eager" : "lazy"}
                 />
-                {/* Optional: Add text overlay for mobile */}
-                {banner.title && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                    <h2 className="text-white text-lg font-bold">{banner.title}</h2>
-                  </div>
-                )}
+                {/* REMOVED TEXT OVERLAY */}
               </a>
             </div>
           );
