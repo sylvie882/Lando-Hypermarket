@@ -300,6 +300,31 @@ const HomePage: React.FC = () => {
         .animate-slide-up {
           animation: slide-up 0.3s ease-out forwards;
         }
+
+        /* Responsive grid for product cards */
+        /* Mobile: 1 card per row */
+        @media (max-width: 767px) {
+          .product-grid {
+            grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+            gap: 1rem !important;
+          }
+        }
+        
+        /* Tablet: 3 cards per row */
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .product-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 0.75rem !important;
+          }
+        }
+        
+        /* Desktop: 6 cards per row */
+        @media (min-width: 1024px) {
+          .product-grid {
+            grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+            gap: 0.5rem !important;
+          }
+        }
       `}</style>
 
       {/* Banner Section - Adjusted to remove gap with navbar */}
@@ -409,7 +434,8 @@ const HomePage: React.FC = () => {
           
           {featuredProducts.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {/* UPDATED: 6 cards per row on desktop with smaller gap */}
+              <div className="product-grid grid">
                 {featuredProducts.slice(0, 12).map((product, index) => (
                   <div 
                     key={product.id} 
@@ -506,11 +532,12 @@ const HomePage: React.FC = () => {
           
           {newArrivals.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {/* UPDATED: 6 cards per row on desktop with smaller gap */}
+              <div className="product-grid grid">
                 {newArrivals.slice(0, 12).map((product, index) => (
                   <div 
                     key={product.id} 
-                    className="scroll-hover bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-300"
+                    className="scroll-hover bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-300 relative"
                     style={{
                       animationDelay: `${index * 50}ms`
                     }}

@@ -180,9 +180,15 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
             </div>
           </div>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {Array.from({ length: Math.min(limit, 4) }).map((_, index) => (
-            <div key={index} className="animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="product-grid grid">
+          {Array.from({ length: Math.min(limit, 12) }).map((_, index) => (
+            <div 
+              key={index} 
+              className="animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-hover"
+              style={{
+                animationDelay: `${index * 50}ms`
+              }}
+            >
               <div className="bg-gray-200 h-48"></div>
               <div className="p-4">
                 <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
@@ -207,7 +213,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
             </div>
             <button
               onClick={refreshRecommendations}
-              className="text-red-600 hover:text-red-700 font-medium flex items-center"
+              className="text-green-600 hover:text-green-700 font-medium flex items-center"
             >
               <RefreshCw size={16} className="mr-1" />
               Refresh
@@ -219,7 +225,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
           <p className="text-yellow-800 mb-4">{error}</p>
           <button
             onClick={refreshRecommendations}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
           >
             Try Again
           </button>
@@ -231,64 +237,21 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
   return (
     <div className={`py-8 ${className}`}>
       {showHeader && (
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Sparkles className="text-yellow-500" size={24} />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping opacity-75"></div>
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-              {showStrategy && strategyUsed && (
-                <p className="text-sm text-gray-600 mt-1">
-                  Based on your preferences • {strategyUsed} strategy
-                </p>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            {showStrategy && recommendations.length > 0 && (
-              <div className="hidden md:block">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Sources:</span>
-                  {[
-                    { type: 'preference_based', label: 'Preferences', color: 'bg-blue-500' },
-                    { type: 'purchase_based', label: 'Purchases', color: 'bg-green-500' },
-                    { type: 'view_based', label: 'Views', color: 'bg-purple-500' },
-                    { type: 'popular', label: 'Popular', color: 'bg-yellow-500' }
-                  ].map((source) => {
-                    const count = recommendations.filter(
-                      r => r.metadata?.recommendation_type === source.type
-                    ).length;
-                    if (count === 0) return null;
-                    
-                    return (
-                      <div key={source.type} className="flex items-center gap-1">
-                        <div className={`w-2 h-2 rounded-full ${source.color}`}></div>
-                        <span className="text-xs text-gray-600">{count}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+          <div className="flex items-center space-x-4">
             <button
               onClick={refreshRecommendations}
-              className="flex items-center gap-2 text-red-600 hover:text-red-700 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors"
-              title="Refresh recommendations"
+              className="text-green-600 hover:text-green-700 font-medium flex items-center"
             >
-              <RefreshCw size={16} />
-              <span className="hidden sm:inline">Refresh</span>
+              <RefreshCw size={16} className="mr-1" />
+              Refresh
             </button>
-            
             <Link 
               href="/recommendations" 
-              className="flex items-center gap-2 text-red-600 hover:text-red-700 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors"
+              className="text-green-600 hover:text-green-700 font-medium flex items-center"
             >
-              <span className="hidden sm:inline">View All</span>
-              <ArrowRight size={16} />
+              View All <ArrowRight size={16} className="ml-1" />
             </Link>
           </div>
         </div>
@@ -296,11 +259,15 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
 
       {recommendations.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {recommendations.map((product) => (
+          {/* UPDATED: 6 cards per row on desktop, 1 on mobile - Same as homepage */}
+          <div className="product-grid grid">
+            {recommendations.map((product, index) => (
               <div 
                 key={product.id} 
-                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1 relative"
+                className="scroll-hover bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-300 relative"
+                style={{
+                  animationDelay: `${index * 50}ms`
+                }}
               >
                 {/* Recommendation type badge */}
                 {product.metadata?.recommendation_type && (
@@ -331,7 +298,6 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
                   </div>
                 )}
                 
-                {/* REMOVED showRelevance prop since ProductCard doesn't support it */}
                 <ProductCard 
                   product={product} 
                   onViewTrack={trackProductView}
@@ -358,7 +324,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/products"
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
             >
               Browse Products
               <ArrowRight size={18} className="ml-2" />

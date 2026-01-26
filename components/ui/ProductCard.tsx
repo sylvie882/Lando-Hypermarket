@@ -21,15 +21,18 @@ const wishlistCheckCache = new Map<number, {
   promise?: Promise<boolean>;
 }>();
 
-// Logo colors configuration
-const LOGO_COLORS = {
-  dark: '#1a1a1a',
-  greenLight: '#9dcc5e',
-  greenMedium: '#6a9c3d',
-  gold: '#d4af37',
-  orange: '#e67e22',
-  yellowGold: '#f1c40f',
-  red: '#c0392b',
+// Updated color scheme to match Naivas
+const NAIVAS_COLORS = {
+  primaryGreen: '#9dcc5e',      // Naivas brand green
+  darkGreen: '#6a9c3d',         // Darker green for gradients
+  warmOrange: '#e67e22',        // Warm orange for hover
+  deepOrange: '#d35400',        // Deeper orange for active states
+  darkText: '#1a1a1a',          // Dark text
+  lightText: '#666666',         // Light text
+  borderColor: '#e0e0e0',       // Border color
+  cardBg: '#ffffff',            // Card background
+  badgeRed: '#c0392b',          // Red for badges
+  badgeGold: '#f1c40f',         // Gold for special badges
 };
 
 const ProductCard: React.FC<ProductCardProps> = ({ 
@@ -267,7 +270,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         type: 'new', 
         content: 'NEW', 
         style: {
-          background: `linear-gradient(135deg, ${LOGO_COLORS.greenMedium}, ${LOGO_COLORS.greenLight})`
+          background: `linear-gradient(135deg, ${NAIVAS_COLORS.darkGreen}, ${NAIVAS_COLORS.primaryGreen})`
         }
       });
     }
@@ -277,7 +280,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         type: 'featured', 
         content: 'Featured', 
         style: {
-          background: `linear-gradient(135deg, ${LOGO_COLORS.orange}, ${LOGO_COLORS.red})`
+          background: `linear-gradient(135deg, ${NAIVAS_COLORS.warmOrange}, ${NAIVAS_COLORS.deepOrange})`
         }
       });
     }
@@ -287,7 +290,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         type: 'discount', 
         content: `-${discountPercentage}%`, 
         style: {
-          background: `linear-gradient(135deg, ${LOGO_COLORS.red}, ${LOGO_COLORS.orange})`
+          background: `linear-gradient(135deg, ${NAIVAS_COLORS.badgeRed}, ${NAIVAS_COLORS.warmOrange})`
         }
       });
     }
@@ -302,7 +305,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   }, [product.id]);
 
   return (
-    <div className="group relative bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-gray-200 overflow-hidden h-full flex flex-col">
+    <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-gray-200 overflow-hidden h-full flex flex-col product-card-naivas">
       
       {/* BADGES */}
       <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
@@ -323,7 +326,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <span 
             className="text-white text-xs font-bold px-2 py-1 rounded-full shadow flex items-center gap-1"
             style={{
-              background: `linear-gradient(135deg, ${LOGO_COLORS.gold}, ${LOGO_COLORS.orange})`
+              background: `linear-gradient(135deg, ${NAIVAS_COLORS.badgeGold}, ${NAIVAS_COLORS.warmOrange})`
             }}
           >
             <Zap size={10} />
@@ -383,7 +386,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <Heart
                   size={16}
                   className={inWishlist ? 'fill-current' : ''}
-                  style={inWishlist ? { color: LOGO_COLORS.red } : undefined}
+                  style={inWishlist ? { color: NAIVAS_COLORS.badgeRed } : undefined}
                 />
               </button>
               
@@ -401,7 +404,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       </div>
 
       {/* PRODUCT INFO SECTION */}
-      <div className="p-3 flex-1 flex flex-col">
+      <div className="p-4 flex-1 flex flex-col">
         
         {/* Category */}
         {product.category?.name && (
@@ -419,17 +422,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
           className="mb-2"
           onClick={() => onViewTrack && onViewTrack(product.id)}
         >
-          <h3 className="font-semibold text-sm leading-tight line-clamp-2 h-10" style={{ color: LOGO_COLORS.dark }}>
+          <h3 className="font-semibold text-sm leading-tight line-clamp-2 h-10" style={{ color: NAIVAS_COLORS.darkText }}>
             {product.name || 'Unnamed Product'}
           </h3>
         </Link>
 
         {/* PRICE & CART SECTION */}
         <div className="mt-auto">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               {/* Final Price */}
-              <div className="text-lg font-bold" style={{ color: LOGO_COLORS.dark }}>
+              <div className="text-lg font-bold" style={{ color: NAIVAS_COLORS.darkText }}>
                 {formatKSH(finalPriceNum)}
               </div>
               
@@ -442,14 +445,26 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </div>
           </div>
 
-          {/* ADD TO CART BUTTON */}
+          {/* ADD TO CART BUTTON - Naivas Style */}
           {showActions && (
             <button
               onClick={handleAddToCart}
               disabled={isAddingToCart || !isInStock}
-              className="w-full text-white py-2 px-4 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-md flex items-center justify-center"
+              className="w-full text-white py-3 px-4 rounded-md font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center naivas-add-to-cart-btn"
               style={{
-                background: `linear-gradient(135deg, ${LOGO_COLORS.greenMedium}, ${LOGO_COLORS.greenLight})`
+                backgroundColor: NAIVAS_COLORS.primaryGreen,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = NAIVAS_COLORS.warmOrange;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = NAIVAS_COLORS.primaryGreen;
+              }}
+              onMouseDown={(e) => {
+                e.currentTarget.style.backgroundColor = NAIVAS_COLORS.deepOrange;
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.backgroundColor = NAIVAS_COLORS.warmOrange;
               }}
             >
               {isAddingToCart ? (
@@ -470,6 +485,32 @@ const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </div>
       </div>
+
+      <style jsx>{`
+        .product-card-naivas {
+          border-radius: 8px;
+          border: 1px solid ${NAIVAS_COLORS.borderColor};
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .product-card-naivas:hover {
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+          border-color: ${NAIVAS_COLORS.primaryGreen};
+        }
+        
+        .naivas-add-to-cart-btn {
+          transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        
+        .naivas-add-to-cart-btn:not(:disabled):hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .naivas-add-to-cart-btn:not(:disabled):active {
+          transform: translateY(0);
+        }
+      `}</style>
     </div>
   );
 };
