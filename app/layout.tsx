@@ -93,9 +93,9 @@ export const metadata: Metadata = {
     site: '@hypermarket_ke',
   },
   icons: {
-    icon: '/favicon.png',  // CHANGED from '/favicon.ico'
-    shortcut: '/favicon.png',  // CHANGED from '/favicon-16x16.png'
-    apple: '/favicon.png',  // CHANGED from '/apple-touch-icon.png'
+    icon: '/favicon.ico',  // CHANGED from '/favicon.ico'
+    shortcut: '/favicon.ico',  // CHANGED from '/favicon-16x16.png'
+    apple: '/favicon.ico',  // CHANGED from '/apple-touch-icon.png'
   },
   category: 'E-commerce & Grocery',
   applicationName: SITE_NAME,
@@ -140,7 +140,7 @@ export default function RootLayout({
                 "@type": "GroceryStore",
                 "@id": `${SITE_URL}/#store`,
                 "name": "Hypermarket Kenya",
-                "image": `${SITE_URL}/logo.png`,
+                "image": `${SITE_URL}/logo.jpeg`,
                 "description": "Online grocery store offering fresh produce delivery in Nairobi, Kenya",
                 "url": SITE_URL,
                 "telephone": BUSINESS_PHONE,

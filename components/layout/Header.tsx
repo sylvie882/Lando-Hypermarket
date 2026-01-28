@@ -77,7 +77,7 @@ const Header: React.FC = () => {
     return allCategories
       .filter(cat => (cat.active_products_count || 0) > 0 && cat.parent_id === null)
       .sort((a, b) => (b.active_products_count || 0) - (a.active_products_count || 0))
-      .slice(0, 9); // Limit to 6 categories
+      .slice(0, 10); // Limit to 10 categories
   }, [allCategories]);
 
   // Handle category hover with delay
