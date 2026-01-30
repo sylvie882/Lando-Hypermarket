@@ -27,7 +27,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: 'Hypermarket Kenya | Shop Online & Save More Now — Online Exclusive Deals Up To 30% Off*',
-  description: 'Shop Now & Save More On All Your Favourite Products. Get your first three orders within 60-90 mins for express delivery on the Hypermarket App. Cash On Delivery Available. Free delivery in Nairobi for orders above Ksh 2,000.',
+  description: 'Shop Now & Save More On All Your Favourite Products. Get your first three orders within 60-90 mins for express delivery on the Hypermarket App. Cash On Delivery Available. Free delivery for all orders',
   keywords: [
     'Hypermarket Kenya',
     'online grocery shopping Kenya',
