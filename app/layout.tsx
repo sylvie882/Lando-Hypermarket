@@ -26,11 +26,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: {
-    default: 'Hypermarket Kenya | Online Grocery Store - Fresh Food Delivery Nairobi',
-    template: '%s | Hypermarket Kenya'
-  },
-  description: 'Buy fresh groceries, vegetables, fruits, dairy products online in Kenya. Free delivery in Nairobi for orders above Ksh 2,000. Same-day grocery delivery available.',
+  title: 'Hypermarket Kenya | Shop Online & Save More Now — Online Exclusive Deals Up To 30% Off*',
+  description: 'Shop Now & Save More On All Your Favourite Products. Get your first three orders within 60-90 mins for express delivery on the Hypermarket App. Cash On Delivery Available. Free delivery in Nairobi for orders above Ksh 2,000.',
   keywords: [
     'Hypermarket Kenya',
     'online grocery shopping Kenya',
@@ -52,7 +49,14 @@ export const metadata: Metadata = {
     'free delivery groceries',
     'online shopping Kenya',
     'grocery app Kenya',
-    'food shopping online'
+    'food shopping online',
+    'shop online Kenya',
+    'save more Kenya',
+    'online deals Kenya',
+    '30% off groceries',
+    'express delivery Nairobi',
+    'cash on delivery Nairobi',
+    'online exclusive deals'
   ],
   authors: [{ name: 'Hypermarket Kenya' }],
   creator: 'Hypermarket Kenya',
@@ -72,30 +76,30 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_KE',
     url: SITE_URL,
-    title: 'Hypermarket Kenya - Online Grocery Delivery Service',
-    description: 'Fresh groceries delivered to your doorstep in Nairobi. Order vegetables, fruits, dairy & household items online.',
+    title: 'Hypermarket Kenya | Shop Online & Save More Now — Online Exclusive Deals Up To 30% Off*',
+    description: 'Shop Now & Save More On All Your Favourite Products. Get your first three orders within 60-90 mins for express delivery on the Hypermarket App. Cash On Delivery Available.',
     siteName: SITE_NAME,
     images: [
       {
         url: `${SITE_URL}/images/og-image.jpg`,
         width: 1200,
         height: 630,
-        alt: 'Hypermarket Kenya Online Grocery Store',
+        alt: 'Hypermarket Kenya - Shop Online & Save More Now',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Hypermarket Kenya | Online Grocery Store',
-    description: 'Fresh food delivery in Nairobi. Order groceries online for same-day delivery.',
+    title: 'Hypermarket Kenya | Shop Online & Save More Now',
+    description: 'Online Exclusive Deals Up To 30% Off* Shop Now & Save More On All Your Favourite Products. Express delivery in 60-90 mins.',
     images: [`${SITE_URL}/images/twitter-card.jpg`],
     creator: '@hypermarket_ke',
     site: '@hypermarket_ke',
   },
   icons: {
-    icon: '/favicon.ico',  // CHANGED from '/favicon.ico'
-    shortcut: '/favicon.ico',  // CHANGED from '/favicon-16x16.png'
-    apple: '/favicon.ico',  // CHANGED from '/apple-touch-icon.png'
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
   },
   category: 'E-commerce & Grocery',
   applicationName: SITE_NAME,
@@ -117,6 +121,9 @@ export default function RootLayout({
       <head>
         {/* GOOGLE SITE VERIFICATION - CRITICAL */}
         <meta name="google-site-verification" content="5696457e6978be87" />
+        
+        {/* Additional meta tags for better visibility */}
+        <meta name="description" content="Shop Online & Save More Now — Online Exclusive Deals Up To 30% Off* Shop Now & Save more On All your Favourite Products. Get your first three orders within 60-90 mins for express delivery on the Hypermarket App. Cash On Delivery. Free delivery in Nairobi for orders above Ksh 2,000." />
         
         {/* hreflang tags */}
         <link rel="alternate" href={SITE_URL} hrefLang="en-ke" />
@@ -141,7 +148,7 @@ export default function RootLayout({
                 "@id": `${SITE_URL}/#store`,
                 "name": "Hypermarket Kenya",
                 "image": `${SITE_URL}/logo.jpeg`,
-                "description": "Online grocery store offering fresh produce delivery in Nairobi, Kenya",
+                "description": "Shop Online & Save More Now — Online Exclusive Deals Up To 30% Off* Shop Now & Save more On All your Favourite Products. Get your first three orders within 60-90 mins for express delivery",
                 "url": SITE_URL,
                 "telephone": BUSINESS_PHONE,
                 "email": BUSINESS_EMAIL,
@@ -182,6 +189,12 @@ export default function RootLayout({
                     "longitude": 36.8219
                   },
                   "geoRadius": "25000"
+                },
+                "offers": {
+                  "@type": "Offer",
+                  "name": "Online Exclusive Deals Up To 30% Off",
+                  "description": "Save more on all your favourite products with online exclusive deals",
+                  "availability": "https://schema.org/InStock"
                 }
               },
               {
@@ -190,7 +203,7 @@ export default function RootLayout({
                 "@id": `${SITE_URL}/#website`,
                 "url": SITE_URL,
                 "name": "Hypermarket Kenya",
-                "description": "Online grocery delivery service in Kenya",
+                "description": "Shop Online & Save More Now — Online Exclusive Deals Up To 30% Off*",
                 "publisher": {
                   "@id": `${SITE_URL}/#store`
                 }
@@ -218,14 +231,14 @@ export default function RootLayout({
                 {
                   "@type": "ListItem",
                   "position": 2,
-                  "name": "Groceries",
-                  "item": `${SITE_URL}/groceries`
+                  "name": "Online Deals",
+                  "item": `${SITE_URL}/deals`
                 },
                 {
                   "@type": "ListItem",
                   "position": 3,
-                  "name": "Fresh Produce",
-                  "item": `${SITE_URL}/fresh-produce`
+                  "name": "Up To 30% Off",
+                  "item": `${SITE_URL}/deals/30-off`
                 }
               ]
             })
@@ -243,6 +256,12 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Hypermarket" />
         <meta name="format-detection" content="telephone=yes" />
+        
+        {/* Additional promotional meta */}
+        <meta name="promotion" content="Online Exclusive Deals Up To 30% Off" />
+        <meta name="offer" content="Save more on all your favourite products" />
+        <meta name="delivery" content="Express delivery within 60-90 minutes" />
+        <meta name="payment" content="Cash On Delivery Available" />
         
       </head>
       <body className={inter.className}>
