@@ -961,21 +961,74 @@ const Header: React.FC = () => {
           {/* ========== ENHANCED HORIZONTAL CATEGORIES ROW ========== */}
           <div className="categories-row-container">
            <div className="categories-row-inner md:translate-x-[-16px] lg:translate-x-[-24px]">
-              {/* All Categories Button */}
-              <Link 
-                href="/categories" 
+          
+            {/* All Categories Button with Dropdown */}
+            <div 
+              className="relative"
+              ref={categoriesMenuRef}
+              onMouseEnter={() => setShowAllCategories(true)}
+              onMouseLeave={() => setShowAllCategories(false)}
+            >
+              <button
+                onClick={() => setShowAllCategories(!showAllCategories)}
                 className="all-categories-button"
-                onMouseEnter={() => {
-                  const allCategoriesCat = allCategories.find(cat => cat.name.toLowerCase().includes('all'));
-                  if (allCategoriesCat) {
-                    handleCategoryHover(allCategoriesCat);
-                  }
-                }}
-                onMouseLeave={handleCategoryLeave}
               >
                 <Menu size={18} />
                 <span>All Categories</span>
-              </Link>
+                <ChevronDown size={16} className={`transition-transform duration-200 ${showAllCategories ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* All Categories Dropdown - Wider to the right */}
+              {showAllCategories && (
+                <div 
+                  className="absolute left-0 top-full mt-1 w-96 bg-white rounded-xl shadow-2xl z-50 animate-fadeIn border border-gray-200 overflow-hidden"
+                  onMouseEnter={() => setShowAllCategories(true)}
+                  onMouseLeave={() => setShowAllCategories(false)}
+                >
+                  {/* Dropdown Header */}
+                  <div className="p-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+                    <div className="flex items-center gap-2">
+                      <Menu size={20} />
+                      <span className="font-bold text-lg">All Categories</span>
+                    </div>
+                    <p className="text-sm opacity-90 mt-1">Browse all product categories</p>
+                  </div>
+                  
+                  {/* Categories List - Increased width */}
+                  <div className="max-h-96 overflow-y-auto p-1">
+                    <div className="grid grid-cols-2 gap-1 p-2">
+                      {allCategories
+                        .filter(cat => cat.is_active && cat.parent_id === null)
+                        .sort((a, b) => (a.order || 0) - (b.order || 0))
+                        .map((category) => (
+                          <Link
+                            key={category.id}
+                            href={`/categories/${category.slug}`}
+                            className="flex items-center px-4 py-3 hover:bg-green-50 rounded-lg transition-all duration-200 group border border-transparent hover:border-green-200"
+                            onClick={() => setShowAllCategories(false)}
+                          >
+                            <span className="text-sm font-medium text-gray-800 group-hover:text-green-700 group-hover:font-semibold flex-1">
+                              {category.name}
+                            </span>
+                            <ArrowRight size={14} className="text-gray-400 group-hover:text-green-600 opacity-0 group-hover:opacity-100 transition-all duration-200 ml-2" />
+                          </Link>
+                        ))}
+                    </div>
+                  </div>
+                  
+                  {/* Footer */}
+                  <Link
+                    href="/categories"
+                    className="flex items-center justify-center gap-2 py-3 bg-gray-50 text-green-700 font-semibold text-sm hover:bg-green-50 transition-colors border-t border-gray-100"
+                    onClick={() => setShowAllCategories(false)}
+                  >
+                    <span>View All Categories</span>
+                    <ArrowRight size={16} />
+                  </Link>
+                </div>
+              )}
+            </div>
+
 
               {/* Horizontal Categories Scroll */}
               <div 
