@@ -579,68 +579,59 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* PERSONALIZED RECOMMENDATIONS SECTION - FIXED */}
-      <section className="compact-section bg-white px-4 sm:px-6 md:px-8">
-        <div className="max-w-7xl mx-auto">
-          {isAuthenticated ? (
-            <PersonalizedRecommendations 
-              title={
-                <div className="flex items-center space-x-2">
-                  <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
-                    <Sparkles size={20} className="text-white" />
-                  </div>
-                  <span className="text-xl md:text-2xl font-bold text-gray-900">
-                    Recommended For You
-                  </span>
-                </div>
-              }
-              limit={12}
-              showHeader={true}
-              showStrategy={true}
-            />
-          ) : (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6">
-              <div className="flex flex-col md:flex-row items-center justify-between">
-                <div className="mb-4 md:mb-0 md:mr-8">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <div className="p-2 bg-white rounded-lg shadow-sm">
-                      <Sparkles size={20} className="text-blue-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900">
-                      Personalize Your Experience
-                    </h3>
-                  </div>
-                  <p className="text-gray-700 mb-4">
-                    Sign in to unlock personalized recommendations based on your preferences and shopping history.
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    <Link
-                      href="/auth/login"
-                      className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all duration-300 inline-flex items-center justify-center shadow-sm hover:shadow"
-                    >
-                      Sign In
-                      <ArrowRight size={16} className="ml-2" />
-                    </Link>
-                    <Link
-                      href="/auth/register"
-                      className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 px-5 py-2.5 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
-                    >
-                      Create Account
-                    </Link>
-                  </div>
-                </div>
-                <div className="hidden md:block">
-                  <div className="w-48 h-48 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-blue-600 mb-2">✨</div>
-                      <div className="text-sm text-blue-800 font-medium">Tailored Just For You</div>
-                    </div>
-                  </div>
-                </div>
+<section className="compact-section bg-white px-4 sm:px-6 md:px-8">
+  <div className="max-w-7xl mx-auto">
+    {isAuthenticated ? (
+      <PersonalizedRecommendations 
+        title="Recommended For You"
+        limit={12}
+        showHeader={true}
+        showStrategy={true}
+      />
+    ) : (
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6">
+        <div className="flex flex-col md:flex-row items-center justify-between">
+          <div className="mb-4 md:mb-0 md:mr-8">
+            <div className="flex items-center space-x-2 mb-3">
+              <div className="p-2 bg-white rounded-lg shadow-sm">
+                <Sparkles size={20} className="text-blue-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">
+                Personalize Your Experience
+              </h3>
+            </div>
+            <p className="text-gray-700 mb-4">
+              Sign in to unlock personalized recommendations based on your preferences and shopping history.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/auth/login"
+                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all duration-300 inline-flex items-center justify-center shadow-sm hover:shadow"
+              >
+                Sign In
+                <ArrowRight size={16} className="ml-2" />
+              </Link>
+              <Link
+                href="/auth/register"
+                className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 px-5 py-2.5 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
+              >
+                Create Account
+              </Link>
+            </div>
+          </div>
+          <div className="hidden md:block">
+            <div className="w-48 h-48 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-4xl font-bold text-blue-600 mb-2">✨</div>
+                <div className="text-sm text-blue-800 font-medium">Tailored Just For You</div>
               </div>
             </div>
-          )}
+          </div>
         </div>
-      </section>
+      </div>
+    )}
+  </div>
+</section>
 
       {/* New Arrivals Section - 12 PRODUCTS */}
       <section 
