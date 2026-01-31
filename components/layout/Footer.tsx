@@ -75,7 +75,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <Mail size={14} style={{ color: colors.gold }} />
-                <span className="text-xs" style={{ color: colors.textLight }}>support@landohypermarket.co.ke</span>
+                <span className="text-xs" style={{ color: colors.textLight }}>landoranchh@gmail.com</span>
               </div>
             </div>
             
