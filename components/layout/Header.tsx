@@ -9,7 +9,7 @@ import {
   ShoppingCart, User, Search, Menu, X, Heart, 
   ChevronDown, ArrowRight, ChevronRight,
   Package, ShoppingBag, MapPin, Phone, ShieldCheck,
-  Zap, Sparkles, Flame, Star
+  Zap, Sparkles, Flame, Star, Clock, MapPin as MapPinIcon, Truck
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { debounce } from 'lodash';
@@ -30,6 +30,8 @@ const Header: React.FC = () => {
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [isHoveringCategory, setIsHoveringCategory] = useState(false);
+  const [deliveryTime, setDeliveryTime] = useState('6:00 PM');
+  const [deliveryLocation, setDeliveryLocation] = useState('Westlands - Nairobi');
   
   // Refs
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -72,12 +74,12 @@ const Header: React.FC = () => {
     }
   }, []);
 
-  // Get top categories for horizontal display (limit to 6)
+  // Get top categories for horizontal display
   const topCategories = useMemo(() => {
     return allCategories
       .filter(cat => (cat.active_products_count || 0) > 0 && cat.parent_id === null)
       .sort((a, b) => (b.active_products_count || 0) - (a.active_products_count || 0))
-      .slice(0, 10); // Limit to 10 categories
+      .slice(0, 11);
   }, [allCategories]);
 
   // Handle category hover with delay
@@ -350,6 +352,53 @@ const Header: React.FC = () => {
           backdrop-filter: blur(20px);
         }
         
+        /* 90EE90 specific styles */
+        .primary-green {
+          background-color: #90EE90;
+        }
+        
+        .primary-green-gradient {
+          background: linear-gradient(135deg, #90EE90 0%, #7CD47C 100%);
+        }
+        
+        .primary-green-dark {
+          background-color: #76D176;
+        }
+        
+        .primary-green-text {
+          color: #2E8B57;
+        }
+        
+        .primary-green-border {
+          border-color: #90EE90;
+        }
+        
+        .primary-green-hover:hover {
+          background-color: #7CD47C;
+        }
+        
+        .delivery-info {
+          background: linear-gradient(135deg, #90EE90 0%, #7CD47C 100%);
+          color: #2E8B57;
+        }
+        
+        .free-delivery-badge {
+          background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
+          color: white;
+        }
+        
+        .category-tag {
+          background: #F8F9FA;
+          border: 1px solid #E9ECEF;
+          transition: all 0.2s ease;
+        }
+        
+        .category-tag:hover {
+          background: #90EE90;
+          border-color: #76D176;
+          transform: translateY(-1px);
+        }
+        
         /* Navigation Links Row */
         .nav-links-row {
           display: flex;
@@ -370,11 +419,11 @@ const Header: React.FC = () => {
         }
         
         .nav-link:hover {
-          color: #059669;
+          color: #2E8B57;
         }
         
         .nav-link.active {
-          color: #059669;
+          color: #2E8B57;
           font-weight: 700;
         }
         
@@ -385,7 +434,7 @@ const Header: React.FC = () => {
           left: 0;
           right: 0;
           height: 2px;
-          background: linear-gradient(90deg, #10b981, #34d399);
+          background: linear-gradient(90deg, #90EE90, #76D176);
           border-radius: 1px;
         }
         
@@ -413,8 +462,8 @@ const Header: React.FC = () => {
           align-items: center;
           gap: 0.5rem;
           padding: 0.75rem 1rem;
-          background: linear-gradient(135deg, #10b981, #34d399);
-          color: white;
+          background: linear-gradient(135deg, #90EE90, #76D176);
+          color: #2E8B57;
           border-radius: 8px;
           text-decoration: none;
           font-size: 14px;
@@ -424,9 +473,9 @@ const Header: React.FC = () => {
         }
         
         .all-categories-button:hover {
-          background: linear-gradient(135deg, #0da271, #2ea87a);
+          background: linear-gradient(135deg, #7CD47C, #68C168);
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+          box-shadow: 0 4px 12px rgba(144, 238, 144, 0.3);
         }
         
         .categories-row-scroll {
@@ -458,11 +507,11 @@ const Header: React.FC = () => {
         }
         
         .category-link:hover {
-          color: #059669;
+          color: #2E8B57;
         }
         
         .category-link.active {
-          color: #059669;
+          color: #2E8B57;
           font-weight: 700;
         }
         
@@ -473,7 +522,7 @@ const Header: React.FC = () => {
           left: 0;
           right: 0;
           height: 2px;
-          background: linear-gradient(90deg, #10b981, #34d399);
+          background: linear-gradient(90deg, #90EE90, #76D176);
           border-radius: 1px;
         }
         
@@ -516,7 +565,7 @@ const Header: React.FC = () => {
         .category-product-card:hover {
           transform: translateY(-4px);
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-          border-color: #10b981;
+          border-color: #90EE90;
         }
         
         .product-image-container {
@@ -554,7 +603,7 @@ const Header: React.FC = () => {
         .product-price {
           font-size: 16px;
           font-weight: 700;
-          color: #059669;
+          color: #2E8B57;
         }
         
         /* Mobile specific */
@@ -626,7 +675,7 @@ const Header: React.FC = () => {
         /* Mobile menu categories */
         .mobile-categories-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(2, 1fr);
           gap: 0.75rem;
           margin-top: 1rem;
         }
@@ -638,25 +687,19 @@ const Header: React.FC = () => {
           text-align: center;
           text-decoration: none;
           color: #374151;
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 500;
           transition: all 0.2s ease;
+          border: 1px solid #e5e7eb;
         }
         
         .mobile-category-item:hover {
-          background: #10b981;
-          color: white;
+          background: #90EE90;
+          color: #2E8B57;
           transform: translateY(-2px);
+          border-color: #76D176;
         }
       `}</style>
-
-      {/* Delivery Mode Selector */}
-      <div className="w-full bg-[#f9fafb] hidden md:block">
-        <div className="max-w-7xl mx-auto px-4 lg:px-0 py-2 flex items-center mr-4">
-          <DeliveryModeToggle />
-        </div>
-      </div>
-
       {/* Main Header */}
       <header className={`sticky top-0 z-50 bg-white transition-all duration-300 ${scrolled ? 'header-shadow' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 lg:px-0">
@@ -676,8 +719,8 @@ const Header: React.FC = () => {
                 <Link href="/" className="flex items-center space-x-2 group">
                   <div className="relative w-12 h-12 rounded-2xl overflow-hidden shadow-lg group-hover:shadow-xl transition-all duration-500 border-4 border-white">
                     <Image 
-                      src="/logo.jpeg" 
-                      alt="Lando Ranch Logo" 
+                      src="/logoone.jpeg" 
+                      alt="Carrefour Logo" 
                       fill
                       className="object-cover"
                       sizes="48px"
@@ -685,7 +728,7 @@ const Header: React.FC = () => {
                     />
                   </div>
                   <div className="hidden sm:block">
-                    <div className="text-2xl font-black text-gray-900 tracking-tight bg-gradient-to-r from-green-400 to-yellow-500 bg-clip-text text-transparent">
+                    <div className="text-2xl font-black text-[#2E8B57] tracking-tight">
                       Lando
                     </div>
                     <div className="text-xs font-bold text-gray-600 -mt-1 tracking-wider">Hypermarket</div>
@@ -725,10 +768,10 @@ const Header: React.FC = () => {
             {/* Desktop Search Bar - Centered */}
             <div className="hidden lg:flex flex-1 max-w-2xl mx-6">
               <form onSubmit={handleSearch} className="relative w-full">
-                <div className="rounded-2xl overflow-hidden transition-all duration-500 border-2 border-gray-200 focus-within:border-green-500 focus-within:shadow-lg">
+                <div className="rounded-2xl overflow-hidden transition-all duration-500 border-2 border-gray-200 focus-within:border-[#90EE90] focus-within:shadow-lg">
                   <div className="relative flex items-center">
                     <div className="absolute left-4 flex items-center justify-center pointer-events-none">
-                      <Search size={20} className="text-green-500" />
+                      <Search size={20} className="text-[#76D176]" />
                     </div>
                     <input
                       type="search"
@@ -740,11 +783,11 @@ const Header: React.FC = () => {
                     />
                     <button
                       type="submit"
-                      className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 transition-all duration-300 font-bold text-sm flex items-center space-x-2 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-6 py-3 bg-gradient-to-r from-[#90EE90] to-[#76D176] text-[#2E8B57] hover:from-[#7CD47C] hover:to-[#68C168] transition-all duration-300 font-bold text-sm flex items-center space-x-2 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={!searchQuery.trim()}
                     >
-                      <Search size={18} />
-                      <span>SEARCH</span>
+                      <Search size={18} className="text-[#2E8B57]" />
+                      <span className="text-[#2E8B57]">SEARCH</span>
                     </button>
                   </div>
                 </div>
@@ -768,8 +811,8 @@ const Header: React.FC = () => {
                 className="hidden lg:flex relative p-2 hover:scale-110 transition-all duration-300 group"
                 aria-label="Wishlist"
               >
-                <div className="relative p-2 rounded-xl bg-white border border-gray-200 group-hover:border-yellow-300 transition-colors">
-                  <Heart size={20} className="text-yellow-500 group-hover:text-yellow-600 transition-colors" />
+                <div className="relative p-2 rounded-xl bg-white border border-gray-200 group-hover:border-red-300 transition-colors">
+                  <Heart size={20} className="text-red-500 group-hover:text-red-600 transition-colors" />
                 </div>
               </Link>
 
@@ -791,20 +834,20 @@ const Header: React.FC = () => {
                           className="object-cover w-full h-full"
                         />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-green-400 via-yellow-400 to-orange-400 flex items-center justify-center">
+                        <div className="w-full h-full bg-gradient-to-br from-[#90EE90] via-[#7CD47C] to-[#76D176] flex items-center justify-center">
                           <User size={20} className="text-white" />
                         </div>
                       )}
                     </div>
                     {isAuthenticated && (
-                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white shadow"></div>
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-[#76D176] rounded-full border-2 border-white shadow"></div>
                     )}
                   </div>
                   <div className="text-left">
                     <div className="text-xs text-gray-600">Welcome back!</div>
                     <div className="text-sm font-bold text-gray-900 flex items-center">
                       {isAuthenticated ? userFirstName : 'Sign In'}
-                      <ChevronDown size={14} className="ml-1.5 text-gray-500 group-hover:text-green-500" />
+                      <ChevronDown size={14} className="ml-1.5 text-gray-500 group-hover:text-[#76D176]" />
                     </div>
                   </div>
                 </button>
@@ -823,21 +866,21 @@ const Header: React.FC = () => {
                           <div className="grid grid-cols-2 gap-3 p-2">
                             <Link 
                               href="/orders" 
-                              className="flex flex-col items-center p-3 hover:bg-green-50 rounded-xl transition-colors group border border-gray-100 hover:border-green-200"
+                              className="flex flex-col items-center p-3 hover:bg-[#F0FFF0] rounded-xl transition-colors group border border-gray-100 hover:border-[#90EE90]"
                               onClick={() => setUserMenuOpen(false)}
                             >
-                              <div className="p-2 rounded-lg bg-green-50 mb-2">
-                                <ShoppingBag size={18} className="text-green-600" />
+                              <div className="p-2 rounded-lg bg-[#F0FFF0] mb-2">
+                                <ShoppingBag size={18} className="text-[#2E8B57]" />
                               </div>
-                              <div className="font-semibold text-sm">Orders</div>
+                              <div className="font-semibold text-sm text-[#2E8B57]">Orders</div>
                             </Link>
                             <Link 
                               href="/profile/wishlist" 
-                              className="flex flex-col items-center p-3 hover:bg-yellow-50 rounded-xl transition-colors group border border-gray-100 hover:border-yellow-200"
+                              className="flex flex-col items-center p-3 hover:bg-red-50 rounded-xl transition-colors group border border-gray-100 hover:border-red-200"
                               onClick={() => setUserMenuOpen(false)}
                             >
-                              <div className="p-2 rounded-lg bg-yellow-50 mb-2">
-                                <Heart size={18} className="text-yellow-600" />
+                              <div className="p-2 rounded-lg bg-red-50 mb-2">
+                                <Heart size={18} className="text-red-600" />
                               </div>
                               <div className="font-semibold text-sm">Wishlist</div>
                             </Link>
@@ -849,7 +892,7 @@ const Header: React.FC = () => {
                               className="flex items-center px-3 py-2.5 hover:bg-gray-50 rounded-xl text-sm transition-colors group"
                               onClick={() => setUserMenuOpen(false)}
                             >
-                              <User size={16} className="mr-3 text-gray-500 group-hover:text-green-600" />
+                              <User size={16} className="mr-3 text-gray-500 group-hover:text-[#76D176]" />
                               <span className="font-semibold">My Profile</span>
                             </Link>
                             <Link 
@@ -857,7 +900,7 @@ const Header: React.FC = () => {
                               className="flex items-center px-3 py-2.5 hover:bg-gray-50 rounded-xl text-sm transition-colors group"
                               onClick={() => setUserMenuOpen(false)}
                             >
-                              <MapPin size={16} className="mr-3 text-gray-500 group-hover:text-green-600" />
+                              <MapPin size={16} className="mr-3 text-gray-500 group-hover:text-[#76D176]" />
                               <span className="font-semibold">Addresses</span>
                             </Link>
                           </div>
@@ -866,7 +909,7 @@ const Header: React.FC = () => {
                           
                           <button 
                             onClick={handleLogout}
-                            className="w-full flex items-center justify-center px-3 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600 rounded-xl text-sm font-bold transition-all duration-300 shadow hover:shadow-lg mt-1"
+                            className="w-full flex items-center justify-center px-3 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 rounded-xl text-sm font-bold transition-all duration-300 shadow hover:shadow-lg mt-1"
                           >
                             Sign Out
                           </button>
@@ -876,7 +919,7 @@ const Header: React.FC = () => {
                           <div className="p-3 space-y-4">
                             <Link 
                               href="/auth/login" 
-                              className="block px-3 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl text-sm font-bold text-center hover:from-green-600 hover:to-emerald-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+                              className="block px-3 py-3 bg-gradient-to-r from-[#90EE90] to-[#76D176] text-[#2E8B57] rounded-xl text-sm font-bold text-center hover:from-[#7CD47C] hover:to-[#68C168] transition-all duration-300 shadow-lg hover:shadow-xl"
                               onClick={() => setUserMenuOpen(false)}
                             >
                               Sign In to Your Account
@@ -885,7 +928,7 @@ const Header: React.FC = () => {
                               New customer?{' '}
                               <Link 
                                 href="/auth/register" 
-                                className="text-green-600 font-bold hover:underline"
+                                className="text-[#2E8B57] font-bold hover:underline"
                                 onClick={() => setUserMenuOpen(false)}
                               >
                                 Create Account
@@ -916,7 +959,7 @@ const Header: React.FC = () => {
               >
                 <div className="flex items-center space-x-2 p-1 hover:scale-105 transition-all duration-300">
                   <div className="relative">
-                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 group-hover:from-orange-600 group-hover:to-amber-600 transition-all duration-300 shadow-lg group-hover:shadow-xl">
+                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#90EE90] to-[#76D176] group-hover:from-[#7CD47C] group-hover:to-[#68C168] transition-all duration-300 shadow-lg group-hover:shadow-xl">
                       <ShoppingCart size={22} className="text-white" />
                     </div>
                     {cartCount > 0 && (
@@ -933,10 +976,10 @@ const Header: React.FC = () => {
           {/* Mobile Search Bar (Hidden on Desktop) */}
           <div className="lg:hidden mt-2">
             <form onSubmit={handleSearch} className="relative">
-              <div className="rounded-2xl overflow-hidden transition-all duration-500 border-2 border-gray-200 focus-within:border-green-500">
+              <div className="rounded-2xl overflow-hidden transition-all duration-500 border-2 border-gray-200 focus-within:border-[#90EE90]">
                 <div className="relative flex items-center">
                   <div className="absolute left-4 flex items-center justify-center pointer-events-none">
-                    <Search size={20} className="text-green-500" />
+                    <Search size={20} className="text-[#76D176]" />
                   </div>
                   <input
                     type="search"
@@ -948,87 +991,85 @@ const Header: React.FC = () => {
                   />
                   <button
                     type="submit"
-                    className="px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 transition-all duration-300 font-bold text-sm flex items-center space-x-2"
+                    className="px-4 py-3 bg-gradient-to-r from-[#90EE90] to-[#76D176] text-[#2E8B57] hover:from-[#7CD47C] hover:to-[#68C168] transition-all duration-300 font-bold text-sm flex items-center space-x-2"
                     disabled={!searchQuery.trim()}
                   >
-                    <Search size={18} />
+                    <Search size={18} className="text-[#2E8B57]" />
                   </button>
                 </div>
               </div>
             </form>
           </div>
 
-          {/* ========== ENHANCED HORIZONTAL CATEGORIES ROW ========== */}
+          {/* ========== HORIZONTAL CATEGORIES ROW ========== */}
           <div className="categories-row-container">
-           <div className="categories-row-inner md:translate-x-[-16px] lg:translate-x-[-24px]">
-          
-            {/* All Categories Button with Dropdown */}
-            <div 
-              className="relative"
-              ref={categoriesMenuRef}
-              onMouseEnter={() => setShowAllCategories(true)}
-              onMouseLeave={() => setShowAllCategories(false)}
-            >
-              <button
-                onClick={() => setShowAllCategories(!showAllCategories)}
-                className="all-categories-button"
+            <div className="categories-row-inner md:translate-x-[-16px] lg:translate-x-[-24px]">
+              {/* All Categories Button with Dropdown */}
+              <div 
+                className="relative"
+                ref={categoriesMenuRef}
+                onMouseEnter={() => setShowAllCategories(true)}
+                onMouseLeave={() => setShowAllCategories(false)}
               >
-                <Menu size={18} />
-                <span>All Categories</span>
-                <ChevronDown size={16} className={`transition-transform duration-200 ${showAllCategories ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* All Categories Dropdown - Wider to the right */}
-              {showAllCategories && (
-                <div 
-                  className="absolute left-0 top-full mt-1 w-96 bg-white rounded-xl shadow-2xl z-50 animate-fadeIn border border-gray-200 overflow-hidden"
-                  onMouseEnter={() => setShowAllCategories(true)}
-                  onMouseLeave={() => setShowAllCategories(false)}
+                <button
+                  onClick={() => setShowAllCategories(!showAllCategories)}
+                  className="all-categories-button"
                 >
-                  {/* Dropdown Header */}
-                  <div className="p-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white">
-                    <div className="flex items-center gap-2">
-                      <Menu size={20} />
-                      <span className="font-bold text-lg">All Categories</span>
-                    </div>
-                    <p className="text-sm opacity-90 mt-1">Browse all product categories</p>
-                  </div>
-                  
-                  {/* Categories List - Increased width */}
-                  <div className="max-h-96 overflow-y-auto p-1">
-                    <div className="grid grid-cols-2 gap-1 p-2">
-                      {allCategories
-                        .filter(cat => cat.is_active && cat.parent_id === null)
-                        .sort((a, b) => (a.order || 0) - (b.order || 0))
-                        .map((category) => (
-                          <Link
-                            key={category.id}
-                            href={`/categories/${category.slug}`}
-                            className="flex items-center px-4 py-3 hover:bg-green-50 rounded-lg transition-all duration-200 group border border-transparent hover:border-green-200"
-                            onClick={() => setShowAllCategories(false)}
-                          >
-                            <span className="text-sm font-medium text-gray-800 group-hover:text-green-700 group-hover:font-semibold flex-1">
-                              {category.name}
-                            </span>
-                            <ArrowRight size={14} className="text-gray-400 group-hover:text-green-600 opacity-0 group-hover:opacity-100 transition-all duration-200 ml-2" />
-                          </Link>
-                        ))}
-                    </div>
-                  </div>
-                  
-                  {/* Footer */}
-                  <Link
-                    href="/categories"
-                    className="flex items-center justify-center gap-2 py-3 bg-gray-50 text-green-700 font-semibold text-sm hover:bg-green-50 transition-colors border-t border-gray-100"
-                    onClick={() => setShowAllCategories(false)}
-                  >
-                    <span>View All Categories</span>
-                    <ArrowRight size={16} />
-                  </Link>
-                </div>
-              )}
-            </div>
+                  <Menu size={18} />
+                  <span>All Categories</span>
+                  <ChevronDown size={16} className={`transition-transform duration-200 ${showAllCategories ? 'rotate-180' : ''}`} />
+                </button>
 
+                {/* All Categories Dropdown */}
+                {showAllCategories && (
+                  <div 
+                    className="absolute left-0 top-full mt-1 w-96 bg-white rounded-xl shadow-2xl z-50 animate-fadeIn border border-gray-200 overflow-hidden"
+                    onMouseEnter={() => setShowAllCategories(true)}
+                    onMouseLeave={() => setShowAllCategories(false)}
+                  >
+                    {/* Dropdown Header */}
+                    <div className="p-4 bg-gradient-to-r from-[#90EE90] to-[#76D176] text-[#2E8B57]">
+                      <div className="flex items-center gap-2">
+                        <Menu size={20} />
+                        <span className="font-bold text-lg">All Categories</span>
+                      </div>
+                      <p className="text-sm opacity-90 mt-1">Browse all product categories</p>
+                    </div>
+                    
+                    {/* Categories List */}
+                    <div className="max-h-96 overflow-y-auto p-1">
+                      <div className="grid grid-cols-2 gap-1 p-2">
+                        {allCategories
+                          .filter(cat => cat.is_active && cat.parent_id === null)
+                          .sort((a, b) => (a.order || 0) - (b.order || 0))
+                          .map((category) => (
+                            <Link
+                              key={category.id}
+                              href={`/categories/${category.slug}`}
+                              className="flex items-center px-4 py-3 hover:bg-[#F0FFF0] rounded-lg transition-all duration-200 group border border-transparent hover:border-[#90EE90]"
+                              onClick={() => setShowAllCategories(false)}
+                            >
+                              <span className="text-sm font-medium text-gray-800 group-hover:text-[#2E8B57] group-hover:font-semibold flex-1">
+                                {category.name}
+                              </span>
+                              <ArrowRight size={14} className="text-gray-400 group-hover:text-[#2E8B57] opacity-0 group-hover:opacity-100 transition-all duration-200 ml-2" />
+                            </Link>
+                          ))}
+                      </div>
+                    </div>
+                    
+                    {/* Footer */}
+                    <Link
+                      href="/categories"
+                      className="flex items-center justify-center gap-2 py-3 bg-gray-50 text-[#2E8B57] font-semibold text-sm hover:bg-[#F0FFF0] transition-colors border-t border-gray-100"
+                      onClick={() => setShowAllCategories(false)}
+                    >
+                      <span>View All Categories</span>
+                      <ArrowRight size={16} />
+                    </Link>
+                  </div>
+                )}
+              </div>
 
               {/* Horizontal Categories Scroll */}
               <div 
@@ -1037,7 +1078,7 @@ const Header: React.FC = () => {
               >
                 {isLoadingCategories ? (
                   // Loading skeleton
-                  Array.from({ length: 15 }).map((_, index) => (
+                  Array.from({ length: 8 }).map((_, index) => (
                     <div key={index} className="category-link">
                       <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
                     </div>
@@ -1082,7 +1123,7 @@ const Header: React.FC = () => {
                     </div>
                     <Link
                       href={`/categories/${activeCategory}`}
-                      className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 font-bold text-sm rounded-xl transition-all duration-300 shadow hover:shadow-lg flex items-center space-x-2"
+                      className="px-5 py-2.5 bg-gradient-to-r from-[#90EE90] to-[#76D176] text-[#2E8B57] hover:from-[#7CD47C] hover:to-[#68C168] font-bold text-sm rounded-xl transition-all duration-300 shadow hover:shadow-lg flex items-center space-x-2"
                       onClick={() => {
                         setActiveCategory(null);
                         setCategoryProducts([]);
@@ -1160,8 +1201,8 @@ const Header: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <div className="font-black text-gray-900 text-md">Lando</div>
-                        <div className="text-xs text-green-600 font-bold">Hypermarket</div>
+                        <div className="font-black text-[#2E8B57] text-md">Lando</div>
+                        <div className="text-xs text-[#76D176] font-bold">Hypermarket</div>
                       </div>
                     </Link>
                     <button 
@@ -1172,9 +1213,26 @@ const Header: React.FC = () => {
                     </button>
                   </div>
                   
+                  {/* Delivery Info in Mobile */}
+                  <div className="mb-4 p-3 bg-gradient-to-r from-[#90EE90] to-[#76D176] rounded-xl text-[#2E8B57]">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <Clock size={14} />
+                        <span className="text-sm font-medium">Today {deliveryTime}</span>
+                      </div>
+                      <div className="free-delivery-badge px-2 py-1 rounded-full text-xs font-bold">
+                        FREE
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <MapPinIcon size={14} />
+                      <span className="text-sm">{deliveryLocation}</span>
+                    </div>
+                  </div>
+                  
                   {/* User Info */}
                   {isAuthenticated ? (
-                    <div className="flex items-center space-x-2 p-3 bg-green-50 rounded-2xl border border-green-200">
+                    <div className="flex items-center space-x-2 p-3 bg-[#F0FFF0] rounded-2xl border border-[#90EE90]">
                       <div className="h-12 w-12 rounded-2xl overflow-hidden border-2 border-white shadow">
                         {user?.profile_picture_url ? (
                           <Image
@@ -1185,13 +1243,13 @@ const Header: React.FC = () => {
                             className="object-cover w-full h-full"
                           />
                         ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-green-400 to-yellow-400 flex items-center justify-center">
+                          <div className="w-full h-full bg-gradient-to-br from-[#90EE90] to-[#76D176] flex items-center justify-center">
                             <User size={22} className="text-white" />
                           </div>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-gray-900 truncate">{user?.name}</div>
+                        <div className="font-bold text-[#2E8B57] truncate">{user?.name}</div>
                         <div className="text-sm text-gray-600 truncate">{user?.email}</div>
                       </div>
                     </div>
@@ -1199,7 +1257,7 @@ const Header: React.FC = () => {
                     <div className="space-y-3">
                       <Link 
                         href="/auth/login" 
-                        className="block py-3 text-center bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-2xl font-bold text-sm shadow-lg"
+                        className="block py-3 text-center bg-gradient-to-r from-[#90EE90] to-[#76D176] text-[#2E8B57] rounded-2xl font-bold text-sm shadow-lg"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Sign In / Register
@@ -1213,64 +1271,64 @@ const Header: React.FC = () => {
                   <div className="space-y-6">
                     {/* Mobile Navigation Links */}
                     <div className="space-y-2">
-                      <h3 className="font-bold text-gray-900 text-sm mb-2 uppercase tracking-wider text-gray-500">Navigation</h3>
+                      <h3 className="font-bold text-[#2E8B57] text-sm mb-2 uppercase tracking-wider text-gray-500">Navigation</h3>
                       <Link
                         href="/"
-                        className="flex items-center justify-between p-3 hover:bg-green-50 rounded-xl transition-colors group border border-gray-100 hover:border-green-200"
+                        className="flex items-center justify-between p-3 hover:bg-[#F0FFF0] rounded-xl transition-colors group border border-gray-100 hover:border-[#90EE90]"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <div className="flex items-center">
-                          <div className="p-2 rounded-lg bg-green-100 mr-3">
-                            <ShoppingBag size={18} className="text-green-600" />
+                          <div className="p-2 rounded-lg bg-[#F0FFF0] mr-3">
+                            <ShoppingBag size={18} className="text-[#2E8B57]" />
                           </div>
-                          <span className="font-bold">Home</span>
+                          <span className="font-bold text-[#2E8B57]">Home</span>
                         </div>
-                        <ChevronRight size={16} className="text-gray-400 group-hover:text-green-500" />
+                        <ChevronRight size={16} className="text-gray-400 group-hover:text-[#2E8B57]" />
                       </Link>
                       <Link
                         href="/products"
-                        className="flex items-center justify-between p-3 hover:bg-green-50 rounded-xl transition-colors group border border-gray-100 hover:border-green-200"
+                        className="flex items-center justify-between p-3 hover:bg-[#F0FFF0] rounded-xl transition-colors group border border-gray-100 hover:border-[#90EE90]"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <div className="flex items-center">
-                          <div className="p-2 rounded-lg bg-green-100 mr-3">
-                            <ShoppingBag size={18} className="text-green-600" />
+                          <div className="p-2 rounded-lg bg-[#F0FFF0] mr-3">
+                            <ShoppingBag size={18} className="text-[#2E8B57]" />
                           </div>
-                          <span className="font-bold">Shop All</span>
+                          <span className="font-bold text-[#2E8B57]">Shop All</span>
                         </div>
-                        <ChevronRight size={16} className="text-gray-400 group-hover:text-green-500" />
+                        <ChevronRight size={16} className="text-gray-400 group-hover:text-[#2E8B57]" />
                       </Link>
                       <Link
                         href="/deals"
-                        className="flex items-center justify-between p-3 hover:bg-orange-50 rounded-xl transition-colors group border border-gray-100 hover:border-orange-200"
+                        className="flex items-center justify-between p-3 hover:bg-red-50 rounded-xl transition-colors group border border-gray-100 hover:border-red-200"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <div className="flex items-center">
-                          <div className="p-2 rounded-lg bg-orange-100 mr-3">
-                            <Flame size={18} className="text-orange-600" />
+                          <div className="p-2 rounded-lg bg-red-100 mr-3">
+                            <Flame size={18} className="text-red-600" />
                           </div>
                           <span className="font-bold">Hot Deals</span>
                         </div>
-                        <ChevronRight size={16} className="text-gray-400 group-hover:text-orange-500" />
+                        <ChevronRight size={16} className="text-gray-400 group-hover:text-red-500" />
                       </Link>
                       <Link
                         href="#new-arrivals"
-                        className="flex items-center justify-between p-3 hover:bg-blue-50 rounded-xl transition-colors group border border-gray-100 hover:border-blue-200"
+                        className="flex items-center justify-between p-3 hover:bg-[#F0FFF0] rounded-xl transition-colors group border border-gray-100 hover:border-[#90EE90]"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <div className="flex items-center">
-                          <div className="p-2 rounded-lg bg-blue-100 mr-3">
-                            <Sparkles size={18} className="text-blue-600" />
+                          <div className="p-2 rounded-lg bg-[#F0FFF0] mr-3">
+                            <Sparkles size={18} className="text-[#2E8B57]" />
                           </div>
-                          <span className="font-bold">New Arrivals</span>
+                          <span className="font-bold text-[#2E8B57]">New Arrivals</span>
                         </div>
-                        <ChevronRight size={16} className="text-gray-400 group-hover:text-blue-500" />
+                        <ChevronRight size={16} className="text-gray-400 group-hover:text-[#2E8B57]" />
                       </Link>
                     </div>
 
                     {/* Mobile Categories Grid */}
                     <div>
-                      <h3 className="font-bold text-gray-900 text-sm mb-3 uppercase tracking-wider text-gray-500">Categories</h3>
+                      <h3 className="font-bold text-[#2E8B57] text-sm mb-3 uppercase tracking-wider text-gray-500">Categories</h3>
                       <div className="mobile-categories-grid">
                         {topCategories.map((category) => (
                           <Link
@@ -1287,7 +1345,7 @@ const Header: React.FC = () => {
                       </div>
                       <Link
                         href="/categories"
-                        className="block w-full mt-3 py-2.5 text-center bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold text-sm shadow-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-300"
+                        className="block w-full mt-3 py-2.5 text-center bg-gradient-to-r from-[#90EE90] to-[#76D176] text-[#2E8B57] rounded-xl font-bold text-sm shadow-lg hover:from-[#7CD47C] hover:to-[#68C168] transition-all duration-300"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         View All Categories
@@ -1298,10 +1356,10 @@ const Header: React.FC = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <Link
                         href="/wishlist"
-                        className="p-3 rounded-2xl bg-yellow-50 border border-yellow-200 text-center group"
+                        className="p-3 rounded-2xl bg-red-50 border border-red-200 text-center group"
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        <div className="p-2 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-500 w-fit mx-auto mb-2">
+                        <div className="p-2 rounded-xl bg-gradient-to-br from-red-500 to-red-600 w-fit mx-auto mb-2">
                           <Heart size={22} className="text-white" />
                         </div>
                         <div className="font-bold text-gray-900">Wishlist</div>
@@ -1309,13 +1367,13 @@ const Header: React.FC = () => {
                       </Link>
                       <Link
                         href="/cart"
-                        className="p-3 rounded-2xl bg-green-50 border border-green-200 text-center group"
+                        className="p-3 rounded-2xl bg-[#F0FFF0] border border-[#90EE90] text-center group"
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        <div className="p-2 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 w-fit mx-auto mb-2">
+                        <div className="p-2 rounded-xl bg-gradient-to-br from-[#90EE90] to-[#76D176] w-fit mx-auto mb-2">
                           <ShoppingCart size={22} className="text-white" />
                         </div>
-                        <div className="font-bold text-gray-900">My Cart</div>
+                        <div className="font-bold text-[#2E8B57]">My Cart</div>
                         <div className="text-xs text-gray-600 mt-1">{cartCount} items</div>
                       </Link>
                     </div>
@@ -1324,13 +1382,13 @@ const Header: React.FC = () => {
 
                 {/* Footer */}
                 <div className="p-5 border-t border-gray-100 bg-white">
-                  <div className="flex items-center justify-center space-x-4 text-sm font-semibold text-gray-700">
+                  <div className="flex items-center justify-center space-x-4 text-sm font-semibold text-[#2E8B57]">
                     <Link href="/terms" onClick={() => setMobileMenuOpen(false)}>Terms</Link>
                     <Link href="/privacy" onClick={() => setMobileMenuOpen(false)}>Privacy</Link>
                     <Link href="/help" onClick={() => setMobileMenuOpen(false)}>Help</Link>
                   </div>
                   <div className="text-center text-xs text-gray-500 mt-3 font-medium">
-                    © {new Date().getFullYear()} Lando Ranch Premium Supermarket
+                    © {new Date().getFullYear()} Carrefour Hypermarket
                   </div>
                 </div>
               </div>
@@ -1362,10 +1420,10 @@ const Header: React.FC = () => {
                       placeholder="What are you looking for?"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-4 py-3 pl-12 bg-white rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 border-2 border-gray-200 focus:border-green-500 text-sm"
+                      className="w-full px-4 py-3 pl-12 bg-white rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#90EE90] border-2 border-gray-200 focus:border-[#90EE90] text-sm"
                       autoFocus
                     />
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-green-500" />
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[#76D176]" />
                   </div>
                 </form>
               </div>
@@ -1381,7 +1439,7 @@ const Header: React.FC = () => {
                         <button
                           key={item}
                           onClick={() => handleQuickSearch(item)}
-                          className="px-3 py-2.5 bg-white hover:bg-green-50 text-gray-700 rounded-xl text-sm font-bold transition-all duration-300 text-left border border-gray-200 hover:border-green-300"
+                          className="px-3 py-2.5 bg-white hover:bg-[#F0FFF0] text-gray-700 rounded-xl text-sm font-bold transition-all duration-300 text-left border border-gray-200 hover:border-[#90EE90]"
                         >
                           {item}
                         </button>

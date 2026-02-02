@@ -407,7 +407,7 @@ const HomePage: React.FC = () => {
       `}</style>
 
       {/* Banner Section - Tight spacing */}
-      <section className="pt-0 pb-0 px-4 sm:px-6 md:px-8 overflow-hidden">
+      <section className="pt-0 pb-0 px-4 sm:px-4 md:px-12 overflow-hidden">
         <div className="w-full">
           <BannerCarousel
             height={{ mobile: '280px', desktop: '380px' }}
