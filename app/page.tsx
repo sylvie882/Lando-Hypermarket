@@ -416,50 +416,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Value Propositions - Compact */}
-      <div className="bg-gray-50 border-y border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Truck className="text-green-600" size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Free Delivery</p>
-                <p className="text-xs text-gray-600">Above Ksh 2,000</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Shield className="text-blue-600" size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Secure Payment</p>
-                <p className="text-xs text-gray-600">100% Protected</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Clock className="text-purple-600" size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">24/7 Support</p>
-                <p className="text-xs text-gray-600">Always Here</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Award className="text-orange-600" size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Quality Guarantee</p>
-                <p className="text-xs text-gray-600">Premium Products</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Categories Section - Compact and Attractive */}
       {categories.length > 0 && (
         <section 
