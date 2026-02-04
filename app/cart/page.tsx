@@ -100,15 +100,14 @@ const CartPage: React.FC = () => {
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [selectedProductImages, setSelectedProductImages] = useState<{[key: number]: string[]}>({});
 
-  // Helper function to create empty cart
+  // Helper function to create empty cart - CORRECTED VERSION
   const getEmptyCart = (): Cart => ({
     items: [],
     id: 0,
     user_id: 0,
     total: 0,
-    item_count: 0,
-    created_at: '',
-    updated_at: ''
+    item_count: 0
+    // Removed created_at and updated_at as they're not in the Cart type
   });
 
   useEffect(() => {
