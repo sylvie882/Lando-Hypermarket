@@ -14,6 +14,20 @@ import {
 import toast from 'react-hot-toast';
 import PaymentMethodDetails from '@/components/payments/PaymentMethodDetails';
 
+// Format currency to KSH
+const formatKSH = (amount: number): string => {
+  if (isNaN(amount) || amount <= 0) {
+    return 'KSh 0';
+  }
+  
+  return new Intl.NumberFormat('en-KE', {
+    style: 'currency',
+    currency: 'KES',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
 const CheckoutPage: React.FC = () => {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
@@ -28,7 +42,7 @@ const CheckoutPage: React.FC = () => {
   
   // Form data
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cod');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('mpesa');
   const [selectedShippingMethod, setSelectedShippingMethod] = useState<string>('standard');
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [deliverySlot, setDeliverySlot] = useState('');
@@ -69,7 +83,7 @@ const CheckoutPage: React.FC = () => {
     address_line_2: '',
     city: '',
     state: '',
-    country: '',
+    country: 'Kenya',
     postal_code: '',
     is_default: false
   });
@@ -112,42 +126,48 @@ const CheckoutPage: React.FC = () => {
   const loadPaymentMethods = async () => {
     try {
       setLoadingPaymentMethods(true);
-      const paymentMethodsRes = await api.payments.getMethods();
-      const methods = paymentMethodsRes.data || [];
-      
-      // Filter methods based on user's country
-      const userCountry = user?.country || 'US';
-      const filteredMethods = methods.filter((method: any) => {
-        if (!method.available) return false;
-        
-        // Check country restrictions
-        if (method.supported_countries && method.supported_countries.length > 0) {
-          // Convert country codes to match
-          const userCountryCode = userCountry.toUpperCase();
-          const supportedCountries = method.supported_countries.map((c: string) => 
-            c.toUpperCase()
-          );
-          
-          // Check if user's country is in supported countries
-          return supportedCountries.includes(userCountryCode);
+      // For Kenya, use M-Pesa and Cash on Delivery as primary methods
+      const kenyaPaymentMethods = [
+        {
+          id: 'mpesa',
+          name: 'M-Pesa',
+          description: 'Pay via M-Pesa mobile money',
+          instructions: 'You will receive a payment request on your phone',
+          available: true,
+          supported_countries: ['KE'],
+          icon: 'mobile'
+        },
+        {
+          id: 'cod',
+          name: 'Cash on Delivery',
+          description: 'Pay when you receive your order',
+          instructions: 'Pay with cash to the delivery agent',
+          available: true,
+          supported_countries: ['KE'],
+          icon: 'cash'
+        },
+        {
+          id: 'credit_card',
+          name: 'Credit/Debit Card',
+          description: 'Pay with Visa, MasterCard, or American Express',
+          instructions: 'Secure card payment',
+          available: true,
+          supported_countries: ['KE', 'US', 'GB'],
+          icon: 'card'
+        },
+        {
+          id: 'bank_transfer',
+          name: 'Bank Transfer',
+          description: 'Direct bank transfer',
+          instructions: 'Transfer to our bank account (details provided after order)',
+          available: true,
+          supported_countries: ['KE'],
+          icon: 'bank'
         }
-        
-        return true;
-      });
+      ];
 
-      setPaymentMethods(filteredMethods);
-
-      // Set default payment method
-      if (filteredMethods.length > 0) {
-        const codMethod = filteredMethods.find((method: any) => 
-          method.id === 'cod' || method.name.toLowerCase().includes('cash')
-        );
-        if (codMethod) {
-          setSelectedPaymentMethod(codMethod.id);
-        } else {
-          setSelectedPaymentMethod(filteredMethods[0].id);
-        }
-      }
+      setPaymentMethods(kenyaPaymentMethods);
+      setSelectedPaymentMethod('mpesa'); // Default to M-Pesa for Kenya
     } catch (error) {
       console.error('Failed to load payment methods:', error);
       toast.error('Failed to load payment methods');
@@ -174,10 +194,6 @@ const CheckoutPage: React.FC = () => {
       toast.error('Please enter city');
       return;
     }
-    if (!newAddress.country.trim()) {
-      toast.error('Please enter country');
-      return;
-    }
 
     try {
       const response = await api.addresses.create(newAddress);
@@ -194,7 +210,7 @@ const CheckoutPage: React.FC = () => {
         address_line_2: '',
         city: '',
         state: '',
-        country: '',
+        country: 'Kenya',
         postal_code: '',
         is_default: false
       });
@@ -213,11 +229,7 @@ const CheckoutPage: React.FC = () => {
     }
     
     try {
-      const subtotal = cart ? cart.items.reduce((sum, item) => {
-        const price = typeof item.price === 'string' ? parseFloat(item.price) : Number(item.price);
-        const quantity = Number(item.quantity);
-        return sum + (price * quantity);
-      }, 0) : 0;
+      const subtotal = calculateTotals().subtotal;
       
       const response = await api.promotions.validate({
         code: promoCode,
@@ -239,7 +251,7 @@ const CheckoutPage: React.FC = () => {
         }
         
         setAppliedDiscount(discount);
-        toast.success(`Promo code applied! Discount: $${discount.toFixed(2)}`);
+        toast.success(`Promo code applied! Discount: ${formatKSH(discount)}`);
       } else {
         toast.error(response.data.message || 'Invalid promo code');
         setAppliedPromo(null);
@@ -269,7 +281,7 @@ const CheckoutPage: React.FC = () => {
       const response = await api.payments.createPaymentIntent({
         order_id: cart.id,
         amount: total,
-        currency: 'USD',
+        currency: 'KES',
         payment_method_types: ['card']
       });
       
@@ -294,9 +306,9 @@ const CheckoutPage: React.FC = () => {
 
     // Validate payment details based on method
     switch (selectedPaymentMethod) {
-      case 'mpesa_till':
-        if (!paymentDetails.mpesa_phone || !paymentDetails.mpesa_till) {
-          throw new Error('Please enter M-Pesa phone and Till number');
+      case 'mpesa':
+        if (!paymentDetails.mpesa_phone) {
+          throw new Error('Please enter your M-Pesa phone number');
         }
         break;
       case 'credit_card':
@@ -316,9 +328,8 @@ const CheckoutPage: React.FC = () => {
     const paymentDetailsPayload: any = { ...paymentDetails };
     
     // Add method-specific details
-    if (selectedPaymentMethod === 'mpesa_till') {
+    if (selectedPaymentMethod === 'mpesa') {
       paymentDetailsPayload.phone_number = paymentDetails.mpesa_phone;
-      paymentDetailsPayload.till_number = paymentDetails.mpesa_till;
     }
 
     if (selectedPaymentMethod === 'credit_card' || selectedPaymentMethod === 'debit_card') {
@@ -328,7 +339,8 @@ const CheckoutPage: React.FC = () => {
     try {
       const response = await api.payments.processPayment(orderId, {
         payment_method: selectedPaymentMethod,
-        payment_details: paymentDetailsPayload
+        payment_details: paymentDetailsPayload,
+        currency: 'KES'
       });
 
       return response.data;
@@ -359,7 +371,7 @@ const CheckoutPage: React.FC = () => {
         payment_method: selectedPaymentMethod,
         shipping_method: selectedShippingMethod,
         notes: deliveryNotes,
-        carrier: 'Standard Carrier',
+        carrier: 'Lando Delivery',
         ...(deliverySlot && { delivery_slot: deliverySlot }),
         ...(appliedPromo?.code && { promo_code: appliedPromo.code })
       };
@@ -418,7 +430,7 @@ const CheckoutPage: React.FC = () => {
     
     // Initialize payment if needed
     const method = paymentMethods.find(m => m.id === methodId);
-    if (method && (method.id === 'credit_card' || method.id === 'debit_card' || method.id === 'stripe')) {
+    if (method && (method.id === 'credit_card' || method.id === 'debit_card')) {
       initializeStripePayment();
     }
   };
@@ -434,7 +446,7 @@ const CheckoutPage: React.FC = () => {
         return <SmartphoneIcon size={24} className="text-blue-400" />;
       case 'apple_pay':
         return <MobilePhone size={24} className="text-gray-800" />;
-      case 'mpesa_till':
+      case 'mpesa':
         return <Smartphone size={24} className="text-green-600" />;
       case 'stripe':
         return <ShieldCheck size={24} className="text-purple-600" />;
@@ -459,14 +471,14 @@ const CheckoutPage: React.FC = () => {
         return 'Fast checkout with Google Pay';
       case 'apple_pay':
         return 'Secure payment with Apple Pay';
-      case 'mpesa_till':
-        return 'Pay via M-Pesa Till number';
+      case 'mpesa':
+        return 'Pay via M-Pesa mobile money';
       case 'stripe':
         return 'Secure payment via Stripe';
       case 'bank_transfer':
         return 'Direct bank transfer (1-3 business days)';
       case 'cod':
-        return 'Pay when you receive your order';
+        return 'Pay with cash when you receive your order';
       default:
         return 'Select to view payment details';
     }
@@ -481,25 +493,28 @@ const CheckoutPage: React.FC = () => {
       return sum + (price * quantity);
     }, 0);
     
-    let shipping = 0;
-    switch (selectedShippingMethod) {
-      case 'standard':
-        shipping = subtotal > 50 ? 0 : 5.99;
-        break;
-      case 'express':
-        shipping = 12.99;
-        break;
-      case 'overnight':
-        shipping = 24.99;
-        break;
-      default:
-        shipping = subtotal > 50 ? 0 : 5.99;
-    }
+    // FREE SHIPPING on all orders - NO SHIPPING COST
+    const shipping = 0;
     
-    const tax = subtotal * 0.1;
-    const total = subtotal + shipping + tax - appliedDiscount;
+    // NO TAX
+    const tax = 0;
+    
+    const total = subtotal - appliedDiscount;
     
     return { subtotal, shipping, tax, total };
+  };
+
+  const getShippingMethodDetails = () => {
+    switch (selectedShippingMethod) {
+      case 'standard':
+        return { name: 'Standard Delivery', days: '3-5 business days', description: 'Free delivery' };
+      case 'express':
+        return { name: 'Express Delivery', days: '1-2 business days', description: 'Priority delivery' };
+      case 'overnight':
+        return { name: 'Overnight Delivery', days: 'Next business day', description: 'Guaranteed next day' };
+      default:
+        return { name: 'Standard Delivery', days: '3-5 business days', description: 'Free delivery' };
+    }
   };
 
   if (!isAuthenticated || isLoading) {
@@ -518,7 +533,7 @@ const CheckoutPage: React.FC = () => {
           <p className="text-gray-600 mb-4">Add some items to checkout</p>
           <button
             onClick={() => router.push('/products')}
-            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
+            className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 font-medium"
           >
             Continue Shopping
           </button>
@@ -528,6 +543,7 @@ const CheckoutPage: React.FC = () => {
   }
 
   const { subtotal, shipping, tax, total } = calculateTotals();
+  const shippingDetails = getShippingMethodDetails();
 
   const steps = [
     { number: 1, title: 'Address', icon: <Truck size={20} /> },
@@ -631,7 +647,6 @@ const CheckoutPage: React.FC = () => {
                   <div className="mt-6 p-6 border-2 rounded-xl bg-gray-50">
                     <h3 className="font-bold text-lg mb-4">Add New Address</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* ... existing address form fields ... */}
                       <div>
                         <label className="block text-sm font-medium mb-1">Label</label>
                         <select
@@ -657,8 +672,8 @@ const CheckoutPage: React.FC = () => {
                       <div>
                         <label className="block text-sm font-medium mb-1">Phone Number *</label>
                         <input
-                          type="text"
-                          placeholder="Phone Number"
+                          type="tel"
+                          placeholder="07XX XXX XXX"
                           value={newAddress.contact_phone}
                           onChange={(e) => setNewAddress({...newAddress, contact_phone: e.target.value})}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -688,30 +703,29 @@ const CheckoutPage: React.FC = () => {
                         <label className="block text-sm font-medium mb-1">City *</label>
                         <input
                           type="text"
-                          placeholder="City"
+                          placeholder="e.g., Nairobi"
                           value={newAddress.city}
                           onChange={(e) => setNewAddress({...newAddress, city: e.target.value})}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">State</label>
+                        <label className="block text-sm font-medium mb-1">State/County</label>
                         <input
                           type="text"
-                          placeholder="State/Province"
+                          placeholder="e.g., Nairobi County"
                           value={newAddress.state}
                           onChange={(e) => setNewAddress({...newAddress, state: e.target.value})}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Country *</label>
+                        <label className="block text-sm font-medium mb-1">Country</label>
                         <input
                           type="text"
-                          placeholder="Country"
                           value={newAddress.country}
-                          onChange={(e) => setNewAddress({...newAddress, country: e.target.value})}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                          readOnly
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100"
                         />
                       </div>
                       <div>
@@ -759,41 +773,28 @@ const CheckoutPage: React.FC = () => {
                   <h3 className="font-bold text-lg mb-4">Shipping Method</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {[
-                      { id: 'standard', name: 'Standard', price: 5.99, days: '3-5 days', description: 'Free on orders over $50' },
-                      { id: 'express', name: 'Express', price: 12.99, days: '1-2 days', description: 'Priority shipping' },
-                      { id: 'overnight', name: 'Overnight', price: 24.99, days: 'Next day', description: 'Guaranteed next day' }
-                    ].map((method) => {
-                      const isFreeShipping = method.id === 'standard' && subtotal > 50;
-                      const shippingPrice = isFreeShipping ? 0 : method.price;
-                      
-                      return (
-                        <div
-                          key={method.id}
-                          onClick={() => setSelectedShippingMethod(method.id)}
-                          className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                            selectedShippingMethod === method.id
-                              ? 'border-orange-500 bg-orange-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-bold">{method.name}</h4>
-                            <span className="font-bold text-lg">
-                              {isFreeShipping ? (
-                                <span className="text-green-600">FREE</span>
-                              ) : (
-                                `$${shippingPrice.toFixed(2)}`
-                              )}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-1">{method.days}</p>
-                          <p className="text-xs text-gray-500">{method.description}</p>
-                          {isFreeShipping && (
-                            <p className="text-xs text-green-600 mt-2 font-medium">🎉 You qualify for free shipping!</p>
-                          )}
+                      { id: 'standard', name: 'Standard', days: '3-5 business days', description: 'Free delivery' },
+                      { id: 'express', name: 'Express', days: '1-2 business days', description: 'Priority delivery' },
+                      { id: 'overnight', name: 'Overnight', days: 'Next business day', description: 'Guaranteed next day' }
+                    ].map((method) => (
+                      <div
+                        key={method.id}
+                        onClick={() => setSelectedShippingMethod(method.id)}
+                        className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                          selectedShippingMethod === method.id
+                            ? 'border-orange-500 bg-orange-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold">{method.name}</h4>
+                          <span className="font-bold text-lg text-green-600">FREE</span>
                         </div>
-                      );
-                    })}
+                        <p className="text-sm text-gray-600 mb-1">{method.days}</p>
+                        <p className="text-xs text-gray-500">{method.description}</p>
+                        <p className="text-xs text-green-600 mt-2 font-medium">🎉 Free shipping on all orders!</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -849,7 +850,7 @@ const CheckoutPage: React.FC = () => {
                 ) : (
                   <>
                     <div className="space-y-4 mb-8">
-                      {paymentMethods.length > 0 ? paymentMethods.map((method) => (
+                      {paymentMethods.map((method) => (
                         <div
                           key={method.id}
                           onClick={() => handlePaymentMethodChange(method.id)}
@@ -866,7 +867,7 @@ const CheckoutPage: React.FC = () => {
                               </div>
                               <div>
                                 <h3 className="font-bold text-lg">{method.name}</h3>
-                                <p className="text-gray-600">{getPaymentMethodDescription(method.id)}</p>
+                                <p className="text-gray-600">{method.description}</p>
                                 {method.instructions && (
                                   <p className="text-sm text-gray-500 mt-1">{method.instructions}</p>
                                 )}
@@ -879,11 +880,7 @@ const CheckoutPage: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                      )) : (
-                        <div className="p-6 border-2 border-gray-200 rounded-xl">
-                          <p className="text-gray-500">No payment methods available</p>
-                        </div>
-                      )}
+                      ))}
                     </div>
 
                     {/* Payment Details Form */}
@@ -894,7 +891,7 @@ const CheckoutPage: React.FC = () => {
                           paymentDetails={paymentDetails}
                           onPaymentDetailsChange={setPaymentDetails}
                           totalAmount={total}
-                          currency="USD"
+                          currency="KES"
                           paymentIntent={paymentIntent}
                           userCountry={user?.country}
                           onSubmit={() => setStep(3)}
@@ -980,16 +977,7 @@ const CheckoutPage: React.FC = () => {
                           {getPaymentMethodIcon(selectedPaymentMethod)}
                           <div className="ml-3">
                             <p className="font-bold text-lg">
-                              {paymentMethods.find(m => m.id === selectedPaymentMethod)?.name || 
-                                (selectedPaymentMethod === 'credit_card' ? 'Credit Card' :
-                                 selectedPaymentMethod === 'debit_card' ? 'Debit Card' :
-                                 selectedPaymentMethod === 'paypal' ? 'PayPal' :
-                                 selectedPaymentMethod === 'google_pay' ? 'Google Pay' :
-                                 selectedPaymentMethod === 'apple_pay' ? 'Apple Pay' :
-                                 selectedPaymentMethod === 'mpesa_till' ? 'M-Pesa Till' :
-                                 selectedPaymentMethod === 'stripe' ? 'Stripe' :
-                                 selectedPaymentMethod === 'bank_transfer' ? 'Bank Transfer' :
-                                 'Cash on Delivery')}
+                              {paymentMethods.find(m => m.id === selectedPaymentMethod)?.name}
                             </p>
                             <p className="text-gray-600">
                               {getPaymentMethodDescription(selectedPaymentMethod)}
@@ -1005,13 +993,10 @@ const CheckoutPage: React.FC = () => {
                       </div>
                       
                       {/* Show payment details summary */}
-                      {selectedPaymentMethod === 'mpesa_till' && paymentDetails.mpesa_phone && (
+                      {selectedPaymentMethod === 'mpesa' && paymentDetails.mpesa_phone && (
                         <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
                           <p className="text-sm text-green-800">
-                            <span className="font-semibold">Phone:</span> {paymentDetails.mpesa_phone}
-                            {paymentDetails.mpesa_till && (
-                              <> • <span className="font-semibold">Till:</span> {paymentDetails.mpesa_till}</>
-                            )}
+                            <span className="font-semibold">M-Pesa Phone:</span> {paymentDetails.mpesa_phone}
                           </p>
                         </div>
                       )}
@@ -1024,23 +1009,12 @@ const CheckoutPage: React.FC = () => {
                     <div className="p-6 border-2 border-gray-200 rounded-xl">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-bold text-lg">
-                            {selectedShippingMethod === 'standard' ? 'Standard Shipping' :
-                             selectedShippingMethod === 'express' ? 'Express Shipping' : 'Overnight Shipping'}
-                          </p>
-                          <p className="text-gray-600">
-                            {selectedShippingMethod === 'standard' ? '3-5 business days' :
-                             selectedShippingMethod === 'express' ? '1-2 business days' : 'Next business day'}
-                          </p>
+                          <p className="font-bold text-lg">{shippingDetails.name}</p>
+                          <p className="text-gray-600">{shippingDetails.days}</p>
+                          <p className="text-sm text-green-600 font-medium">🎉 Free shipping on all orders!</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-lg">
-                            {shipping === 0 ? (
-                              <span className="text-green-600">FREE</span>
-                            ) : (
-                              `$${shipping.toFixed(2)}`
-                            )}
-                          </p>
+                          <p className="font-bold text-lg text-green-600">FREE</p>
                           <button
                             onClick={() => setStep(1)}
                             className="text-sm text-orange-500 hover:text-orange-600 font-medium"
@@ -1056,19 +1030,23 @@ const CheckoutPage: React.FC = () => {
                   <div>
                     <h3 className="font-bold text-lg mb-4">Order Items</h3>
                     <div className="border-2 border-gray-200 rounded-xl divide-y">
-                      {cart.items.map((item) => (
-                        <div key={item.id} className="p-6 flex items-center justify-between hover:bg-gray-50">
-                          <div className="flex-1">
-                            <p className="font-bold text-lg">{item.product.name}</p>
-                            <p className="text-gray-600">
-                              {item.quantity} × ${typeof item.price === 'number' ? item.price.toFixed(2) : parseFloat(item.price).toFixed(2)}
+                      {cart.items.map((item) => {
+                        const itemPrice = typeof item.price === 'number' ? item.price : parseFloat(item.price);
+                        const itemTotal = item.quantity * itemPrice;
+                        return (
+                          <div key={item.id} className="p-6 flex items-center justify-between hover:bg-gray-50">
+                            <div className="flex-1">
+                              <p className="font-bold text-lg">{item.product?.name || 'Product'}</p>
+                              <p className="text-gray-600">
+                                {item.quantity} × {formatKSH(itemPrice)}
+                              </p>
+                            </div>
+                            <p className="font-bold text-lg">
+                              {formatKSH(itemTotal)}
                             </p>
                           </div>
-                          <p className="font-bold text-lg">
-                            ${(item.quantity * (typeof item.price === 'number' ? item.price : parseFloat(item.price))).toFixed(2)}
-                          </p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1115,7 +1093,7 @@ const CheckoutPage: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-4">
                             <span className="font-bold text-lg text-green-800">
-                              -${appliedDiscount.toFixed(2)}
+                              -{formatKSH(appliedDiscount)}
                             </span>
                             <button
                               onClick={removePromoCode}
@@ -1164,50 +1142,55 @@ const CheckoutPage: React.FC = () => {
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">${subtotal.toFixed(2)}</span>
+                  <span className="font-medium">{formatKSH(subtotal)}</span>
                 </div>
+                
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium">
-                    {shipping === 0 ? (
-                      <span className="text-green-600 font-bold">FREE</span>
-                    ) : (
-                      `$${shipping.toFixed(2)}`
-                    )}
-                  </span>
+                  <span className="font-bold text-green-600">FREE</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Tax (10%)</span>
-                  <span className="font-medium">${tax.toFixed(2)}</span>
-                </div>
+                
                 {appliedDiscount > 0 && (
                   <div className="flex justify-between items-center text-green-600">
                     <span className="font-medium">Discount</span>
-                    <span className="font-bold">-${appliedDiscount.toFixed(2)}</span>
+                    <span className="font-bold">-{formatKSH(appliedDiscount)}</span>
                   </div>
                 )}
-                <hr className="my-4" />
+                
+                <hr className="my-4 border-gray-300" />
+                
                 <div className="flex justify-between items-center text-xl font-bold text-gray-900">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>{formatKSH(total)}</span>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">
-                  {shipping === 0 ? 
-                    '🎉 Free shipping on orders over $50!' : 
-                    `Add $${(50 - subtotal).toFixed(2)} more for free shipping`
-                  }
-                </p>
+                
+                <div className="p-3 bg-green-50 rounded-lg border border-green-200 mt-4">
+                  <p className="text-sm text-green-700 font-medium">
+                    🎉 Free shipping on all orders!
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    No hidden charges • No VAT
+                  </p>
+                </div>
               </div>
 
               {/* Security Note */}
-              <div className="p-4 bg-gray-50 rounded-lg border">
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="flex items-center mb-2">
                   <ShieldCheck size={16} className="text-gray-500 mr-2" />
                   <span className="text-sm font-medium text-gray-700">Secure SSL Encryption</span>
                 </div>
                 <p className="text-xs text-gray-500">
-                  Your payment information is encrypted and secure. We never store your credit card details.
+                  Your payment information is encrypted and secure. We never store your payment details.
                 </p>
+              </div>
+              
+              {/* Need Help */}
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-700 mb-2">
+                  <span className="font-medium">Need help?</span> Call our support team
+                </p>
+                <p className="text-lg font-bold text-blue-800">+254 716 354 589</p>
               </div>
             </div>
           </div>

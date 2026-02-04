@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -11,6 +11,7 @@ import {
   ChevronRight, ShoppingCart, Heart, LogOut, Settings, Shield
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
 
 interface Category {
   id: number;
@@ -40,7 +41,7 @@ const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false);
   const [productsMenuOpen, setProductsMenuOpen] = useState(false);
-  const [cartCount] = useState(2);
+  const [cartCount, setCartCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -50,6 +51,9 @@ const Header: React.FC = () => {
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   
   const pathname = usePathname();
   const router = useRouter();
@@ -64,24 +68,126 @@ const Header: React.FC = () => {
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mobileSearchRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Function to fetch cart count
+  const fetchCartCount = useCallback(async () => {
+    if (!isAuthenticated) {
+      setCartCount(0);
+      return;
+    }
+    
+    try {
+      const response = await api.cart.getCount();
+      const count = response.data?.count || response.data || 0;
+      setCartCount(Number(count));
+    } catch (error) {
+      console.error('Error fetching cart count:', error);
+      setCartCount(0);
+    }
+  }, [isAuthenticated]);
+
+  // Custom hook for real-time cart updates
+  const useCartRealtime = () => {
+    const { isAuthenticated } = useAuth();
+    
+    // Function to manually refresh cart count
+    const refreshCartCount = useCallback(async () => {
+      if (!isAuthenticated) {
+        setCartCount(0);
+        return;
+      }
+      
+      try {
+        const response = await api.cart.getCount();
+        const count = response.data?.count || response.data || 0;
+        setCartCount(Number(count));
+        
+        // Also update localStorage for cross-tab synchronization
+        localStorage.setItem('cart_last_updated', Date.now().toString());
+        localStorage.setItem('cart_count', count.toString());
+      } catch (error) {
+        console.error('Error fetching cart count:', error);
+        setCartCount(0);
+      }
+    }, [isAuthenticated]);
+
+    // Listen for cart events from other components
+    useEffect(() => {
+      const handleCartUpdate = () => {
+        refreshCartCount();
+      };
+
+      // Listen for custom events
+      window.addEventListener('cart:updated', handleCartUpdate);
+      window.addEventListener('cart:itemAdded', handleCartUpdate);
+      window.addEventListener('cart:itemRemoved', handleCartUpdate);
+      window.addEventListener('cart:cleared', handleCartUpdate);
+      
+      // Listen for storage events (if cart is updated in another tab)
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'cart_updated' || e.key === 'cart_count') {
+          refreshCartCount();
+        }
+      };
+
+      window.addEventListener('storage', handleStorageChange);
+      
+      // Listen for page visibility changes (when user returns to tab)
+      const handleVisibilityChange = () => {
+        if (!document.hidden) {
+          refreshCartCount();
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      return () => {
+        window.removeEventListener('cart:updated', handleCartUpdate);
+        window.removeEventListener('cart:itemAdded', handleCartUpdate);
+        window.removeEventListener('cart:itemRemoved', handleCartUpdate);
+        window.removeEventListener('cart:cleared', handleCartUpdate);
+        window.removeEventListener('storage', handleStorageChange);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
+    }, [refreshCartCount]);
+
+    // Manual refresh function
+    return { refreshCartCount };
+  };
+
+  // Initialize real-time cart tracking
+  const { refreshCartCount } = useCartRealtime();
+
+  // Fetch cart count on component mount and when auth status changes
+  useEffect(() => {
+    fetchCartCount();
+    
+    // Refresh cart count periodically (less frequent since we have real-time updates)
+    const interval = setInterval(fetchCartCount, 60000); // Refresh every 60 seconds
+    
+    return () => clearInterval(interval);
+  }, [fetchCartCount, isAuthenticated]);
+
+  // Function to dispatch cart update events (can be called from other components)
+  const dispatchCartUpdate = useCallback(() => {
+    // Dispatch custom event
+    window.dispatchEvent(new Event('cart:updated'));
+    
+    // Update localStorage for cross-tab synchronization
+    localStorage.setItem('cart_updated', Date.now().toString());
+    localStorage.removeItem('cart_updated'); // Trigger storage event
+  }, []);
 
   // Fetch categories from API
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         setIsLoadingCategories(true);
-        const response = await fetch('https://api.hypermarket.co.ke/api/categories', {
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          }
-        });
+        const response = await api.categories.getAll();
         
-        if (!response.ok) {
-          throw new Error('Failed to fetch categories');
-        }
-        
-        const data = await response.json();
+        const data = response.data || [];
         
         // Filter to get only parent categories (parent_id === null)
         const parentCategories = data.filter((category: Category) => 
@@ -100,7 +206,6 @@ const Header: React.FC = () => {
         setCategories(sortedCategories);
       } catch (error) {
         console.error('Error fetching categories:', error);
-        // Fallback to empty array if API fails
         setCategories([]);
       } finally {
         setIsLoadingCategories(false);
@@ -114,23 +219,13 @@ const Header: React.FC = () => {
   const fetchCategoryProducts = async (categoryId: number) => {
     try {
       setIsLoadingProducts(true);
-      const response = await fetch(
-        `https://api.hypermarket.co.ke/api/products?category_id=${categoryId}&per_page=8`,
-        {
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          }
-        }
-      );
+      const response = await api.products.getAll({
+        category_id: categoryId,
+        per_page: 8
+      });
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch category products');
-      }
-      
-      const data = await response.json();
-      // Handle both array and paginated response formats
-      const products = data.data || data || [];
+      const data = response.data;
+      const products = data?.data || data || [];
       setCategoryProducts(products);
     } catch (error) {
       console.error('Error fetching category products:', error);
@@ -183,7 +278,35 @@ const Header: React.FC = () => {
     }, 300);
   };
 
-  // Close user menu on outside click
+  // Handle search input change with debounce
+  useEffect(() => {
+    const searchProducts = async () => {
+      if (!searchQuery.trim()) {
+        setSearchResults([]);
+        setShowSearchResults(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const response = await api.products.search(searchQuery);
+        const data = response.data;
+        const products = data?.data || data || [];
+        setSearchResults(products.slice(0, 5));
+        setShowSearchResults(true);
+      } catch (error) {
+        console.error('Error searching products:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchProducts, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery]);
+
+  // Close user menu and search results on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
@@ -207,6 +330,9 @@ const Header: React.FC = () => {
       if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
         setActiveCategory(null);
         setCategoryProducts([]);
+      }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
       }
     };
 
@@ -233,6 +359,7 @@ const Header: React.FC = () => {
     setCategoryProducts([]);
     setMobileSearchOpen(false);
     setUserMenuOpen(false);
+    setShowSearchResults(false);
   }, [pathname]);
 
   // Handle body overflow for mobile menu
@@ -255,12 +382,23 @@ const Header: React.FC = () => {
     }
   }, [mobileSearchOpen]);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery('');
+      setShowSearchResults(false);
       setMobileSearchOpen(false);
       setMobileMenuOpen(false);
+    }
+  };
+
+  // Handle direct search submission
+  const handleSearchSubmit = () => {
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery('');
+      setShowSearchResults(false);
     }
   };
 
@@ -279,6 +417,11 @@ const Header: React.FC = () => {
   const handleLogout = async () => {
     await logout();
     setUserMenuOpen(false);
+    setCartCount(0);
+    
+    // Clear cart related localStorage
+    localStorage.removeItem('cart_last_updated');
+    localStorage.removeItem('cart_count');
   };
 
   // Update navItems to match your new navigation links
@@ -299,19 +442,7 @@ const Header: React.FC = () => {
 
   // Get image URL for product
   const getProductImageUrl = (product: Product) => {
-    if (product.main_image) {
-      if (product.main_image.startsWith('http')) {
-        return product.main_image;
-      }
-      return `https://api.hypermarket.co.ke/storage/${product.main_image}`;
-    }
-    if (product.thumbnail) {
-      if (product.thumbnail.startsWith('http')) {
-        return product.thumbnail;
-      }
-      return `https://api.hypermarket.co.ke/storage/${product.thumbnail}`;
-    }
-    return '/placeholder-product.jpg';
+    return api.getImageUrl(product.main_image || product.thumbnail, '/placeholder-product.jpg');
   };
 
   // Get user initials for avatar
@@ -335,6 +466,22 @@ const Header: React.FC = () => {
     }
   };
 
+  // Function to handle adding to cart and update count in real-time
+  const handleAddToCart = async (productId: number, quantity: number = 1) => {
+    try {
+      await api.cart.addItem({ product_id: productId, quantity });
+      // Refresh cart count immediately
+      await fetchCartCount();
+      // Dispatch event for other components
+      window.dispatchEvent(new Event('cart:itemAdded'));
+      
+      // Show success message or notification
+      // You can implement a toast notification here
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+    }
+  };
+
   return (
     <>
       {/* Top Header - Hide on mobile when user is logged in */}
@@ -348,7 +495,7 @@ const Header: React.FC = () => {
                   <div className="mr-3">
                     <a href="#" className="text-gray-800 hover:text-gray-600 flex items-center no-underline">
                       <Gift size={16} className="mr-1.5" />
-                      <span className="text-sm">Gift Certificates</span>
+                      <span className="text-sm">Free delivery for all orders</span>
                     </a>
                   </div>
                   <div className="hidden md:block border-l border-gray-400 h-6 mx-3"></div>
@@ -510,7 +657,7 @@ const Header: React.FC = () => {
                   </button>
                   <Link href="/" className="no-underline">
                     <h1 className="text-2xl font-medium tracking-tight text-gray-900" style={{ letterSpacing: '-0.1rem' }}>
-                      <strong className="align-middle italic">LandoRanch</strong>
+                      <strong className="align-middle italic">Lando Hypermarket</strong>
                     </h1>
                   </Link>
                 </div>
@@ -535,8 +682,8 @@ const Header: React.FC = () => {
                   <Link href="/cart" className="relative p-2">
                     <ShoppingCart size={20} className="text-gray-700" />
                     {cartCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                        {cartCount}
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        {cartCount > 99 ? '99+' : cartCount}
                       </span>
                     )}
                   </Link>
@@ -546,7 +693,7 @@ const Header: React.FC = () => {
               {/* Desktop: Logo */}
               <div className="hidden md:flex items-center">
                 <Link href="/" className="no-underline">
-                  <h1 className="text-2xl md:text-3xl font-medium tracking-tight text-green-900" style={{ letterSpacing: '-0.15rem', lineHeight: '1.1' }}>
+                  <h1 className="text-3xl md:text-4xl font-medium tracking-tight text-gray-900" style={{ letterSpacing: '-0.15rem', lineHeight: '1.1' }}>
                     <strong className="align-middle italic">Lando Hypermarket</strong>
                   </h1>
                 </Link>
@@ -567,9 +714,9 @@ const Header: React.FC = () => {
                   <li className="relative">
                     <Link href="/cart" className="no-underline">
                       <div className="bg-red-500 rounded-full p-2.5 w-12 h-12 flex items-center justify-center relative">
-                        <ShoppingBag size={22} className="text-white" />
+                        <ShoppingCart size={28} className="text-white" />
                         <span className="absolute -top-1.5 -right-1.5 bg-white text-gray-900 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border border-gray-300">
-                          {cartCount}
+                          {cartCount > 99 ? '99+' : cartCount}
                         </span>
                       </div>
                     </Link>
@@ -645,32 +792,105 @@ const Header: React.FC = () => {
                 </ul>
               </div>
               
-              {/* Search Form - Desktop */}
-              <div className="hidden md:block w-full md:w-auto">
+              {/* Search Form - Desktop with live results */}
+              <div className="hidden md:block w-full md:w-auto relative" ref={searchRef}>
                 <form className="flex" onSubmit={handleSearch}>
-                  <input 
-                    className="flex-grow px-4 py-1 rounded-l-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    type="search" 
-                    placeholder="Search" 
-                    aria-label="Search"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{ minWidth: '200px' }}
-                  />
+                  <div className="relative">
+                    <input 
+                      ref={searchInputRef}
+                      className="flex-grow px-4 py-2 pl-10 rounded-l-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      type="search" 
+                      placeholder="Search products..." 
+                      aria-label="Search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      style={{ minWidth: '300px' }}
+                      onFocus={() => {
+                        if (searchQuery.trim()) {
+                          setShowSearchResults(true);
+                        }
+                      }}
+                    />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
                   <button 
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-1 rounded-r-lg flex items-center"
+                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-r-lg flex items-center"
                     type="submit"
                   >
                     <Search size={18} />
                   </button>
                 </form>
+                
+                {/* Search Results Dropdown */}
+                {showSearchResults && (searchQuery.trim() || searchResults.length > 0) && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 max-h-96 overflow-y-auto">
+                    {isSearching ? (
+                      <div className="p-4 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
+                        <p className="text-sm text-gray-600 mt-2">Searching...</p>
+                      </div>
+                    ) : searchResults.length > 0 ? (
+                      <>
+                        <div className="p-2 border-b border-gray-100">
+                          <div className="flex justify-between items-center">
+                            <h3 className="font-medium text-gray-900">Search Results</h3>
+                            <button
+                              onClick={handleSearchSubmit}
+                              className="text-sm text-green-600 hover:text-green-700"
+                            >
+                              See all results →
+                            </button>
+                          </div>
+                        </div>
+                        <div className="p-2">
+                          {searchResults.map((product) => (
+                            <Link
+                              key={product.id}
+                              href={`/products/${product.slug}`}
+                              className="flex items-center p-2 hover:bg-gray-50 rounded transition-colors"
+                              onClick={() => {
+                                setSearchQuery('');
+                                setShowSearchResults(false);
+                              }}
+                            >
+                              <div className="w-10 h-10 rounded bg-gray-100 mr-3 overflow-hidden">
+                                <Image
+                                  src={getProductImageUrl(product)}
+                                  alt={product.name}
+                                  width={40}
+                                  height={40}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm text-gray-900 truncate">{product.name}</p>
+                                <p className="text-xs text-green-600 font-bold">
+                                  KES {product.price.toLocaleString()}
+                                </p>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </>
+                    ) : searchQuery.trim() ? (
+                      <div className="p-4 text-center">
+                        <p className="text-gray-600">No products found for "{searchQuery}"</p>
+                        <button
+                          onClick={handleSearchSubmit}
+                          className="mt-2 text-sm text-green-600 hover:text-green-700"
+                        >
+                          Try searching anyway
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </nav>
 
         {/* ========== HORIZONTAL CATEGORIES ROW ========== */}
-        {/* Hidden on mobile, only show on desktop */}
         <div className="hidden md:block bg-white border-t border-b border-gray-200 relative">
           <div className="container mx-auto px-4">
             <div className="flex items-center py-1">
@@ -723,14 +943,12 @@ const Header: React.FC = () => {
               <div className="flex-1">
                 <div className="flex flex-wrap gap-4 py-1">
                   {isLoadingCategories ? (
-                    // Loading skeleton
                     Array.from({ length: 10 }).map((_, index) => (
                       <div key={index} className="animate-pulse">
                         <div className="h-4 w-20 bg-gray-200 rounded"></div>
                       </div>
                     ))
                   ) : categories.length > 0 ? (
-                    // Display only 5-6 categories (no scroll)
                     categories.slice(0, 9).map((category) => (
                       <div
                         key={category.id}
@@ -849,22 +1067,19 @@ const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Menu Overlay - Improved Design */}
+      {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-50">
-          {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
             onClick={() => setMobileMenuOpen(false)}
           />
           
-          {/* Menu Content */}
           <div 
             ref={mobileMenuRef}
             className="absolute left-0 top-0 h-full w-4/5 max-w-xs bg-white shadow-2xl transform transition-transform duration-300"
           >
             <div className="h-full flex flex-col">
-              {/* Menu Header */}
               <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-green-50 to-green-100">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center space-x-3">
@@ -883,7 +1098,6 @@ const Header: React.FC = () => {
                   </button>
                 </div>
                 
-                {/* User Info */}
                 <div className="flex items-center space-x-3 p-3 bg-white rounded-lg shadow-sm">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
                     {isAuthenticated && user ? (
@@ -930,9 +1144,7 @@ const Header: React.FC = () => {
                 </div>
               </div>
 
-              {/* Menu Content */}
               <div className="flex-1 overflow-y-auto p-5">
-                {/* Quick Actions */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   {mobileMenuCategories.map((item, index) => (
                     <Link
@@ -951,7 +1163,6 @@ const Header: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Navigation Links */}
                 <div className="space-y-1 mb-6">
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Navigation</h3>
                   {navItems.map((item) => (
@@ -973,7 +1184,6 @@ const Header: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Categories - Properly Aligned */}
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Categories</h3>
@@ -1015,7 +1225,6 @@ const Header: React.FC = () => {
                   )}
                 </div>
 
-                {/* Contact Info */}
                 <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl border border-green-200">
                   <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
                     <Smartphone size={16} className="mr-2 text-green-600" />
@@ -1026,7 +1235,6 @@ const Header: React.FC = () => {
                 </div>
               </div>
 
-              {/* Footer */}
               <div className="p-5 border-t border-gray-200 bg-gray-50">
                 <div className="flex items-center justify-center space-x-4 text-sm font-medium text-gray-600">
                   <Link href="/terms" onClick={() => setMobileMenuOpen(false)} className="hover:text-green-600">Terms</Link>
@@ -1036,7 +1244,7 @@ const Header: React.FC = () => {
                   <Link href="/help" onClick={() => setMobileMenuOpen(false)} className="hover:text-green-600">Help</Link>
                 </div>
                 <div className="text-center text-xs text-gray-500 mt-3">
-                  © {new Date().getFullYear()} LandoRanch
+                  © {new Date().getFullYear()} Lando Hypermarket
                 </div>
               </div>
             </div>
@@ -1048,7 +1256,6 @@ const Header: React.FC = () => {
       {mobileSearchOpen && (
         <div className="md:hidden fixed inset-0 z-50 bg-white">
           <div className="h-full flex flex-col">
-            {/* Header */}
             <div className="p-5 border-b border-gray-200">
               <div className="flex items-center justify-between mb-5">
                 <div className="font-bold text-xl text-gray-900">Search Products</div>
@@ -1076,35 +1283,86 @@ const Header: React.FC = () => {
               </form>
             </div>
             
-            {/* Recent Searches */}
             <div className="flex-1 overflow-y-auto p-5">
-              <h3 className="font-bold text-gray-900 mb-3 text-lg">Popular Categories</h3>
-              {isLoadingCategories ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <div key={index} className="animate-pulse">
-                      <div className="h-12 bg-gray-200 rounded"></div>
-                    </div>
-                  ))}
+              {isSearching ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
+                  <p className="text-gray-600 mt-2">Searching...</p>
                 </div>
-              ) : categories.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {categories.slice(0, 8).map((category) => (
-                    <Link
-                      key={category.id}
-                      href={`/category/${category.slug}`}
-                      className="px-4 py-3 bg-gray-50 hover:bg-green-50 text-gray-700 rounded-lg text-sm font-medium transition-all duration-300 text-left border border-gray-200 hover:border-green-300 hover:text-green-700 flex items-center justify-between"
-                      onClick={() => setMobileSearchOpen(false)}
-                    >
-                      <span className="truncate">{category.name.length > 15 
-                        ? category.name.substring(0, 15) + '...' 
-                        : category.name}</span>
-                      <ChevronRight size={14} className="text-gray-400 flex-shrink-0 ml-2" />
-                    </Link>
-                  ))}
+              ) : searchResults.length > 0 ? (
+                <>
+                  <h3 className="font-bold text-gray-900 mb-3 text-lg">Search Results</h3>
+                  <div className="space-y-3">
+                    {searchResults.map((product) => (
+                      <Link
+                        key={product.id}
+                        href={`/products/${product.slug}`}
+                        className="flex items-center p-3 bg-gray-50 hover:bg-green-50 rounded-lg transition-all duration-300 text-left border border-gray-200 hover:border-green-300"
+                        onClick={() => setMobileSearchOpen(false)}
+                      >
+                        <div className="w-16 h-16 rounded-lg bg-gray-100 mr-4 overflow-hidden">
+                          <Image
+                            src={getProductImageUrl(product)}
+                            alt={product.name}
+                            width={64}
+                            height={64}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
+                            {product.name}
+                          </h4>
+                          <p className="text-green-600 font-bold">
+                            KES {product.price.toLocaleString()}
+                          </p>
+                        </div>
+                        <ChevronRight size={16} className="text-gray-400 ml-2" />
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              ) : searchQuery.trim() ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600">No products found for "{searchQuery}"</p>
+                  <button
+                    onClick={handleSearchSubmit}
+                    className="mt-4 px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm"
+                  >
+                    Try searching anyway
+                  </button>
                 </div>
               ) : (
-                <div className="text-gray-500 py-4 text-center">No categories available</div>
+                <>
+                  <h3 className="font-bold text-gray-900 mb-3 text-lg">Popular Categories</h3>
+                  {isLoadingCategories ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <div key={index} className="animate-pulse">
+                          <div className="h-12 bg-gray-200 rounded"></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : categories.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {categories.slice(0, 8).map((category) => (
+                        <Link
+                          key={category.id}
+                          href={`/category/${category.slug}`}
+                          className="px-4 py-3 bg-gray-50 hover:bg-green-50 text-gray-700 rounded-lg text-sm font-medium transition-all duration-300 text-left border border-gray-200 hover:border-green-300 hover:text-green-700 flex items-center justify-between"
+                          onClick={() => setMobileSearchOpen(false)}
+                        >
+                          <span className="truncate">{category.name.length > 15 
+                            ? category.name.substring(0, 15) + '...' 
+                            : category.name}</span>
+                          <ChevronRight size={14} className="text-gray-400 flex-shrink-0 ml-2" />
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-gray-500 py-4 text-center">No categories available</div>
+                  )}
+                </>
               )}
             </div>
           </div>

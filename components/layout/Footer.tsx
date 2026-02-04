@@ -8,94 +8,79 @@ import {
   MapPin, 
   Phone, 
   Mail,
-  Clock,
-  CreditCard,
-  Shield,
-  Truck,
   ShoppingBag,
-  Heart,
-  Award,
-  Users,
-  Smartphone,
-  Star,
+  Shield,
   Package,
-  Headphones,
+  Award,
   Store,
-  ChevronRight
+  ChevronRight,
+  Clock,
+  Truck,
+  Headphones
 } from 'lucide-react';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
-  // Deep green color scheme - compact version
-  const colors = {
-    deepGreen: '#0d2818',
-    deepGreenLight: '#1a4731',
-    greenAccent: '#2E7D32',
-    greenBright: '#4CAF50',
-    gold: '#FFC107',
-    lightGreen: '#8BC34A',
-    textLight: '#cccccc',
-    textLighter: '#e0e0e0'
-  };
-
   return (
-    <footer className="text-white" style={{ backgroundColor: colors.deepGreen }}>
-      {/* Main Footer Content - Compact */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <footer className="bg-gray-900 text-white">
+      {/* Main Footer Content */}
+      <div className="container mx-auto px-4 py-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
           
           {/* Brand & Contact */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="p-2 rounded-lg" style={{ backgroundColor: colors.greenBright }}>
-                <ShoppingBag size={20} className="text-white" />
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-green-600 to-green-700">
+                <ShoppingBag size={24} className="text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold">
-                  <span className="text-white">LANDO</span>
-                  <span style={{ color: colors.gold }}> </span>
-                  <span className="text-white">HYPERMARKET</span>
+                <h1 className="text-xl font-bold">
+                  LANDO HYPERMARKET
                 </h1>
-                <p className="text-xs mt-0.5" style={{ color: colors.lightGreen }}>
+                <p className="text-sm text-green-400 mt-1">
                   Trusted Since 2010
                 </p>
               </div>
             </div>
             
-            <p className="mb-4 text-xs leading-relaxed" style={{ color: colors.textLight }}>
+            <p className="mb-6 text-gray-300 leading-relaxed">
               Your premier online supermarket for fresh groceries and household essentials at competitive prices.
             </p>
             
             {/* Contact */}
-            <div className="mb-4 space-y-1.5">
-              <div className="flex items-center gap-2">
-                <Phone size={14} style={{ color: colors.gold }} />
-                <span className="text-sm font-medium text-white">+254 716 354 589</span>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Phone size={18} className="text-green-400" />
+                <span className="font-medium">+254 716 354 589</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Mail size={14} style={{ color: colors.gold }} />
-                <span className="text-xs" style={{ color: colors.textLight }}>landoranchh@gmail.com</span>
+              <div className="flex items-center gap-3">
+                <Mail size={18} className="text-green-400" />
+                <span className="text-gray-300">landoranchh@gmail.com</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <MapPin size={18} className="text-green-400" />
+                <span className="text-gray-300">Nairobi, Kenya</span>
               </div>
             </div>
             
             {/* Social */}
-            <div>
-              <div className="flex gap-2">
+            <div className="mt-6">
+              <div className="flex gap-3">
                 {[
-                  { icon: Facebook, color: '#1877F2' },
-                  { icon: Twitter, color: '#1DA1F2' },
-                  { icon: Instagram, color: '#E4405F' },
-                  { icon: Youtube, color: '#FF0000' }
+                  { icon: Facebook, color: '#1877F2', label: 'Facebook' },
+                  { icon: Twitter, color: '#1DA1F2', label: 'Twitter' },
+                  { icon: Instagram, color: '#E4405F', label: 'Instagram' },
+                  { icon: Youtube, color: '#FF0000', label: 'YouTube' }
                 ].map((social, index) => (
                   <a 
                     key={index}
                     href="#"
-                    className="p-1.5 rounded transition-transform hover:scale-110"
-                    style={{ backgroundColor: colors.deepGreenLight }}
-                    aria-label={social.icon.name}
+                    className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-all duration-300 hover:scale-110"
+                    style={{ backgroundColor: '#1f2937' }}
+                    aria-label={social.label}
                   >
-                    <social.icon size={14} className="text-white" />
+                    <social.icon size={18} className="text-gray-300" />
                   </a>
                 ))}
               </div>
@@ -104,23 +89,20 @@ export default function Footer() {
 
           {/* Quick Categories */}
           <div>
-            <h3 className="text-sm font-bold mb-3 pb-2 uppercase tracking-wider" style={{ 
-              color: colors.gold,
-              borderBottom: `1px solid ${colors.greenAccent}`
-            }}>
-              Shop
+            <h3 className="text-lg font-bold mb-5 pb-3 uppercase tracking-wider border-b border-gray-700 text-green-400">
+              Shop Categories
             </h3>
-            <ul className="space-y-1.5">
+            <ul className="space-y-2.5">
               {['Fresh Produce', 'Dairy & Eggs', 'Meat & Poultry', 'Bakery', 'Beverages', 'Household'].map((item) => (
                 <li key={item}>
                   <Link 
                     href={`/categories/${item.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
-                    className="flex items-center justify-between group"
+                    className="flex items-center justify-between group hover:translate-x-1 transition-transform duration-200"
                   >
-                    <span className="text-xs group-hover:text-white transition-colors" style={{ color: colors.textLight }}>
+                    <span className="text-gray-300 group-hover:text-white">
                       {item}
                     </span>
-                    <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: colors.gold }} />
+                    <ChevronRight size={16} className="text-green-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </Link>
                 </li>
               ))}
@@ -129,159 +111,144 @@ export default function Footer() {
 
           {/* Customer Service */}
           <div>
-            <h3 className="text-sm font-bold mb-3 pb-2 uppercase tracking-wider" style={{ 
-              color: colors.gold,
-              borderBottom: `1px solid ${colors.greenAccent}`
-            }}>
-              Help
+            <h3 className="text-lg font-bold mb-5 pb-3 uppercase tracking-wider border-b border-gray-700 text-green-400">
+              Help & Support
             </h3>
-            <ul className="space-y-1.5">
-              {['Contact Us', 'FAQs', 'Delivery Info', 'Returns', 'Track Order', 'Stores'].map((item) => (
-                <li key={item}>
+            <ul className="space-y-2.5">
+              {[
+                { label: 'Contact Us', icon: Headphones },
+                { label: 'FAQs', icon: null },
+                { label: 'Delivery Info', icon: Truck },
+                { label: 'Returns', icon: null },
+                { label: 'Track Order', icon: null },
+                { label: 'Store Locations', icon: Store }
+              ].map((item) => (
+                <li key={item.label}>
                   <Link 
-                    href={`/${item.toLowerCase().replace(/ /g, '-')}`}
-                    className="flex items-center justify-between group"
+                    href={`/${item.label.toLowerCase().replace(/ /g, '-')}`}
+                    className="flex items-center justify-between group hover:translate-x-1 transition-transform duration-200"
                   >
-                    <span className="text-xs group-hover:text-white transition-colors" style={{ color: colors.textLight }}>
-                      {item}
-                    </span>
-                    <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: colors.gold }} />
+                    <div className="flex items-center gap-2">
+                      {item.icon && <item.icon size={16} className="text-green-400" />}
+                      <span className="text-gray-300 group-hover:text-white">
+                        {item.label}
+                      </span>
+                    </div>
+                    <ChevronRight size={16} className="text-green-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Company & Legal */}
+          {/* Newsletter */}
           <div>
-            <h3 className="text-sm font-bold mb-3 pb-2 uppercase tracking-wider" style={{ 
-              color: colors.gold,
-              borderBottom: `1px solid ${colors.greenAccent}`
-            }}>
-              Company
+            <h3 className="text-lg font-bold mb-5 pb-3 uppercase tracking-wider border-b border-gray-700 text-green-400">
+              Newsletter
             </h3>
-            <ul className="space-y-1.5 mb-4">
-              {['About Us', 'Careers', 'Wholesale', 'Terms', 'Privacy', 'Sitemap'].map((item) => (
-                <li key={item}>
-                  <Link 
-                    href={`/${item.toLowerCase().replace(/ /g, '-')}`}
-                    className="flex items-center justify-between group"
-                  >
-                    <span className="text-xs group-hover:text-white transition-colors" style={{ color: colors.textLight }}>
-                      {item}
-                    </span>
-                    <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: colors.gold }} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <p className="text-gray-300 mb-5">
+              Subscribe to get exclusive offers and the latest news.
+            </p>
             
-            {/* Newsletter - Compact */}
-            <div>
-              <div className="flex mb-2">
+            <div className="space-y-3">
+              <div className="flex">
                 <input 
                   type="email" 
-                  placeholder="Email for deals"
-                  className="flex-1 px-2 py-1.5 text-xs rounded-l focus:outline-none"
-                  style={{ 
-                    backgroundColor: colors.deepGreenLight,
-                    color: 'white',
-                    border: `1px solid ${colors.greenAccent}`
-                  }}
+                  placeholder="Your email address"
+                  className="flex-1 px-4 py-3 text-gray-900 bg-white rounded-l-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
                 <button 
-                  className="px-3 py-1.5 text-xs font-medium rounded-r transition-colors hover:opacity-90"
-                  style={{ backgroundColor: colors.gold, color: colors.deepGreen }}
+                  className="px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-medium rounded-r-lg hover:from-green-700 hover:to-green-800 transition-all duration-300"
                 >
-                  Join
+                  Subscribe
                 </button>
               </div>
-              <p className="text-xs" style={{ color: colors.lightGreen }}>
-                Get exclusive offers
-              </p>
+              
+              <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield size={18} className="text-green-400" />
+                  <span className="font-medium">Secure Shopping</span>
+                </div>
+                <p className="text-sm text-gray-400">
+                  100% secure payments with SSL encryption
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Payment & Trust Badges - Single Row */}
-        <div className="py-4 border-t border-b" style={{ borderColor: colors.greenAccent }}>
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="text-center sm:text-left">
-              <div className="text-xs font-medium mb-2 text-white">Payment Methods</div>
-              <div className="flex flex-wrap justify-center sm:justify-start gap-1.5">
-                {['M-Pesa', 'Visa', 'MasterCard', 'Cash'].map((method) => (
+        {/* Trust & Payment Section */}
+        <div className="py-6 border-t border-b border-gray-800">
+          <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
+            {/* Trust Badges */}
+            <div className="text-center lg:text-left">
+              <div className="text-sm font-medium mb-3">Why Shop With Us</div>
+              <div className="flex flex-wrap justify-center lg:justify-start gap-4">
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 rounded-lg">
+                  <Shield size={16} className="text-green-400" />
+                  <span className="text-sm">100% Secure</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 rounded-lg">
+                  <Truck size={16} className="text-green-400" />
+                  <span className="text-sm">Fast Delivery</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 rounded-lg">
+                  <Award size={16} className="text-green-400" />
+                  <span className="text-sm">Quality Guarantee</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Payment Methods */}
+            <div className="text-center lg:text-right">
+              <div className="text-sm font-medium mb-3">Payment Methods</div>
+              <div className="flex flex-wrap justify-center lg:justify-end gap-2">
+                {['M-Pesa', 'Visa', 'MasterCard', 'Cash on Delivery'].map((method) => (
                   <span 
                     key={method}
-                    className="px-2 py-0.5 text-xs rounded"
-                    style={{ 
-                      backgroundColor: colors.deepGreenLight,
-                      color: colors.lightGreen,
-                      border: `1px solid ${colors.greenAccent}`
-                    }}
+                    className="px-3 py-1.5 text-sm bg-gray-800 text-gray-300 rounded-lg border border-gray-700"
                   >
                     {method}
                   </span>
                 ))}
               </div>
             </div>
-            
-            <div className="text-center sm:text-right">
-              <div className="text-xs font-medium mb-2 text-white">Trusted & Secure</div>
-              <div className="flex justify-center sm:justify-end gap-3">
-                <div className="flex items-center gap-1">
-                  <Shield size={12} style={{ color: colors.greenBright }} />
-                  <span className="text-xs" style={{ color: colors.lightGreen }}>Secure</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Package size={12} style={{ color: colors.greenBright }} />
-                  <span className="text-xs" style={{ color: colors.lightGreen }}>Fast Delivery</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Award size={12} style={{ color: colors.greenBright }} />
-                  <span className="text-xs" style={{ color: colors.lightGreen }}>Verified</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* Bottom Bar - Compact */}
-        <div className="pt-4">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-3">
-            <div className="text-center sm:text-left">
-              <p className="text-xs" style={{ color: colors.textLight }}>
-                © {currentYear} <span className="font-medium text-white">LANDO HYPERMARKET</span>
-                <span className="hidden sm:inline mx-1">•</span>
-                <span className="block sm:inline mt-1 sm:mt-0">All rights reserved</span>
+        {/* Bottom Bar */}
+        <div className="pt-6">
+          <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-4">
+            <div className="text-center lg:text-left">
+              <p className="text-gray-400">
+                © {currentYear} <span className="font-bold text-white">LANDO HYPERMARKET</span>
+                <span className="hidden lg:inline mx-2">•</span>
+                <span className="block lg:inline mt-1 lg:mt-0">All rights reserved</span>
               </p>
             </div>
             
-            <div className="flex flex-wrap justify-center gap-3 text-xs">
+            <div className="flex flex-wrap justify-center gap-4 text-sm">
               <Link 
                 href="/privacy"
-                className="hover:text-white transition-colors"
-                style={{ color: colors.textLight }}
+                className="text-gray-400 hover:text-white transition-colors"
               >
-                Privacy
+                Privacy Policy
               </Link>
               <Link 
                 href="/terms"
-                className="hover:text-white transition-colors"
-                style={{ color: colors.textLight }}
+                className="text-gray-400 hover:text-white transition-colors"
               >
-                Terms
+                Terms & Conditions
               </Link>
               <Link 
                 href="/cookies"
-                className="hover:text-white transition-colors"
-                style={{ color: colors.textLight }}
+                className="text-gray-400 hover:text-white transition-colors"
               >
                 Cookies
               </Link>
               <Link 
                 href="/accessibility"
-                className="hover:text-white transition-colors"
-                style={{ color: colors.textLight }}
+                className="text-gray-400 hover:text-white transition-colors"
               >
                 Accessibility
               </Link>
@@ -289,16 +256,23 @@ export default function Footer() {
           </div>
           
           {/* Store Info */}
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              <Store size={10} style={{ color: colors.greenBright }} />
-              <span className="text-xs" style={{ color: colors.lightGreen }}>
-                Multiple branches nationwide
-              </span>
+          <div className="text-center pt-4 border-t border-gray-800">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-sm">
+              <div className="flex items-center gap-2">
+                <Store size={14} className="text-green-400" />
+                <span className="text-gray-400">Multiple branches nationwide</span>
+              </div>
+              <div className="hidden sm:block text-gray-600">•</div>
+              <div className="flex items-center gap-2">
+                <Clock size={14} className="text-green-400" />
+                <span className="text-gray-400">Mon-Sun: 6AM - 11PM</span>
+              </div>
+              <div className="hidden sm:block text-gray-600">•</div>
+              <div className="flex items-center gap-2">
+                <Phone size={14} className="text-green-400" />
+                <span className="font-medium text-green-400">+254 716 354 589</span>
+              </div>
             </div>
-            <p className="text-xs" style={{ color: '#999' }}>
-              Mon-Sun: 6AM - 11PM • Call: <span className="font-medium" style={{ color: colors.gold }}>+254 716 354 589</span>
-            </p>
           </div>
         </div>
       </div>

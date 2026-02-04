@@ -14,7 +14,8 @@ interface Promotion {
   id: number;
   code: string;
   name: string;
-  type: 'percentage' | 'fixed_amount';
+  description?: string;
+  type: 'percentage' | 'fixed_amount' | 'free_shipping' | 'buy_one_get_one';
   discount_value: number;
   max_discount_amount: number | null;
   min_order_amount: number | null;
@@ -105,7 +106,9 @@ const CartPage: React.FC = () => {
     id: 0,
     user_id: 0,
     total: 0,
-    item_count: 0
+    item_count: 0,
+    created_at: '',
+    updated_at: ''
   });
 
   useEffect(() => {
@@ -120,10 +123,25 @@ const CartPage: React.FC = () => {
     try {
       setIsLoading(true);
       const response = await api.cart.get();
-      setCart(response.data.cart || getEmptyCart());
+      console.log('Cart API Response:', response); // Debug log
+      
+      // Handle different response structures
+      let cartData;
+      if (response.data && response.data.cart) {
+        // Structure: { cart: {...}, total: X, item_count: X }
+        cartData = response.data.cart;
+      } else if (response.data) {
+        // Structure: cart data directly in response.data
+        cartData = response.data;
+      } else {
+        // No data
+        cartData = getEmptyCart();
+      }
+      
+      setCart(cartData);
       
       // Extract gallery images for each product
-      const items = response.data.cart?.items || [];
+      const items = cartData?.items || [];
       const imageMap: {[key: number]: string[]} = {};
       
       items.forEach((item: CartItem) => {
@@ -133,10 +151,20 @@ const CartPage: React.FC = () => {
       });
       
       setSelectedProductImages(imageMap);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch cart:', error);
-      toast.error('Failed to load cart');
-      setCart(getEmptyCart());
+      
+      // Check if it's a 401 error (not logged in)
+      if (error.response?.status === 401) {
+        toast.error('Please login to view your cart');
+      } else if (error.response?.status === 404) {
+        // Cart doesn't exist yet, create empty one
+        toast.error('Your cart is empty');
+        setCart(getEmptyCart());
+      } else {
+        toast.error('Failed to load cart');
+        setCart(getEmptyCart());
+      }
     } finally {
       setIsLoading(false);
     }
@@ -149,8 +177,13 @@ const CartPage: React.FC = () => {
     try {
       await api.cart.updateItem(itemId, { quantity: newQuantity });
       await fetchCart(); // Refresh cart
+      
+      // Dispatch event for header update
+      window.dispatchEvent(new Event('cart:updated'));
+      
       toast.success('Cart updated');
     } catch (error: any) {
+      console.error('Update cart error:', error);
       const message = error.response?.data?.message || error.message || 'Failed to update cart';
       toast.error(message);
     } finally {
@@ -164,8 +197,13 @@ const CartPage: React.FC = () => {
     try {
       await api.cart.removeItem(itemId);
       await fetchCart(); // Refresh cart
+      
+      // Dispatch event for header update
+      window.dispatchEvent(new Event('cart:itemRemoved'));
+      
       toast.success('Item removed from cart');
     } catch (error: any) {
+      console.error('Remove item error:', error);
       const message = error.response?.data?.message || error.message || 'Failed to remove item';
       toast.error(message);
     }
@@ -192,10 +230,10 @@ const CartPage: React.FC = () => {
         return sum + (price * quantity);
       }, 0);
       
-      // Check if your API has promotions endpoint
-      const response = await api.post<PromotionValidationResponse>('/promotions/validate', {
+      // Use the promotions API
+      const response = await api.promotions.validate({
         code: promoCode.trim(),
-        subtotal: subtotal
+        order_amount: subtotal
       });
       
       const data = response.data;
@@ -251,6 +289,10 @@ const CartPage: React.FC = () => {
       await api.cart.clear();
       setCart(getEmptyCart());
       removePromoCode();
+      
+      // Dispatch event for header update
+      window.dispatchEvent(new Event('cart:cleared'));
+      
       toast.success('Cart cleared');
     } catch (error: any) {
       const message = error.response?.data?.message || error.message || 'Failed to clear cart';
@@ -273,6 +315,23 @@ const CartPage: React.FC = () => {
     const quantity = safeParseNumber(item.quantity);
     return price * quantity;
   };
+
+  // Listen for cart updates from other components
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      fetchCart();
+    };
+
+    window.addEventListener('cart:updated', handleCartUpdate);
+    window.addEventListener('cart:itemAdded', handleCartUpdate);
+    window.addEventListener('cart:itemRemoved', handleCartUpdate);
+    
+    return () => {
+      window.removeEventListener('cart:updated', handleCartUpdate);
+      window.removeEventListener('cart:itemAdded', handleCartUpdate);
+      window.removeEventListener('cart:itemRemoved', handleCartUpdate);
+    };
+  }, []);
 
   if (!isAuthenticated) {
     return (
@@ -313,6 +372,10 @@ const CartPage: React.FC = () => {
             <Link
               href="/products"
               className="inline-flex items-center justify-center bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
+              onClick={() => {
+                // Dispatch event to refresh header cart count
+                window.dispatchEvent(new Event('cart:updated'));
+              }}
             >
               Continue Shopping
               <ArrowRight className="ml-2" size={20} />
@@ -358,7 +421,7 @@ const CartPage: React.FC = () => {
 
               <div className="divide-y divide-gray-200">
                 {cartItems.map((item) => {
-                  const imageUrl = getImageUrl(item.product?.thumbnail);
+                  const imageUrl = getImageUrl(item.product?.thumbnail || item.product?.main_image);
                   const galleryImages = selectedProductImages[item.product?.id || 0] || [];
                   const itemTotal = calculateItemTotal(item);
                   const isUpdating = updatingItems.includes(item.id);
@@ -375,7 +438,6 @@ const CartPage: React.FC = () => {
                               alt={item.product?.name || 'Product'}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                console.log('Image failed to load:', imageUrl);
                                 e.currentTarget.src = '/images/placeholder-product.jpg';
                               }}
                               loading="lazy"
@@ -499,6 +561,10 @@ const CartPage: React.FC = () => {
               <Link
                 href="/products"
                 className="inline-flex items-center text-green-600 hover:text-green-700 font-medium hover:underline transition-colors"
+                onClick={() => {
+                  // Dispatch event to refresh header cart count
+                  window.dispatchEvent(new Event('cart:updated'));
+                }}
               >
                 ← Continue Shopping
               </Link>
@@ -618,6 +684,10 @@ const CartPage: React.FC = () => {
                 <Link
                   href="/checkout"
                   className="block w-full text-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => {
+                    // Dispatch event to refresh header cart count before checkout
+                    window.dispatchEvent(new Event('cart:updated'));
+                  }}
                 >
                   Proceed to Checkout
                 </Link>
@@ -625,6 +695,10 @@ const CartPage: React.FC = () => {
                 <Link
                   href="/products"
                   className="block w-full text-center border-2 border-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  onClick={() => {
+                    // Dispatch event to refresh header cart count
+                    window.dispatchEvent(new Event('cart:updated'));
+                  }}
                 >
                   Continue Shopping
                 </Link>
