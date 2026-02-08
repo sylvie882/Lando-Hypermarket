@@ -345,14 +345,14 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <div>
+                        {/* <div>
                           <p className="text-2xl font-bold">Ksh {((item as FeaturedProduct).price).toFixed(2)}</p>
                           {(item as FeaturedProduct).discount_price && (
                             <p className="text-sm line-through text-gray-300">
                               Ksh {((item as FeaturedProduct).discount_price).toFixed(2)}
                             </p>
                           )}
-                        </div>
+                        </div> */}
                         <Link
                           href={`/products/${(item as FeaturedProduct).slug}`}
                           className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
