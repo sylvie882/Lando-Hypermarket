@@ -69,11 +69,12 @@ const getCsrfToken = (): string | null => {
   return null;
 };
 
-// Image compression function
+// FIXED: Image compression function that preserves transparency
 const compressImage = async (file: File, maxWidth = 1920, quality = 0.8): Promise<File> => {
   return new Promise((resolve, reject) => {
-    // Skip compression for small files (< 2MB)
-    if (file.size < 2 * 1024 * 1024) {
+    // Skip compression for small files (< 2MB) OR for PNG/GIF files to preserve transparency
+    if (file.size < 2 * 1024 * 1024 || file.type === 'image/png' || file.type === 'image/gif') {
+      console.log(`Skipping compression for ${file.type} file: ${file.name}`);
       resolve(file);
       return;
     }
@@ -102,6 +103,12 @@ const compressImage = async (file: File, maxWidth = 1920, quality = 0.8): Promis
         canvas.width = width;
         canvas.height = height;
 
+        // For JPEG/WebP images (non-transparent), fill with white background
+        if (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/webp') {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+        }
+
         // Draw image
         ctx.drawImage(img, 0, 0, width, height);
 
@@ -113,7 +120,9 @@ const compressImage = async (file: File, maxWidth = 1920, quality = 0.8): Promis
         else if (fileSizeMB > 5) finalQuality = 0.6;
         else if (fileSizeMB > 2) finalQuality = 0.7;
 
-        // Convert to JPEG for better compression
+        // Determine output format - preserve original format
+        const outputFormat = file.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
+        
         canvas.toBlob(
           (blob) => {
             if (!blob) {
@@ -121,19 +130,30 @@ const compressImage = async (file: File, maxWidth = 1920, quality = 0.8): Promis
               return;
             }
 
+            // Keep original file extension
+            const fileExt = file.name.split('.').pop()?.toLowerCase();
+            let outputFileName = file.name;
+            
+            if (fileExt && !['jpg', 'jpeg', 'webp'].includes(fileExt)) {
+              // If not already a supported format, change to appropriate extension
+              outputFileName = file.name.replace(/\.[^/.]+$/, "") + 
+                (outputFormat === 'image/webp' ? '.webp' : '.jpg');
+            }
+
             const compressedFile = new File(
               [blob], 
-              file.name.replace(/\.[^/.]+$/, "") + '.jpg',
+              outputFileName,
               {
-                type: 'image/jpeg',
+                type: outputFormat,
                 lastModified: Date.now(),
               }
             );
 
             console.log(`Compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+            console.log(`Format: ${file.type} → ${outputFormat}`);
             resolve(compressedFile);
           },
-          'image/jpeg',
+          outputFormat,
           finalQuality
         );
       };
@@ -147,9 +167,15 @@ const compressImage = async (file: File, maxWidth = 1920, quality = 0.8): Promis
   });
 };
 
-// Alternative simpler compression function (fallback)
+// FIXED: Alternative simpler compression function (fallback)
 const compressImageSimple = async (file: File, maxSizeMB = 5): Promise<File> => {
   return new Promise((resolve, reject) => {
+    // Skip compression for PNG/GIF to preserve transparency
+    if (file.type === 'image/png' || file.type === 'image/gif') {
+      resolve(file);
+      return;
+    }
+
     if (file.size <= maxSizeMB * 1024 * 1024) {
       resolve(file);
       return;
@@ -183,12 +209,21 @@ const compressImageSimple = async (file: File, maxSizeMB = 5): Promise<File> => 
         canvas.width = width;
         canvas.height = height;
         
+        // For non-transparent images, fill with white background
+        if (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/webp') {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+        }
+        
         ctx.drawImage(img, 0, 0, width, height);
         
         // Lower quality for larger files
         let quality = 0.7;
         if (file.size > 10 * 1024 * 1024) quality = 0.5;
         if (file.size > 20 * 1024 * 1024) quality = 0.3;
+        
+        // Use appropriate format
+        const outputFormat = file.type === 'image/webp' ? 'image/webp' : 'image/jpeg';
         
         canvas.toBlob(
           (blob) => {
@@ -198,13 +233,13 @@ const compressImageSimple = async (file: File, maxSizeMB = 5): Promise<File> => 
             }
             
             const compressedFile = new File([blob], file.name, {
-              type: 'image/jpeg',
+              type: outputFormat,
               lastModified: Date.now(),
             });
             
             resolve(compressedFile);
           },
-          'image/jpeg',
+          outputFormat,
           quality
         );
       };
@@ -388,7 +423,7 @@ export default function CreateBannerPage() {
       let processedMobileImage = mobileImage;
 
       try {
-        // Try advanced compression first
+        // Try advanced compression first (PNG/GIF files will be skipped to preserve transparency)
         processedImage = await compressImage(image, 1920, 0.8);
         if (mobileImage) {
           processedMobileImage = await compressImage(mobileImage, 768, 0.8);
@@ -397,7 +432,7 @@ export default function CreateBannerPage() {
       } catch (compressionError) {
         console.warn('Advanced compression failed, trying simple compression:', compressionError);
         try {
-          // Fallback to simple compression
+          // Fallback to simple compression (PNG/GIF files will be skipped)
           processedImage = await compressImageSimple(image, 5);
           if (mobileImage) {
             processedMobileImage = await compressImageSimple(mobileImage, 5);
@@ -437,10 +472,18 @@ export default function CreateBannerPage() {
         formDataToSend.append('mobile_image', processedMobileImage);
       }
 
-      // Log sizes
-      console.log('Upload sizes:', {
-        desktop: `${(processedImage.size / 1024 / 1024).toFixed(2)}MB`,
-        mobile: processedMobileImage ? `${(processedMobileImage.size / 1024 / 1024).toFixed(2)}MB` : 'none',
+      // Log sizes and formats
+      console.log('Upload details:', {
+        desktop: {
+          name: processedImage.name,
+          type: processedImage.type,
+          size: `${(processedImage.size / 1024 / 1024).toFixed(2)}MB`
+        },
+        mobile: processedMobileImage ? {
+          name: processedMobileImage.name,
+          type: processedMobileImage.type,
+          size: `${(processedMobileImage.size / 1024 / 1024).toFixed(2)}MB`
+        } : 'none',
         total: `${((processedImage.size + (processedMobileImage?.size || 0)) / 1024 / 1024).toFixed(2)}MB`
       });
 
@@ -600,7 +643,7 @@ export default function CreateBannerPage() {
             </div>
           )}
 
-          {/* Upload Guidelines */}
+          {/* Upload Guidelines - UPDATED with transparency info */}
           <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-start">
               <FileWarning className="text-blue-600 mr-3 mt-0.5" size={20} />
@@ -620,9 +663,15 @@ export default function CreateBannerPage() {
                     <p className="text-xs text-gray-600 mt-1">768×400px (recommended)</p>
                   </div>
                   <div className="bg-white p-3 rounded-lg border border-blue-100">
-                    <p className="text-sm font-medium text-gray-700">Auto Compression</p>
-                    <p className="text-xs text-gray-600 mt-1">Files over 2MB are auto-compressed</p>
+                    <p className="text-sm font-medium text-gray-700">Transparency</p>
+                    <p className="text-xs text-gray-600 mt-1">PNG/GIF files preserve transparency</p>
                   </div>
+                </div>
+                <div className="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <p className="text-sm text-yellow-800">
+                    <span className="font-medium">Note:</span> PNG and GIF files are not compressed to preserve transparency. 
+                    JPEG and WebP files are optimized for size.
+                  </p>
                 </div>
               </div>
             </div>
@@ -910,13 +959,19 @@ export default function CreateBannerPage() {
                       </div>
                       {image && (
                         <div className="mt-2 text-xs text-gray-600">
-                          <p>{image.name}</p>
-                          <p>Size: {(image.size / 1024 / 1024).toFixed(2)} MB</p>
-                          {image.size > 2 * 1024 * 1024 && (
-                            <p className="text-yellow-600 mt-1">
-                              ⚡ Will be compressed for faster upload
-                            </p>
-                          )}
+                          <div className="flex justify-between">
+                            <span>{image.name}</span>
+                            <span className="font-medium">{(image.size / 1024 / 1024).toFixed(2)} MB</span>
+                          </div>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-gray-500">Type: {image.type}</span>
+                            {(image.type === 'image/png' || image.type === 'image/gif') && image.size > 2 * 1024 * 1024 && (
+                              <span className="text-blue-600 font-medium">Transparency preserved</span>
+                            )}
+                            {image.type !== 'image/png' && image.type !== 'image/gif' && image.size > 2 * 1024 * 1024 && (
+                              <span className="text-yellow-600">Will be compressed</span>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -984,13 +1039,19 @@ export default function CreateBannerPage() {
                       </div>
                       {mobileImage && (
                         <div className="mt-2 text-xs text-gray-600">
-                          <p>{mobileImage.name}</p>
-                          <p>Size: {(mobileImage.size / 1024 / 1024).toFixed(2)} MB</p>
-                          {mobileImage.size > 2 * 1024 * 1024 && (
-                            <p className="text-yellow-600 mt-1">
-                              ⚡ Will be compressed for faster upload
-                            </p>
-                          )}
+                          <div className="flex justify-between">
+                            <span>{mobileImage.name}</span>
+                            <span className="font-medium">{(mobileImage.size / 1024 / 1024).toFixed(2)} MB</span>
+                          </div>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-gray-500">Type: {mobileImage.type}</span>
+                            {(mobileImage.type === 'image/png' || mobileImage.type === 'image/gif') && mobileImage.size > 2 * 1024 * 1024 && (
+                              <span className="text-blue-600 font-medium">Transparency preserved</span>
+                            )}
+                            {mobileImage.type !== 'image/png' && mobileImage.type !== 'image/gif' && mobileImage.size > 2 * 1024 * 1024 && (
+                              <span className="text-yellow-600">Will be compressed</span>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1031,6 +1092,13 @@ export default function CreateBannerPage() {
                           <span className="font-medium">Total:</span>
                           <span className="font-medium">{totalSizeMB} MB</span>
                         </div>
+                        {(image.type === 'image/png' || image.type === 'image/gif' || (mobileImage && (mobileImage.type === 'image/png' || mobileImage.type === 'image/gif'))) && (
+                          <div className="mt-2 pt-2 border-t border-blue-200">
+                            <p className="text-blue-700 text-xs">
+                              <span className="font-medium">Note:</span> PNG/GIF files preserve transparency
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1045,7 +1113,7 @@ export default function CreateBannerPage() {
                         {compressing ? (
                           <>
                             <Loader2 className="animate-spin" size={18} />
-                            Compressing Images...
+                            Optimizing Images...
                           </>
                         ) : saving ? (
                           <>

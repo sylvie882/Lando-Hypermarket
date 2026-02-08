@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import { Product } from '@/types';
 import ProductCard from '@/components/ui/ProductCard';
-import BannerCarousel from '@/components/ui/BannerCarousel';
+import BannerCarousel from '@/components/ui/ProductsCarousel';
 import { 
   ArrowRight, 
   Truck, 
@@ -32,6 +32,7 @@ import {
 import Link from 'next/link';
 import PersonalizedRecommendations from '@/components/ui/PersonalizedRecommendations';
 import { useAuth } from '@/lib/auth';
+import ProductsCarousel from '@/components/ui/ProductsCarousel';
 
 interface CategoryData {
   id: number;
@@ -409,7 +410,7 @@ const HomePage: React.FC = () => {
       {/* Banner Section - Tight spacing */}
       <section className="pt-0 pb-0 px-4 sm:px-4 md:px-12 overflow-hidden">
         <div className="w-full">
-          <BannerCarousel
+          <ProductsCarousel
             height={{ mobile: '280px', desktop: '380px' }}
             rounded={false}
           />
