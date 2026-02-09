@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, ArrowRight, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { api } from '@/lib/api';
 
 interface Banner {
   id: number;
@@ -14,7 +13,7 @@ interface Banner {
   mobile_image: string | null;
   button_text: string | null;
   button_link: string | null;
-  order: number; // Changed from number to string to match API
+  order: number;
   is_active: boolean;
   start_date: string | null;
   end_date: string | null;
@@ -216,10 +215,24 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
       let bannerData: Banner[] = [];
       
       if (Array.isArray(apiData.data)) {
-        // Parse string order values to numbers
+        // Parse and type-cast the banner data
         bannerData = apiData.data.map(banner => ({
           ...banner,
-          order: parseInt(banner.order) || 0
+          order: parseInt(banner.order) || 0,
+          type: banner.type as 'homepage' | 'category' | 'promotional' | 'sidebar',
+          subtitle: banner.subtitle || null,
+          mobile_image: banner.mobile_image || null,
+          button_text: banner.button_text || null,
+          button_link: banner.button_link || null,
+          start_date: banner.start_date || null,
+          end_date: banner.end_date || null,
+          category_slug: banner.category_slug || null,
+          clicks: banner.clicks || 0,
+          impressions: banner.impressions || 0,
+          created_at: banner.created_at,
+          updated_at: banner.updated_at,
+          image_url: banner.image_url || '',
+          mobile_image_url: banner.mobile_image_url || ''
         }));
       }
       
