@@ -478,4 +478,5 @@ const BannerSlide: React.FC<{
   );
 };
 
+
 export default BannerCarousel;
