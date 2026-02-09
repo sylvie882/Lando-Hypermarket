@@ -14,7 +14,7 @@ interface Banner {
   mobile_image: string | null;
   button_text: string | null;
   button_link: string | null;
-  order: number;
+  order: number; // Changed from number to string to match API
   is_active: boolean;
   start_date: string | null;
   end_date: string | null;
@@ -216,13 +216,17 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
       let bannerData: Banner[] = [];
       
       if (Array.isArray(apiData.data)) {
-        bannerData = apiData.data;
+        // Parse string order values to numbers
+        bannerData = apiData.data.map(banner => ({
+          ...banner,
+          order: parseInt(banner.order) || 0
+        }));
       }
       
       // Filter active banners and sort by order
       const activeBanners = bannerData
         .filter(banner => banner.is_active === true)
-        .sort((a, b) => parseInt(a.order) - parseInt(b.order));
+        .sort((a, b) => a.order - b.order);
       
       setBanners(activeBanners);
       
