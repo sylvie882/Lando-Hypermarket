@@ -1,10 +1,33 @@
-// lib/auth.ts
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { api } from './api';
 import { User } from '@/types';
-import toast from 'react-hot-toast';
+
+// Simple toast replacement that doesn't require external dependencies
+const showToast = {
+  success: (message: string) => {
+    console.log(`✅ ${message}`);
+    // Optional: Show browser notification
+    if (typeof window !== 'undefined') {
+      // You can add a custom toast implementation here
+      const toastEvent = new CustomEvent('show-toast', {
+        detail: { message, type: 'success' }
+      });
+      window.dispatchEvent(toastEvent);
+    }
+  },
+  error: (message: string) => {
+    console.error(`❌ ${message}`);
+    // Optional: Show browser notification
+    if (typeof window !== 'undefined') {
+      const toastEvent = new CustomEvent('show-toast', {
+        detail: { message, type: 'error' }
+      });
+      window.dispatchEvent(toastEvent);
+    }
+  },
+};
 
 interface AuthContextType {
   user: User | null;
@@ -19,7 +42,7 @@ interface AuthContextType {
   register: (data: any) => Promise<boolean>;
   logout: () => Promise<void>;
   updateProfile: (data: any) => Promise<boolean>;
-  updateUser: (userData: Partial<User>) => Promise<boolean>; // Add this line
+  updateUser: (userData: Partial<User>) => Promise<boolean>;
   refreshUser: () => Promise<boolean>;
   forgotPassword: (email: string) => Promise<boolean>;
   resetPassword: (token: string, data: { password: string; password_confirmation: string }) => Promise<boolean>;
@@ -48,7 +71,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
 
   useEffect(() => {
     initializeAuth();
@@ -81,8 +103,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const syncAuthToCookies = (token: string, user: User) => {
     try {
       // Set token and user cookies
-      document.cookie = `token=${token}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
-      document.cookie = `user=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=${60 * 60 * 24 * 7}`;
+      document.cookie = `token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax`;
+      document.cookie = `user=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax`;
     } catch (error) {
       console.error('Failed to sync auth to cookies:', error);
     }
@@ -138,11 +160,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Sync to cookies for middleware
       syncAuthToCookies(token, user);
       
-      toast.success('Login successful!');
+      showToast.success('Login successful!');
       return true;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
-      toast.error(errorMessage);
+      showToast.error(errorMessage);
       return false;
     } finally {
       setIsLoading(false);
@@ -157,7 +179,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Check if user is admin
       if (user.role !== 'admin') {
-        toast.error('Access denied. Admin privileges required.');
+        showToast.error('Access denied. Admin privileges required.');
         return false;
       }
       
@@ -170,11 +192,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Sync to cookies for middleware
       syncAuthToCookies(token, user);
       
-      toast.success('Admin login successful!');
+      showToast.success('Admin login successful!');
       return true;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Admin login failed. Please check your credentials.';
-      toast.error(errorMessage);
+      showToast.error(errorMessage);
       return false;
     } finally {
       setIsLoading(false);
@@ -196,7 +218,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Sync to cookies for middleware
       syncAuthToCookies(token, user);
       
-      toast.success('Registration successful! Please check your email for verification.');
+      showToast.success('Registration successful! Please check your email for verification.');
       return true;
     } catch (error: any) {
       const errors = error.response?.data?.errors;
@@ -214,7 +236,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         errorMessage = error.response?.data?.message || errorMessage;
       }
       
-      toast.error(errorMessage);
+      showToast.error(errorMessage);
       return false;
     } finally {
       setIsLoading(false);
@@ -228,7 +250,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Logout API error:', error);
     } finally {
       clearAuthData();
-      toast.success('Logged out successfully');
+      showToast.success('Logged out successfully');
       // Redirect based on current path
       const currentPath = window.location.pathname;
       if (currentPath.includes('/admin')) {
@@ -253,50 +275,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         syncAuthToCookies(currentToken, updatedUser);
       }
       
-      toast.success('Profile updated successfully!');
+      showToast.success('Profile updated successfully!');
       return true;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Update failed';
-      toast.error(errorMessage);
+      showToast.error(errorMessage);
       return false;
     }
   };
 
-  // ADD THIS updateUser FUNCTION RIGHT HERE:
-const updateUser = async (userData: Partial<User>): Promise<boolean> => {
-  try {
-    // Update local state
-    setUser(prev => prev ? { ...prev, ...userData } : userData as User);
-    
-    // Update localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const currentUser = JSON.parse(storedUser);
-      const updatedUser = { ...currentUser, ...userData };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+  const updateUser = async (userData: Partial<User>): Promise<boolean> => {
+    try {
+      // Update local state
+      setUser(prev => prev ? { ...prev, ...userData } : userData as User);
       
-      // Sync to cookies
-      const currentToken = localStorage.getItem('token');
-      if (currentToken) {
-        syncAuthToCookies(currentToken, updatedUser);
+      // Update localStorage
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const currentUser = JSON.parse(storedUser);
+        const updatedUser = { ...currentUser, ...userData };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        // Sync to cookies
+        const currentToken = localStorage.getItem('token');
+        if (currentToken) {
+          syncAuthToCookies(currentToken, updatedUser);
+        }
       }
+      
+      return true;
+    } catch (error: any) {
+      console.error('Failed to update user data:', error);
+      return false;
     }
-    
-    return true;
-  } catch (error: any) {
-    console.error('Failed to update user data:', error);
-    return false;
-  }
-};
+  };
 
   const forgotPassword = async (email: string): Promise<boolean> => {
     try {
       await api.auth.forgotPassword(email);
-      toast.success('Password reset link sent to your email!');
+      showToast.success('Password reset link sent to your email!');
       return true;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Failed to send reset link';
-      toast.error(errorMessage);
+      showToast.error(errorMessage);
       return false;
     }
   };
@@ -307,11 +328,11 @@ const updateUser = async (userData: Partial<User>): Promise<boolean> => {
   }): Promise<boolean> => {
     try {
       await api.auth.resetPassword({ token, ...data });
-      toast.success('Password reset successful!');
+      showToast.success('Password reset successful!');
       return true;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Failed to reset password';
-      toast.error(errorMessage);
+      showToast.error(errorMessage);
       return false;
     }
   };
@@ -323,11 +344,11 @@ const updateUser = async (userData: Partial<User>): Promise<boolean> => {
   }): Promise<boolean> => {
     try {
       await api.auth.changePassword(data);
-      toast.success('Password changed successfully!');
+      showToast.success('Password changed successfully!');
       return true;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Failed to change password';
-      toast.error(errorMessage);
+      showToast.error(errorMessage);
       return false;
     }
   };
@@ -335,11 +356,11 @@ const updateUser = async (userData: Partial<User>): Promise<boolean> => {
   const verifyEmail = async (token: string): Promise<boolean> => {
     try {
       await api.auth.verifyEmail(token);
-      toast.success('Email verified successfully!');
+      showToast.success('Email verified successfully!');
       return true;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Email verification failed';
-      toast.error(errorMessage);
+      showToast.error(errorMessage);
       return false;
     }
   };
@@ -347,11 +368,11 @@ const updateUser = async (userData: Partial<User>): Promise<boolean> => {
   const resendVerificationEmail = async (email: string): Promise<boolean> => {
     try {
       await api.auth.resendVerificationEmail(email);
-      toast.success('Verification email sent!');
+      showToast.success('Verification email sent!');
       return true;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Failed to resend verification email';
-      toast.error(errorMessage);
+      showToast.error(errorMessage);
       return false;
     }
   };

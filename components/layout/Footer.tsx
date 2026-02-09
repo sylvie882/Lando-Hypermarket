@@ -152,16 +152,7 @@ export default function Footer() {
             
             <div className="space-y-3">
               <div className="flex">
-                <input 
-                  type="email" 
-                  placeholder="Your email address"
-                  className="flex-1 px-4 py-3 text-gray-900 bg-white rounded-l-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-                <button 
-                  className="px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-medium rounded-r-lg hover:from-green-700 hover:to-green-800 transition-all duration-300"
-                >
-                  Subscribe
-                </button>
+          
               </div>
               
               <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">

@@ -171,7 +171,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
   // Add a fallback for non-authenticated users
   if (isLoading) {
     return (
-      <div className={`py-8 ${className}`}>
+      <div className={`py-8 px-4 sm:px-6 md:px-8 lg:px-12 ${className}`}>
         {showHeader && (
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
@@ -204,7 +204,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
 
   if (error && recommendations.length === 0) {
     return (
-      <div className={`py-8 ${className}`}>
+      <div className={`py-8 px-4 sm:px-6 md:px-8 lg:px-12 ${className}`}>
         {showHeader && (
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
@@ -235,7 +235,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
   }
 
   return (
-    <div className={`py-8 ${className}`}>
+    <div className={`py-8 px-4 sm:px-6 md:px-8 lg:px-12 ${className}`}>
       {showHeader && (
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
@@ -259,7 +259,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
 
       {recommendations.length > 0 ? (
         <>
-          {/* UPDATED: 6 cards per row on desktop, 1 on mobile - Same as homepage */}
+          {/* REMOVED the recommendation type badges and relevance score indicators */}
           <div className="product-grid grid">
             {recommendations.map((product, index) => (
               <div 
@@ -269,38 +269,11 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
                   animationDelay: `${index * 50}ms`
                 }}
               >
-                {/* Recommendation type badge */}
-                {product.metadata?.recommendation_type && (
-                  <div className="absolute top-2 left-2 z-10">
-                    <span className={`text-xs px-2 py-1 rounded-full capitalize ${
-                      product.metadata.recommendation_type === 'preference_based' 
-                        ? 'bg-blue-100 text-blue-800'
-                        : product.metadata.recommendation_type === 'purchase_based'
-                        ? 'bg-green-100 text-green-800'
-                        : product.metadata.recommendation_type === 'view_based'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {product.metadata.recommendation_type.replace('_', ' ')}
-                    </span>
-                  </div>
-                )}
-                
-                {/* Relevance score indicator */}
-                {product.metadata?.relevance_score && (
-                  <div className="absolute top-2 right-2 z-10">
-                    <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1">
-                      <Sparkles size={12} className="text-yellow-500" />
-                      <span className="text-xs font-bold">
-                        {Math.round(product.metadata.relevance_score)}%
-                      </span>
-                    </div>
-                  </div>
-                )}
-                
+                {/* ProductCard with hideFeaturedBadge to remove featured text */}
                 <ProductCard 
                   product={product} 
                   onViewTrack={trackProductView}
+                  hideFeaturedBadge={true} // This removes featured text
                 />
               </div>
             ))}
@@ -338,6 +311,29 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        @media (max-width: 639px) {
+          .product-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 0.75rem !important;
+          }
+        }
+        
+        @media (min-width: 640px) and (max-width: 1023px) {
+          .product-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            gap: 0.75rem !important;
+          }
+        }
+        
+        @media (min-width: 1024px) {
+          .product-grid {
+            grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+            gap: 0.75rem !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

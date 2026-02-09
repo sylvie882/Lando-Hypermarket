@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, ShoppingBag, Star, Clock, Tag, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight, ShoppingCart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -28,116 +28,203 @@ interface Banner {
   mobile_image_url?: string;
 }
 
-interface FeaturedProduct {
-  id: number;
-  name: string;
-  slug: string;
-  price: number;
-  discount_price?: number;
-  main_image?: string;
-  thumbnail?: string;
-  rating: number;
-  review_count: number;
-  category_name?: string;
-  is_featured: boolean;
-  is_on_sale: boolean;
-}
-
 interface BannerCarouselProps {
   height?: {
     mobile?: string;
     desktop?: string;
   };
   rounded?: boolean;
-  displayType?: 'banners' | 'featured' | 'mixed'; // Can show banners, featured products, or mixed
+  autoPlay?: boolean;
+  interval?: number;
 }
 
 const BannerCarousel: React.FC<BannerCarouselProps> = ({
   height = {
-    mobile: '340px',
-    desktop: '420px'
+    mobile: '380px',
+    desktop: '500px'
   },
   rounded = true,
-  displayType = 'mixed' // Default shows both
+  autoPlay = true,
+  interval = 6000
 }) => {
   const [banners, setBanners] = useState<Banner[]>([]);
-  const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentDisplayType, setCurrentDisplayType] = useState<'banners' | 'featured'>('banners');
-
-  // Rotate between banners and featured products every 24 hours
-  useEffect(() => {
-    if (displayType === 'mixed') {
-      // Check localStorage for last display type
-      const lastDisplayType = localStorage.getItem('lastBannerDisplayType');
-      const lastDisplayDate = localStorage.getItem('lastBannerDisplayDate');
-      
-      const today = new Date().toDateString();
-      
-      if (lastDisplayType && lastDisplayDate === today) {
-        // Use saved display type for today
-        setCurrentDisplayType(lastDisplayType as 'banners' | 'featured');
-      } else {
-        // Randomly choose or alternate
-        const randomType = Math.random() > 0.5 ? 'banners' : 'featured';
-        setCurrentDisplayType(randomType);
-        
-        // Save to localStorage
-        localStorage.setItem('lastBannerDisplayType', randomType);
-        localStorage.setItem('lastBannerDisplayDate', today);
-      }
-    } else {
-      setCurrentDisplayType(displayType);
-    }
-  }, [displayType]);
+  const [isHovering, setIsHovering] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
 
   useEffect(() => {
-    if (currentDisplayType === 'banners') {
-      fetchBanners();
-    } else {
-      fetchFeaturedProducts();
-    }
-  }, [currentDisplayType]);
+    fetchBanners();
+  }, []);
 
   const fetchBanners = async () => {
     try {
       setIsLoading(true);
       
-      const response = await fetch('https://api.hypermarket.co.ke/api/banners/homepage');
-      
-      if (!response.ok) {
-        throw new Error(`API responded with ${response.status}`);
-      }
-      
-      const data = await response.json();
+      // For demo - using the provided API data directly
+      const apiData = {
+        "success":true,
+        "data":[
+          {
+            "id":15,
+            "title":"Fresh Farm Vegetables",
+            "subtitle":"Naturally grown. Harvested with care.",
+            "description":"Explore our wide selection of fresh, organic vegetables — from kales, cabbages, broccoli, sugarcane, garlic, onions, French beans, courgettes, asparagus, eggplants, pumpkins, baby veggies, herbs, leafy greens, and many more.",
+            "image":"banners/banner-1770536616-69883ea884300.png",
+            "mobile_image":"banners/banner-mobile-1770536616-69883ea88460d.png",
+            "button_text":"Shop Vegetables",
+            "button_link":"https://hypermarket.co.ke/categories",
+            "order":"1",
+            "is_active":true,
+            "start_date":null,
+            "end_date":null,
+            "type":"homepage",
+            "category_slug":null,
+            "target_audience":[],
+            "attributes":[],
+            "clicks":5,
+            "impressions":2322,
+            "created_at":"2025-12-18T15:33:47.000000Z",
+            "updated_at":"2026-02-09T05:56:50.000000Z",
+            "deleted_at":null,
+            "conversions":0,
+            "image_url":"https://api.hypermarket.co.ke/storage/banners/banner-1770536616-69883ea884300.png",
+            "mobile_image_url":"https://api.hypermarket.co.ke/storage/banners/banner-mobile-1770536616-69883ea88460d.png",
+            "status":"active",
+            "ctr":0.22,
+            "conversion_rate":0
+          },
+          {
+            "id":16,
+            "title":"Fresh Seasonal Fruits",
+            "subtitle":"Sweet, ripe, and handpicked from trusted farms.",
+            "description":"Enjoy mangoes, bananas, apples, grapes, kiwi, pawpaw, jackfruit, soursop, peaches, pomegranate, tamarind, berries, star apple, sugar apple, plum, dragon fruit, and more.",
+            "image":"banners/banner-1770533458-69883252c11d2.png",
+            "mobile_image":"banners/banner-mobile-1770533458-69883252c15ab.png",
+            "button_text":"Shop Fruits",
+            "button_link":"https://hypermarket.co.ke/categories",
+            "order":"2",
+            "is_active":true,
+            "start_date":null,
+            "end_date":null,
+            "type":"homepage",
+            "category_slug":null,
+            "target_audience":[],
+            "attributes":[],
+            "clicks":2,
+            "impressions":2316,
+            "created_at":"2025-12-18T15:38:16.000000Z",
+            "updated_at":"2026-02-09T05:56:50.000000Z",
+            "deleted_at":null,
+            "conversions":0,
+            "image_url":"https://api.hypermarket.co.ke/storage/banners/banner-1770533458-69883252c11d2.png",
+            "mobile_image_url":"https://api.hypermarket.co.ke/storage/banners/banner-mobile-1770533458-69883252c15ab.png",
+            "status":"active",
+            "ctr":0.09,
+            "conversion_rate":0
+          },
+          {
+            "id":17,
+            "title":"Premium Grains & Legumes",
+            "subtitle":"Wholesome, nutritious staples for every kitchen.",
+            "description":"Includes beans, green grams, black beans, nyayo beans, yellow beans, rosecoco, bambara nuts, maize, soya beans, sorghum, ndengu, yams, cassava, flour varieties, and more.",
+            "image":"banners/banner-1770533806-698833ae5b622.png",
+            "mobile_image":"banners/banner-mobile-1770533806-698833ae5ba32.png",
+            "button_text":"Shop Grains",
+            "button_link":"https://hypermarket.co.ke/categories",
+            "order":"3",
+            "is_active":true,
+            "start_date":null,
+            "end_date":null,
+            "type":"homepage",
+            "category_slug":null,
+            "target_audience":[],
+            "attributes":[],
+            "clicks":1,
+            "impressions":2312,
+            "created_at":"2025-12-18T15:43:31.000000Z",
+            "updated_at":"2026-02-09T05:56:50.000000Z",
+            "deleted_at":null,
+            "conversions":0,
+            "image_url":"https://api.hypermarket.co.ke/storage/banners/banner-1770533806-698833ae5b622.png",
+            "mobile_image_url":"https://api.hypermarket.co.ke/storage/banners/banner-mobile-1770533806-698833ae5ba32.png",
+            "status":"active",
+            "ctr":0.04,
+            "conversion_rate":0
+          },
+          {
+            "id":18,
+            "title":"Healthy Nuts & Seeds",
+            "subtitle":"Freshly harvested. Protein-rich. Naturally pure.",
+            "description":"Choose from groundnuts (raw & roasted), simsim, cashew nuts, almonds, chia seeds, pumpkin seeds, and more protein-packed varieties.",
+            "image":"banners/banner-1770534035-69883493ecfed.png",
+            "mobile_image":"banners/banner-mobile-1770534035-69883493ed45f.png",
+            "button_text":"Shop Nuts & Seeds",
+            "button_link":"https://hypermarket.co.ke/categories",
+            "order":"5",
+            "is_active":true,
+            "start_date":null,
+            "end_date":null,
+            "type":"homepage",
+            "category_slug":null,
+            "target_audience":[],
+            "attributes":[],
+            "clicks":4,
+            "impressions":2310,
+            "created_at":"2025-12-18T15:46:10.000000Z",
+            "updated_at":"2026-02-09T05:56:50.000000Z",
+            "deleted_at":null,
+            "conversions":0,
+            "image_url":"https://api.hypermarket.co.ke/storage/banners/banner-1770534035-69883493ecfed.png",
+            "mobile_image_url":"https://api.hypermarket.co.ke/storage/banners/banner-mobile-1770534035-69883493ed45f.png",
+            "status":"active",
+            "ctr":0.17,
+            "conversion_rate":0
+          },
+          {
+            "id":21,
+            "title":"Natural Tubers & Roots",
+            "subtitle":"Traditional, nutritious, and filling.",
+            "description":"Sweet potatoes, Irish potatoes, cassava, yams, arrowroot, turnips, beetroots, radish, ginger, turmeric, and more farm-fresh roots.",
+            "image":"banners/banner-1767086467-695399837de4e.png",
+            "mobile_image":"banners/banner-mobile-1767086467-695399837e1c6.png",
+            "button_text":"Shop Tubers",
+            "button_link":"https://hypermarket.co.ke/categories",
+            "order":"5",
+            "is_active":true,
+            "start_date":null,
+            "end_date":null,
+            "type":"homepage",
+            "category_slug":null,
+            "target_audience":[],
+            "attributes":[],
+            "clicks":2,
+            "impressions":2304,
+            "created_at":"2025-12-18T15:55:42.000000Z",
+            "updated_at":"2026-02-09T05:56:50.000000Z",
+            "deleted_at":null,
+            "conversions":0,
+            "image_url":"https://api.hypermarket.co.ke/storage/banners/banner-1767086467-695399837de4e.png",
+            "mobile_image_url":"https://api.hypermarket.co.ke/storage/banners/banner-mobile-1767086467-695399837e1c6.png",
+            "status":"active",
+            "ctr":0.09,
+            "conversion_rate":0
+          }
+        ]
+      };
       
       let bannerData: Banner[] = [];
       
-      if (Array.isArray(data)) {
-        bannerData = data;
-      } else if (data.data && Array.isArray(data.data)) {
-        bannerData = data.data;
-      } else if (data.success && Array.isArray(data.data)) {
-        bannerData = data.data;
-      } else if (data.banners && Array.isArray(data.banners)) {
-        bannerData = data.banners;
+      if (Array.isArray(apiData.data)) {
+        bannerData = apiData.data;
       }
       
-      // Filter active homepage banners only
-      const activeHomepageBanners = bannerData
-        .filter(banner => {
-          const isActive = banner.is_active === true;
-          const isHomepage = banner.type === 'homepage';
-          const hasImage = banner.image || banner.image_url;
-          const isCurrent = !banner.start_date || new Date(banner.start_date) <= new Date();
-          const notExpired = !banner.end_date || new Date(banner.end_date) >= new Date();
-          
-          return isActive && isHomepage && hasImage && isCurrent && notExpired;
-        })
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
+      // Filter active banners and sort by order
+      const activeBanners = bannerData
+        .filter(banner => banner.is_active === true)
+        .sort((a, b) => parseInt(a.order) - parseInt(b.order));
       
-      setBanners(activeHomepageBanners);
+      setBanners(activeBanners);
       
     } catch (error) {
       console.error('Failed to fetch banners:', error);
@@ -147,158 +234,86 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
     }
   };
 
-  const fetchFeaturedProducts = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Fetch featured products from your API
-      const response = await api.products.getFeatured();
-      let productsData = response.data || [];
-      
-      // If no featured products, get some random products
-      if (!productsData.length) {
-        const allProducts = await api.products.getAll({ per_page: 10 });
-        productsData = allProducts.data?.data || allProducts.data || [];
-        
-        // Mark some as featured
-        productsData = productsData.slice(0, 5).map((product: any, index: number) => ({
-          ...product,
-          is_featured: true,
-          is_on_sale: index % 2 === 0 // Make some on sale
-        }));
-      }
-      
-      setFeaturedProducts(productsData);
-      
-    } catch (error) {
-      console.error('Failed to fetch featured products:', error);
-      setFeaturedProducts([]);
-    } finally {
-      setIsLoading(false);
+  const getImageUrl = (banner: Banner, isMobile = false): string => {
+    if (isMobile && banner.mobile_image_url) {
+      return banner.mobile_image_url;
     }
-  };
-
-  // Get the correct image URL
-  const getImageUrl = (item: Banner | FeaturedProduct, isMobile = false): string => {
-    if ('image_url' in item && item.image_url) {
-      return item.image_url;
-    }
-    
-    if ('image' in item) {
-      const imagePath = isMobile ? item.mobile_image || item.image : item.image;
-      return api.getImageUrl(imagePath, '/images/placeholder.jpg');
-    }
-    
-    if ('main_image' in item) {
-      return api.getImageUrl(item.main_image || item.thumbnail, '/images/placeholder-product.jpg');
-    }
-    
-    return '/images/placeholder.jpg';
+    return banner.image_url || '/images/placeholder.jpg';
   };
 
   const nextSlide = () => {
-    const items = currentDisplayType === 'banners' ? banners : featuredProducts;
-    if (items.length <= 1) return;
-    setActiveIndex((prev) => (prev === items.length - 1 ? 0 : prev + 1));
+    if (banners.length <= 1) return;
+    setSlideDirection('right');
+    setActiveIndex((prev) => (prev === banners.length - 1 ? 0 : prev + 1));
   };
 
   const prevSlide = () => {
-    const items = currentDisplayType === 'banners' ? banners : featuredProducts;
-    if (items.length <= 1) return;
-    setActiveIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1));
+    if (banners.length <= 1) return;
+    setSlideDirection('left');
+    setActiveIndex((prev) => (prev === 0 ? banners.length - 1 : prev - 1));
   };
 
   // Auto-rotate slides
   useEffect(() => {
-    const items = currentDisplayType === 'banners' ? banners : featuredProducts;
-    if (items.length <= 1) return;
+    if (!autoPlay || isHovering || banners.length <= 1) return;
     
-    const interval = setInterval(() => {
+    const intervalId = setInterval(() => {
       nextSlide();
-    }, 5000);
+    }, interval);
     
-    return () => clearInterval(interval);
-  }, [banners.length, featuredProducts.length, activeIndex, currentDisplayType]);
+    return () => clearInterval(intervalId);
+  }, [banners.length, activeIndex, autoPlay, isHovering, interval]);
 
-  // Show loading skeleton
   if (isLoading) {
     return (
       <div 
-        className={`relative ${rounded ? 'rounded-2xl' : ''} overflow-hidden bg-gradient-to-r from-green-50 to-lime-50 animate-pulse`}
+        className={`relative overflow-hidden bg-gradient-to-r from-green-50 via-lime-50 to-emerald-50 animate-pulse ${rounded ? 'rounded-3xl md:rounded-[2rem]' : ''}`}
         style={{ height: typeof window !== 'undefined' && window.innerWidth < 768 ? height.mobile : height.desktop }}
-      >
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-        </div>
-      </div>
+      />
     );
   }
 
-  // Get current items based on display type
-  const items = currentDisplayType === 'banners' ? banners : featuredProducts;
-  
-  // Return null if no items
-  if (items.length === 0) {
+  if (banners.length === 0) {
     return null;
   }
 
   return (
-    <div className="relative">
-      {/* Display Type Badge */}
-      <div className="absolute top-4 left-4 z-20">
-        <div className="flex items-center gap-2">
-          <div className={`px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-sm ${
-            currentDisplayType === 'banners' 
-              ? 'bg-gradient-to-r from-orange-500/90 to-orange-600/90 text-white' 
-              : 'bg-gradient-to-r from-green-500/90 to-lime-600/90 text-white'
-          }`}>
-            {currentDisplayType === 'banners' ? (
-              <div className="flex items-center gap-1">
-                <Sparkles size={10} />
-                <span>SPECIAL OFFER</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1">
-                <Star size={10} className="fill-yellow-400" />
-                <span>FEATURED PRODUCTS</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Main Carousel */}
-      <div className={`relative overflow-hidden ${rounded ? 'rounded-2xl' : ''} shadow-xl`}>
+    <div 
+      className="relative group"
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
+      {/* Main Carousel Container */}
+      <div className={`relative overflow-hidden shadow-2xl group ${rounded ? 'rounded-3xl md:rounded-[2rem]' : ''}`}>
+        
         {/* Desktop View */}
         <div className="hidden md:block" style={{ height: height.desktop }}>
-          {items.map((item, index) => {
+          {banners.map((banner, index) => {
             const isActive = index === activeIndex;
-            const imageUrl = getImageUrl(item, false);
+            const isPrev = index === (activeIndex === 0 ? banners.length - 1 : activeIndex - 1);
+            const isNext = index === (activeIndex === banners.length - 1 ? 0 : activeIndex + 1);
             
-            if (!imageUrl) return null;
+            let translateX = '0%';
+            if (isActive) translateX = '0%';
+            else if (isPrev) translateX = '-100%';
+            else if (isNext) translateX = '100%';
+            else translateX = '100%';
             
             return (
               <div
-                key={currentDisplayType === 'banners' ? (item as Banner).id : (item as FeaturedProduct).id}
-                className={`absolute inset-0 transition-all duration-700 ease-in-out ${
-                  isActive ? 'opacity-100 z-10 scale-100' : 'opacity-0 z-0 scale-105'
-                }`}
+                key={banner.id}
+                className={`absolute inset-0 transition-all duration-700 ease-in-out`}
+                style={{
+                  transform: `translateX(${translateX})`,
+                  zIndex: isActive ? 20 : isPrev || isNext ? 10 : 0,
+                  opacity: isActive || isPrev || isNext ? 1 : 0,
+                }}
               >
-                {currentDisplayType === 'banners' ? (
-                  <BannerSlide 
-                    banner={item as Banner}
-                    imageUrl={imageUrl}
-                    isActive={isActive}
-                  />
-                ) : (
-                  <FeaturedProductsSlide 
-                    products={featuredProducts}
-                    activeIndex={activeIndex}
-                    index={index}
-                    imageUrl={imageUrl}
-                    isActive={isActive}
-                  />
-                )}
+                <BannerSlide 
+                  banner={banner}
+                  imageUrl={getImageUrl(banner, false)}
+                  isActive={isActive}
+                />
               </div>
             );
           })}
@@ -306,99 +321,75 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
 
         {/* Mobile View */}
         <div className="md:hidden" style={{ height: height.mobile }}>
-          {items.map((item, index) => {
+          {banners.map((banner, index) => {
             const isActive = index === activeIndex;
-            const imageUrl = getImageUrl(item, true);
+            const isPrev = index === (activeIndex === 0 ? banners.length - 1 : activeIndex - 1);
+            const isNext = index === (activeIndex === banners.length - 1 ? 0 : activeIndex + 1);
             
-            if (!imageUrl) return null;
+            let translateX = '0%';
+            if (isActive) translateX = '0%';
+            else if (isPrev) translateX = '-100%';
+            else if (isNext) translateX = '100%';
+            else translateX = '100%';
             
             return (
               <div
-                key={currentDisplayType === 'banners' ? (item as Banner).id : (item as FeaturedProduct).id}
-                className={`absolute inset-0 transition-all duration-700 ease-in-out ${
-                  isActive ? 'opacity-100 z-10 scale-100' : 'opacity-0 z-0 scale-105'
-                }`}
+                key={banner.id}
+                className={`absolute inset-0 transition-all duration-700 ease-in-out`}
+                style={{
+                  transform: `translateX(${translateX})`,
+                  zIndex: isActive ? 20 : isPrev || isNext ? 10 : 0,
+                  opacity: isActive || isPrev || isNext ? 1 : 0,
+                }}
               >
-                {currentDisplayType === 'banners' ? (
-                  <BannerSlide 
-                    banner={item as Banner}
-                    imageUrl={imageUrl}
-                    isActive={isActive}
-                    isMobile={true}
-                  />
-                ) : (
-                  <div className="relative w-full h-full">
-                    <Image
-                      src={imageUrl}
-                      alt={(item as FeaturedProduct).name}
-                      fill
-                      className="object-cover"
-                      loading={isActive ? "eager" : "lazy"}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-lg font-bold">{(item as FeaturedProduct).name}</h3>
-                        <div className="flex items-center">
-                          <Star size={14} className="fill-yellow-400 text-yellow-400 mr-1" />
-                          <span className="text-sm">{(item as FeaturedProduct).rating}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        {/* <div>
-                          <p className="text-2xl font-bold">Ksh {((item as FeaturedProduct).price).toFixed(2)}</p>
-                          {(item as FeaturedProduct).discount_price && (
-                            <p className="text-sm line-through text-gray-300">
-                              Ksh {((item as FeaturedProduct).discount_price).toFixed(2)}
-                            </p>
-                          )}
-                        </div> */}
-                        <Link
-                          href={`/products/${(item as FeaturedProduct).slug}`}
-                          className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
-                        >
-                          Shop Now
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <BannerSlide 
+                  banner={banner}
+                  imageUrl={getImageUrl(banner, true)}
+                  isActive={isActive}
+                  isMobile={true}
+                />
               </div>
             );
           })}
         </div>
 
-        {/* Navigation Controls */}
-        {items.length > 1 && (
+        {/* Navigation Controls - Only show if there are multiple banners */}
+        {banners.length > 1 && (
           <>
             <button
               onClick={prevSlide}
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-all duration-300 z-20"
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full backdrop-blur-sm transition-all duration-300 z-30 shadow-xl hover:shadow-2xl hover:scale-110 opacity-0 group-hover:opacity-100"
               aria-label="Previous slide"
             >
-              <ChevronLeft size={24} />
+              <ChevronLeft size={28} className="text-green-700" />
             </button>
+            
             <button
               onClick={nextSlide}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-all duration-300 z-20"
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full backdrop-blur-sm transition-all duration-300 z-30 shadow-xl hover:shadow-2xl hover:scale-110 opacity-0 group-hover:opacity-100"
               aria-label="Next slide"
             >
-              <ChevronRight size={24} />
+              <ChevronRight size={28} className="text-green-700" />
             </button>
             
             {/* Dots Indicator */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-2 z-20">
-              {items.map((_, index) => (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-3 z-30">
+              {banners.map((_, index) => (
                 <button
                   key={index}
-                  onClick={() => setActiveIndex(index)}
-                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                    index === activeIndex 
-                      ? 'bg-white scale-125' 
-                      : 'bg-white/50 hover:bg-white/70'
-                  }`}
+                  onClick={() => {
+                    setSlideDirection(index > activeIndex ? 'right' : 'left');
+                    setActiveIndex(index);
+                  }}
+                  className={`transition-all duration-300 flex items-center`}
                   aria-label={`Go to slide ${index + 1}`}
-                />
+                >
+                  <div className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    index === activeIndex 
+                      ? 'bg-green-400 scale-125 ring-4 ring-green-400/30' 
+                      : 'bg-white/70 hover:bg-white'
+                  }`} />
+                </button>
               ))}
             </div>
           </>
@@ -428,128 +419,45 @@ const BannerSlide: React.FC<{
   return (
     <Link
       href={getBannerLink()}
-      className="absolute inset-0 w-full h-full block"
+      className="absolute inset-0 w-full h-full block group/slide"
     >
       <Image
         src={imageUrl}
         alt={banner.title}
         fill
         className="object-cover"
-        loading={isActive ? "eager" : "lazy"}
+        priority={isActive}
+        sizes="100vw"
       />
-      {/* Overlay with gradient */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
       
-      {/* Content */}
-      <div className="absolute inset-0 flex items-center">
-        <div className={`text-white p-8 md:p-12 max-w-lg ${
-          isMobile ? 'text-center' : 'ml-8 md:ml-12'
-        }`}>
-          {banner.subtitle && (
-            <div className="flex items-center gap-2 mb-2">
-              <Tag size={16} />
-              <span className="text-sm font-medium bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
-                {banner.subtitle}
-              </span>
-            </div>
-          )}
-          <h2 className="text-2xl md:text-4xl font-bold mb-3 leading-tight">{banner.title}</h2>
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-transparent" />
+      
+      {/* Content - Only Title and Button */}
+      <div className="absolute inset-0 flex items-center justify-center md:justify-start">
+        <div className={`text-white p-8 md:p-16 max-w-2xl transform transition-all duration-700 ${
+          isActive ? 'translate-x-0 opacity-100' : 'opacity-0'
+        } ${isMobile ? 'text-center' : 'ml-8 md:ml-16'}`}>
+          
+          {/* Title */}
+          <h2 className={`font-bold leading-tight mb-6 md:mb-8 ${
+            isMobile ? 'text-3xl md:text-4xl' : 'text-4xl md:text-5xl lg:text-6xl'
+          }`}>
+            {banner.title}
+          </h2>
+          
+          {/* Button */}
           {banner.button_text && (
-            <button className="mt-4 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl">
-              {banner.button_text}
-            </button>
+            <div className="mt-2">
+              <button className="group/btn inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 text-white font-bold rounded-xl shadow-2xl hover:shadow-green-500/30 transition-all duration-300 transform hover:-translate-y-1 hover:scale-105">
+                <span className="text-lg">{banner.button_text}</span>
+                <ArrowRight size={20} className="group-hover/btn:translate-x-2 transition-transform" />
+              </button>
+            </div>
           )}
         </div>
       </div>
     </Link>
-  );
-};
-
-// Featured Products Slide Component (Desktop only - shows 3 products)
-const FeaturedProductsSlide: React.FC<{
-  products: FeaturedProduct[];
-  activeIndex: number;
-  index: number;
-  imageUrl: string;
-  isActive: boolean;
-}> = ({ products, activeIndex, index, imageUrl, isActive }) => {
-  // Get 3 products to display in this slide
-  const startIndex = activeIndex * 3;
-  const slideProducts = products.slice(startIndex, startIndex + 3);
-
-  if (slideProducts.length === 0) return null;
-
-  return (
-    <div className="w-full h-full bg-gradient-to-br from-green-50 to-lime-50 p-8">
-      <div className="flex flex-col h-full">
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Featured Products</h2>
-          <p className="text-gray-600">Discover our handpicked selection of premium products</p>
-        </div>
-        
-        <div className="flex-1 grid grid-cols-3 gap-6">
-          {slideProducts.map((product) => (
-            <Link
-              key={product.id}
-              href={`/products/${product.slug}`}
-              className="group bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
-            >
-              <div className="relative h-48 bg-gradient-to-br from-green-100 to-lime-100">
-                <Image
-                  src={api.getImageUrl(product.main_image || product.thumbnail, '/images/placeholder-product.jpg')}
-                  alt={product.name}
-                  fill
-                  className="object-contain p-4 group-hover:scale-110 transition-transform duration-300"
-                />
-                {product.is_on_sale && (
-                  <div className="absolute top-3 left-3">
-                    <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
-                      SALE
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900 group-hover:text-orange-600 truncate">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-center">
-                    <Star size={12} className="fill-yellow-400 text-yellow-400 mr-1" />
-                    <span className="text-xs text-gray-600">{product.rating}</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-lg font-bold text-orange-600">
-                      Ksh {product.price.toFixed(2)}
-                    </p>
-                    {product.discount_price && (
-                      <p className="text-sm text-gray-500 line-through">
-                        Ksh {product.discount_price.toFixed(2)}
-                      </p>
-                    )}
-                  </div>
-                  <button className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-lime-500 text-white text-sm rounded-lg hover:from-orange-500 hover:to-orange-600 transition-all">
-                    <ShoppingBag size={16} />
-                  </button>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-        
-        <div className="mt-6 text-center">
-          <Link
-            href="/products?featured=true"
-            className="inline-flex items-center text-orange-600 hover:text-orange-700 font-semibold"
-          >
-            View all featured products
-            <ChevronRight size={18} className="ml-1" />
-          </Link>
-        </div>
-      </div>
-    </div>
   );
 };
 

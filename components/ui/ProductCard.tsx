@@ -6,13 +6,14 @@ import Image from 'next/image';
 import { Product } from '@/types';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { ShoppingCart, Heart, Eye, Zap, Tag } from 'lucide-react';
+import { ShoppingCart, Heart, Eye, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface ProductCardProps {
   product: Product;
   showActions?: boolean;
   onViewTrack?: (productId: number) => void;
+  hideFeaturedBadge?: boolean; // Add this prop
 }
 
 const wishlistCheckCache = new Map<number, {
@@ -21,24 +22,11 @@ const wishlistCheckCache = new Map<number, {
   promise?: Promise<boolean>;
 }>();
 
-// Updated color scheme to match Naivas
-const NAIVAS_COLORS = {
-  primaryGreen: '#9dcc5e',      // Naivas brand green
-  darkGreen: '#6a9c3d',         // Darker green for gradients
-  warmOrange: '#e67e22',        // Warm orange for hover
-  deepOrange: '#d35400',        // Deeper orange for active states
-  darkText: '#1a1a1a',          // Dark text
-  lightText: '#666666',         // Light text
-  borderColor: '#e0e0e0',       // Border color
-  cardBg: '#ffffff',            // Card background
-  badgeRed: '#c0392b',          // Red for badges
-  badgeGold: '#f1c40f',         // Gold for special badges
-};
-
 const ProductCard: React.FC<ProductCardProps> = ({ 
   product, 
   showActions = true,
-  onViewTrack
+  onViewTrack,
+  hideFeaturedBadge = false // Default to false
 }) => {
   const { isAuthenticated } = useAuth();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -48,7 +36,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  // ========== PRICE CALCULATIONS ==========
+  // Price calculations
   const finalPrice = product.final_price || product.discounted_price || product.price || 0;
   const price = product.price ? parseFloat(String(product.price)) : 0;
   const finalPriceNum = finalPrice ? parseFloat(String(finalPrice)) : 0;
@@ -59,7 +47,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       : 0;
   }, [price, finalPriceNum]);
 
-  // ========== STOCK STATUS ==========
+  // Stock status
   const stockQuantity = product.stock_quantity ? 
     (typeof product.stock_quantity === 'number' 
       ? product.stock_quantity 
@@ -76,7 +64,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     (product as any).new_arrival
   );
 
-  // ========== WISHLIST CHECK ==========
+  // Wishlist check
   const checkWishlistStatus = useCallback(async (productId: number) => {
     if (!isAuthenticated || hasCheckedWishlist) return;
     
@@ -137,7 +125,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }
   }, [isAuthenticated, product.id, hasCheckedWishlist, checkWishlistStatus]);
 
-  // ========== FORMAT CURRENCY ==========
+  // Format currency
   const formatKSH = useCallback((amount: any) => {
     const numAmount = amount ? parseFloat(String(amount)) : 0;
     
@@ -153,55 +141,40 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }).format(numAmount);
   }, []);
 
-  // ========== IMAGE URL ==========
+  // Image URL
   const imageUrl = useMemo(() => {
     const baseUrl = 'https://api.hypermarket.co.ke';
     const timestamp = product.updated_at ? new Date(product.updated_at).getTime() : Date.now();
     
-    // Get the image path
     const imagePath = product.main_image || product.thumbnail;
     
-    console.log(`ProductCard ${product.id}: imagePath =`, imagePath);
-    
     if (!imagePath) {
-      // Use a placeholder service instead of local file
-      return `https://via.placeholder.com/400x300/cccccc/666666?text=No+Image`;
+      return `https://via.placeholder.com/400x300/f5f5f5/999999?text=No+Image`;
     }
     
-    // If it's already a full URL, return it with params
     if (imagePath.startsWith('http')) {
       return `${imagePath}${imagePath.includes('?') ? '&' : '?'}t=${timestamp}&w=400&h=300&fit=crop&auto=format`;
     }
     
-    // Clean the path
     let cleanPath = imagePath;
     
-    // Remove leading slash if present
     if (cleanPath.startsWith('/')) {
       cleanPath = cleanPath.substring(1);
     }
     
-    // Handle the specific format from your API
     if (cleanPath.includes('products/thumbnails/')) {
-      // API returns: products/thumbnails/thumbnail-1767070660-69535bc434ad4.png
-      // Convert to: storage/products/thumbnails/thumbnail-1767070660-69535bc434ad4.png
       if (!cleanPath.startsWith('storage/')) {
         cleanPath = `storage/${cleanPath}`;
       }
     } else if (!cleanPath.startsWith('storage/')) {
-      // Add storage prefix if not present
       cleanPath = `storage/${cleanPath}`;
     }
     
     const finalUrl = `${baseUrl}/${cleanPath}`;
-    const urlWithParams = `${finalUrl}${finalUrl.includes('?') ? '&' : '?'}t=${timestamp}&w=400&h=300&fit=crop&auto=format`;
-    
-    console.log(`ProductCard ${product.id}: finalUrl =`, urlWithParams);
-    
-    return urlWithParams;
+    return `${finalUrl}${finalUrl.includes('?') ? '&' : '?'}t=${timestamp}&w=400&h=300&fit=crop&auto=format`;
   }, [product.main_image, product.thumbnail, product.updated_at, product.id]);
 
-  // ========== HANDLERS ==========
+  // Handlers
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
       toast.error('Please login to add items to cart');
@@ -261,7 +234,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  // ========== BADGES ==========
+  // Badges - UPDATED: Conditionally exclude featured badge
   const badges = useMemo(() => {
     const badgesArray = [];
     
@@ -269,19 +242,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
       badgesArray.push({ 
         type: 'new', 
         content: 'NEW', 
-        style: {
-          background: `linear-gradient(135deg, ${NAIVAS_COLORS.darkGreen}, ${NAIVAS_COLORS.primaryGreen})`
-        }
       });
     }
     
-    if (product.is_featured) {
+    // Only show featured badge if hideFeaturedBadge is false AND product is featured
+    if (product.is_featured && !hideFeaturedBadge) {
       badgesArray.push({ 
         type: 'featured', 
         content: 'Featured', 
-        style: {
-          background: `linear-gradient(135deg, ${NAIVAS_COLORS.warmOrange}, ${NAIVAS_COLORS.deepOrange})`
-        }
       });
     }
     
@@ -289,14 +257,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
       badgesArray.push({ 
         type: 'discount', 
         content: `-${discountPercentage}%`, 
-        style: {
-          background: `linear-gradient(135deg, ${NAIVAS_COLORS.badgeRed}, ${NAIVAS_COLORS.warmOrange})`
-        }
       });
     }
     
     return badgesArray.slice(0, 2);
-  }, [isNewProduct, product.is_featured, discountPercentage]);
+  }, [isNewProduct, product.is_featured, discountPercentage, hideFeaturedBadge]); // Added hideFeaturedBadge to dependencies
 
   // Reset image state when product changes
   useEffect(() => {
@@ -305,44 +270,38 @@ const ProductCard: React.FC<ProductCardProps> = ({
   }, [product.id]);
 
   return (
-    <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-gray-200 overflow-hidden h-full flex flex-col product-card-naivas">
+    <div className="group relative bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden h-full flex flex-col hover:-translate-y-1">
       
-      {/* BADGES */}
-      <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+      {/* Badges */}
+      <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
         {badges.map((badge, index) => (
           <span 
             key={`${badge.type}-${index}`}
-            className="text-xs font-bold px-2 py-1 rounded-full shadow text-white"
-            style={badge.style}
+            className="text-xs font-bold px-3 py-1.5 rounded-full shadow-sm bg-gradient-to-r from-gray-900 to-gray-700 text-white"
           >
             {badge.content}
           </span>
         ))}
       </div>
 
-      {/* BEST SELLER BADGE */}
+      {/* Best Seller Badge */}
       {(product as any).is_bestseller && (
-        <div className="absolute top-2 right-2 z-10">
-          <span 
-            className="text-white text-xs font-bold px-2 py-1 rounded-full shadow flex items-center gap-1"
-            style={{
-              background: `linear-gradient(135deg, ${NAIVAS_COLORS.badgeGold}, ${NAIVAS_COLORS.warmOrange})`
-            }}
-          >
+        <div className="absolute top-3 right-3 z-10">
+          <span className="text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm bg-gradient-to-r from-amber-500 to-orange-500 flex items-center gap-1">
             <Zap size={10} />
             Best Seller
           </span>
         </div>
       )}
 
-      {/* PRODUCT IMAGE SECTION */}
+      {/* Product Image */}
       <div className="relative overflow-hidden bg-gray-50">
         <Link 
           href={`/products/${product.id}`} 
           className="block"
           onClick={() => onViewTrack && onViewTrack(product.id)}
         >
-          <div className="relative w-full" style={{ paddingBottom: '75%' }}>
+          <div className="relative w-full aspect-square">
             
             {/* Loading Skeleton */}
             {!imageLoaded && !imageError && (
@@ -356,116 +315,85 @@ const ProductCard: React.FC<ProductCardProps> = ({
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className={`object-cover transition-transform duration-500 ${
-                imageLoaded ? 'group-hover:scale-105 opacity-100' : 'opacity-0'
+                imageLoaded ? 'group-hover:scale-110 opacity-100' : 'opacity-0'
               }`}
-              onLoad={() => {
-                console.log(`ProductCard ${product.id}: Image loaded successfully`);
-                setImageLoaded(true);
-              }}
-              onError={(e) => {
-                console.error(`ProductCard ${product.id}: Failed to load image:`, imageUrl, e);
+              onLoad={() => setImageLoaded(true)}
+              onError={() => {
                 setImageError(true);
                 setImageLoaded(true);
               }}
               loading="lazy"
               quality={85}
             />
-
-            {/* QUICK ACTIONS */}
-            <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleAddToWishlist();
-                }}
-                disabled={isAddingToWishlist}
-                className="bg-white p-1.5 rounded-full shadow hover:bg-gray-50 transition-colors"
-                title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-              >
-                <Heart
-                  size={16}
-                  className={inWishlist ? 'fill-current' : ''}
-                  style={inWishlist ? { color: NAIVAS_COLORS.badgeRed } : undefined}
-                />
-              </button>
-              
-              <Link
-                href={`/products/${product.id}`}
-                onClick={() => onViewTrack && onViewTrack(product.id)}
-                className="bg-white p-1.5 rounded-full shadow hover:bg-gray-50 transition-colors"
-                title="Quick View"
-              >
-                <Eye size={16} />
-              </Link>
-            </div>
           </div>
         </Link>
+
+        {/* Quick Actions */}
+        <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleAddToWishlist();
+            }}
+            disabled={isAddingToWishlist}
+            className="bg-white p-2 rounded-full shadow-md hover:shadow-lg transition-all hover:scale-110"
+            title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            <Heart
+              size={18}
+              className={inWishlist ? 'fill-red-500 text-red-500' : 'text-gray-600'}
+            />
+          </button>
+          
+          <Link
+            href={`/products/${product.id}`}
+            onClick={() => onViewTrack && onViewTrack(product.id)}
+            className="bg-white p-2 rounded-full shadow-md hover:shadow-lg transition-all hover:scale-110"
+            title="Quick View"
+          >
+            <Eye size={18} className="text-gray-600" />
+          </Link>
+        </div>
       </div>
 
-      {/* PRODUCT INFO SECTION */}
+      {/* Product Info */}
       <div className="p-4 flex-1 flex flex-col">
         
-        {/* Category */}
-        {product.category?.name && (
-          <div className="mb-1">
-            <span className="inline-flex items-center gap-1 text-xs text-gray-600 font-medium">
-              <Tag size={10} />
-              {product.category.name}
-            </span>
-          </div>
-        )}
-
         {/* Product Name */}
         <Link 
           href={`/products/${product.id}`} 
-          className="mb-2"
           onClick={() => onViewTrack && onViewTrack(product.id)}
         >
-          <h3 className="font-semibold text-sm leading-tight line-clamp-2 h-10" style={{ color: NAIVAS_COLORS.darkText }}>
+          <h3 className="font-medium text-gray-900 text-sm leading-tight line-clamp-2 mb-2 h-10">
             {product.name || 'Unnamed Product'}
           </h3>
         </Link>
 
-        {/* PRICE & CART SECTION */}
+        {/* Price Section - Reduced spacing */}
         <div className="mt-auto">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
+          <div className="mb-3">
+            <div className="flex items-center gap-3">
               {/* Final Price */}
-              <div className="text-lg font-bold" style={{ color: NAIVAS_COLORS.darkText }}>
+              <div className="text-lg font-bold text-gray-900">
                 {formatKSH(finalPriceNum)}
               </div>
               
-              {/* Original Price (if discounted) */}
+              {/* Original Price */}
               {finalPriceNum < price && price > 0 && (
-                <span className="text-sm line-through text-gray-500">
+                <span className="text-sm line-through text-gray-400">
                   {formatKSH(price)}
                 </span>
               )}
             </div>
           </div>
 
-          {/* ADD TO CART BUTTON - Naivas Style */}
+          {/* Add to Cart Button - Warm orange with light green hover */}
           {showActions && (
             <button
               onClick={handleAddToCart}
               disabled={isAddingToCart || !isInStock}
-              className="w-full text-white py-3 px-4 rounded-md font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center naivas-add-to-cart-btn"
-              style={{
-                backgroundColor: NAIVAS_COLORS.primaryGreen,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = NAIVAS_COLORS.warmOrange;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = NAIVAS_COLORS.primaryGreen;
-              }}
-              onMouseDown={(e) => {
-                e.currentTarget.style.backgroundColor = NAIVAS_COLORS.deepOrange;
-              }}
-              onMouseUp={(e) => {
-                e.currentTarget.style.backgroundColor = NAIVAS_COLORS.warmOrange;
-              }}
+              className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-2.5 px-4 rounded-lg font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center hover:bg-gradient-to-r hover:from-emerald-500 hover:to-emerald-600 active:scale-[0.98] shadow-md hover:shadow-lg"
             >
               {isAddingToCart ? (
                 <span className="flex items-center justify-center">
@@ -485,32 +413,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </div>
       </div>
-
-      <style jsx>{`
-        .product-card-naivas {
-          border-radius: 8px;
-          border: 1px solid ${NAIVAS_COLORS.borderColor};
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-        
-        .product-card-naivas:hover {
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-          border-color: ${NAIVAS_COLORS.primaryGreen};
-        }
-        
-        .naivas-add-to-cart-btn {
-          transition: background-color 0.2s ease, transform 0.2s ease;
-        }
-        
-        .naivas-add-to-cart-btn:not(:disabled):hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-        
-        .naivas-add-to-cart-btn:not(:disabled):active {
-          transform: translateY(0);
-        }
-      `}</style>
     </div>
   );
 };
