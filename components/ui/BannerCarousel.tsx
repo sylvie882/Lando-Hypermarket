@@ -37,6 +37,8 @@ interface BannerCarouselProps {
   interval?: number;
 }
 
+
+
 const BannerCarousel: React.FC<BannerCarouselProps> = ({
   height = {
     mobile: '380px',
