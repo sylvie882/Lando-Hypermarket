@@ -175,15 +175,15 @@ const HomePage: React.FC = () => {
         }
       `}</style>
 
-      {/* Banner Section - Add padding/margin to push it down */}
-      <section className="pt-2 sm:pt-4 md:pt-6 lg:pt-8 pb-0 px-4 sm:px-6 md:px-8 lg:px-12 overflow-hidden">
-        <div className="w-full">
-          <BannerCarousel
-            height={{ mobile: '280px', desktop: '380px' }}
-            rounded={false}
-          />
-        </div>
-      </section>
+{/* Banner Section - Negative margin for mobile only */}
+<section className="-mt-2 pt-0 sm:pt-2 md:pt-4 lg:pt-6 pb-0 px-4 sm:px-6 md:px-8 lg:px-12 overflow-hidden">
+  <div className="w-full">
+    <BannerCarousel
+      height={{ mobile: '280px', desktop: '380px' }}
+      rounded={false}
+    />
+  </div>
+</section>
 
       {/* Categories Section - Using new component */}
       <div ref={categoriesSectionRef}>
