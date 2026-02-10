@@ -412,6 +412,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </button>
           )}
         </div>
+
+        
       </div>
     </div>
   );
