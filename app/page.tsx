@@ -176,7 +176,7 @@ const HomePage: React.FC = () => {
       `}</style>
 
       {/* Banner Section - Add padding/margin to push it down */}
-      <section className="pt-6 sm:pt-8 md:pt-10 pb-0 px-4 sm:px-6 md:px-8 lg:px-12 overflow-hidden">
+      <section className="pt-2 sm:pt-4 md:pt-6 lg:pt-8 pb-0 px-4 sm:px-6 md:px-8 lg:px-12 overflow-hidden">
         <div className="w-full">
           <BannerCarousel
             height={{ mobile: '280px', desktop: '380px' }}
