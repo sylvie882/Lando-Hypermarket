@@ -566,7 +566,7 @@ const Header: React.FC = () => {
                   >
                     <div className="flex">
                       {/* Categories Column */}
-                      <div className="w-72 bg-green-50 border-r border-green-200">
+                      <div className="w-72 bg-white border-r border-green-200">
                         <div className="p-4 border-b border-green-200">
                           <h3 className="font-bold text-green-800">Categories</h3>
                         </div>
@@ -575,19 +575,14 @@ const Header: React.FC = () => {
                             <button
                               key={category.id}
                               onMouseEnter={() => handleCategoryHover(category)}
-                              className={`w-full text-left px-4 py-3 border-b border-green-100 flex items-center justify-between transition-colors ${
+                              className={`w-full text-left px-4 py-3 border-b border-gray-100 flex items-center justify-between transition-colors ${
                                 activeCategory?.id === category.id 
                                   ? 'bg-gradient-to-r from-orange-50 to-orange-100 text-orange-600 font-medium border-orange-200' 
-                                  : 'text-green-700 hover:bg-gradient-to-r hover:from-orange-50 hover:to-orange-100 hover:text-orange-600'
+                                  : 'text-gray-700 hover:bg-white hover:text-orange-600'
                               }`}
                             >
                               <span className="font-medium">{category.name}</span>
-                              <div className="flex items-center space-x-2">
-                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                                  {category.active_products_count}
-                                </span>
-                                <ChevronRight size={14} className="text-green-400" />
-                              </div>
+                              <ChevronRight size={14} className="text-gray-400" />
                             </button>
                           ))}
                         </div>
@@ -789,9 +784,7 @@ const Header: React.FC = () => {
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <span className="font-medium">{category.name}</span>
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                          {category.active_products_count}
-                        </span>
+                        <ChevronRight size={14} className="text-gray-400" />
                       </Link>
                     ))}
                   </div>
