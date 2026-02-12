@@ -340,9 +340,10 @@ const Header: React.FC = () => {
                 <div>
                   <h1 className="text-2xl font-bold">
                     <span className="text-orange-600 group-hover:text-orange-700 transition-colors">Lando</span>
-                    <span className="text-emerald-600 group-hover:text-emerald-700 transition-colors ml-1">Hypermarket</span>
+                    {/* <span className="text-emerald-600 group-hover:text-emerald-700 transition-colors ml-1">Hypermarket</span>
+                   */}
                   </h1>
-                  <p className="text-xs text-gray-500 -mt-1 group-hover:text-orange-500 transition-colors">One-stop online & Shopping</p>
+                  <p className="text-xs text-emerald-600 group-hover:text-emerald-700 -mt-1 group-hover:text-orange-500 transition-colors">Hypermarket</p>
                 </div>
               </Link>
 
