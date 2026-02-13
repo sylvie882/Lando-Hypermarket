@@ -132,13 +132,17 @@ const Header: React.FC = () => {
     fetchCategories();
   }, []);
 
+  
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
-      setSearchQuery('');
-    }
-  };
+  e.preventDefault();
+  if (searchQuery.trim()) {
+    // Change from 'q' to 'search' to match what ProductsPage expects
+    router.push(`/products?search=${encodeURIComponent(searchQuery)}`);
+    setSearchQuery('');
+  }
+};
+
+
 
   const handleLogout = async () => {
     try {
@@ -422,9 +426,9 @@ const Header: React.FC = () => {
             <span className={`text-[10px] mt-0.5 ${pathname === '/' ? 'text-[#E67E22] font-medium' : 'text-gray-600'}`}>Home</span>
           </Link>
           
-          <Link href="/shop" className="flex flex-col items-center p-1 w-16">
-            <ShoppingBag size={20} className={pathname === '/shop' ? 'text-[#E67E22]' : 'text-gray-600'} />
-            <span className={`text-[10px] mt-0.5 ${pathname === '/shop' ? 'text-[#E67E22] font-medium' : 'text-gray-600'}`}>Shop</span>
+          <Link href="/products" className="flex flex-col items-center p-1 w-16">
+            <ShoppingBag size={20} className={pathname === '/products' ? 'text-[#E67E22]' : 'text-gray-600'} />
+            <span className={`text-[10px] mt-0.5 ${pathname === '/products' ? 'text-[#E67E22] font-medium' : 'text-gray-600'}`}>Shop</span>
           </Link>
           
           <button 

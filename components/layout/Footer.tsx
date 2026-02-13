@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { 
   Facebook, 
@@ -31,17 +32,20 @@ export default function Footer() {
           {/* Brand & Contact */}
           <div>
             <div className="flex items-center gap-3 mb-5">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-green-600 to-green-700">
-                <ShoppingBag size={24} className="text-white" />
+              <Link href="/" className="flex items-center space-x-3">
+              <Image 
+                src="/logotwo.png" 
+                alt="Lando Logo" 
+                width={60} 
+                height={60} 
+                className="object-contain"
+              />
+              <div className="flex flex-col">
+                <span className="text-2xl font-bold text-[#E67E22] leading-tight">Lando</span>
+                <span className="text-sm font-medium text-[#2E7D32] tracking-wide">Hypermarket</span>
               </div>
-              <div>
-                <h1 className="text-xl font-bold">
-                  LANDO HYPERMARKET
-                </h1>
-                <p className="text-sm text-green-400 mt-1">
-                  Trusted Since 2010
-                </p>
-              </div>
+            </Link>
+                          
             </div>
             
             <p className="mb-6 text-gray-300 leading-relaxed">
