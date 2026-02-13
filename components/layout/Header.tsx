@@ -152,12 +152,15 @@ const Header: React.FC = () => {
 
   const visibleCategories = categories.slice(0, 11);
 
+  // Consistent padding class for all sections
+  const containerPadding = "px-4 sm:px-6 md:px-8 lg:px-12";
+
   return (
     <>
       {/* Single Sticky Container - Light Dim Green Background */}
-      <div className="sticky top-0 z-50 bg-[#F8FAF5] px-4 shadow-md">
+      <div className={`sticky top-0 z-50 bg-[#F8FAF5] shadow-md ${containerPadding}`}>
         {/* Top Header - Same Light Dim Green with Warm Orange Borders */}
-        <div className="bg-[#F8FAF5] text-gray-700 py-2 px-4 sm:px-6 md:px-8 lg:px-12 border-b border-[#E67E22]">
+        <div className="bg-[#F8FAF5] text-gray-700 py-2 border-b border-[#E67E22]">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <span className="flex items-center px-3 py-1 border border-[#E67E22] rounded-full">
@@ -177,7 +180,7 @@ const Header: React.FC = () => {
 
         {/* Desktop Header - Same Light Dim Green */}
         <div className="hidden md:block bg-[#F8FAF5]">
-          <div className="flex items-center justify-between sm:px-6 md:px-8 lg:px-12 py-3">
+          <div className="flex items-center justify-between py-3">
             {/* Logo and Store Name - Stacked with Warm Orange Lando */}
             <Link href="/" className="flex items-center space-x-3">
               <Image 
@@ -324,7 +327,7 @@ const Header: React.FC = () => {
         </div>
 
         {/* Mobile Header - Same Light Dim Green */}
-        <div className="md:hidden px-4 py-3 bg-[#F8FAF5]">
+        <div className="md:hidden py-3 bg-[#F8FAF5]">
           {/* Logo and Location Row */}
           <div className="flex items-center justify-between mb-3">
             <Link href="/" className="flex items-center space-x-2">
@@ -380,7 +383,7 @@ const Header: React.FC = () => {
         </div>
 
         {/* Desktop Categories - Same Light Dim Green with Warm Orange Accents */}
-          <nav className="bg-[#F8FAF5] hidden md:block px-4 sm:px-6 md:px-8 lg:px-12 border-t border-[#E67E22]/30">
+        <nav className="bg-[#F8FAF5] hidden md:block border-t border-[#E67E22]/30">
           <div className="flex items-center py-2">
             {/* All Categories Button with Warm Orange */}
             <button
