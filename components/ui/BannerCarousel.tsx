@@ -152,7 +152,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
   if (isLoading) {
     return (
       <div 
-        className={`relative overflow-hidden bg-gradient-to-r from-orange-100 via-emerald-100 to-orange-100 animate-pulse ${rounded ? 'rounded-2xl md:rounded-3xl' : ''}`}
+        className={`relative overflow-hidden bg-gradient-to-r from-[#E67E22]/20 via-[#F8FAF5] to-[#E67E22]/20 animate-pulse ${rounded ? 'rounded-xl md:rounded-2xl' : ''}`}
         style={{ height: typeof window !== 'undefined' && window.innerWidth < 768 ? height.mobile : height.desktop }}
       />
     );
@@ -170,7 +170,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
       onMouseLeave={() => setIsHovering(false)}
     >
       {/* Main Carousel Container */}
-      <div className={`relative overflow-hidden shadow-xl ${rounded ? 'rounded-2xl md:rounded-3xl' : ''}`}>
+      <div className={`relative overflow-hidden shadow-xl ${rounded ? 'rounded-xl md:rounded-2xl' : ''}`}>
         
         {/* Desktop View - Infinite Carousel */}
         <div className="hidden md:block" style={{ height: height.desktop }}>
@@ -283,19 +283,19 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
             <button
               onClick={prevSlide}
               disabled={isAnimating}
-              className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-2 md:p-3 rounded-full backdrop-blur-sm transition-all duration-300 z-30 shadow-lg hover:shadow-xl hover:scale-110 opacity-0 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-2 md:p-3 rounded-xl backdrop-blur-sm transition-all duration-300 z-30 shadow-lg hover:shadow-xl hover:scale-110 opacity-0 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Previous slide"
             >
-              <ChevronLeft size={20} className="md:w-6 md:h-6 text-orange-600" />
+              <ChevronLeft size={20} className="md:w-6 md:h-6 text-[#E67E22]" />
             </button>
             
             <button
               onClick={nextSlide}
               disabled={isAnimating}
-              className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-2 md:p-3 rounded-full backdrop-blur-sm transition-all duration-300 z-30 shadow-lg hover:shadow-xl hover:scale-110 opacity-0 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-2 md:p-3 rounded-xl backdrop-blur-sm transition-all duration-300 z-30 shadow-lg hover:shadow-xl hover:scale-110 opacity-0 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Next slide"
             >
-              <ChevronRight size={20} className="md:w-6 md:h-6 text-orange-600" />
+              <ChevronRight size={20} className="md:w-6 md:h-6 text-[#E67E22]" />
             </button>
             
             {/* Dots Indicator */}
@@ -315,7 +315,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
                 >
                   <div className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full transition-all duration-300 ${
                     index === activeIndex 
-                      ? 'bg-gradient-to-r from-orange-500 to-emerald-600 scale-125 ring-4 ring-orange-500/30' 
+                      ? 'bg-[#E67E22] scale-125 ring-4 ring-[#E67E22]/30' 
                       : 'bg-white/70 hover:bg-white'
                   }`} />
                 </button>
@@ -323,7 +323,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
             </div>
 
             {/* Slide Counter */}
-            <div className="absolute bottom-4 md:bottom-6 right-4 md:right-6 z-30 bg-black/40 backdrop-blur-md text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-medium">
+            <div className="absolute bottom-4 md:bottom-6 right-4 md:right-6 z-30 bg-black/40 backdrop-blur-md text-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-xs md:text-sm font-medium">
               {activeIndex + 1} / {banners.length}
             </div>
           </>
@@ -368,7 +368,7 @@ const BannerSlide: React.FC<{
       />
       
       {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-transparent rounded-xl md:rounded-2xl" />
       
       {/* Content */}
       <div className="absolute inset-0 flex items-center justify-center md:justify-start">
@@ -380,7 +380,7 @@ const BannerSlide: React.FC<{
           <h2 className={`font-bold leading-tight mb-2 md:mb-4 ${
             isMobile ? 'text-xl md:text-2xl' : 'text-2xl md:text-3xl lg:text-4xl'
           }`}>
-            <span className="bg-gradient-to-r from-white via-orange-100 to-emerald-100 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-white via-orange-100 to-[#E67E22]/30 bg-clip-text text-transparent">
               {banner.title}
             </span>
           </h2>
@@ -392,9 +392,9 @@ const BannerSlide: React.FC<{
             </p>
           )}
           
-          {/* Button */}
+          {/* Button - Warm Orange */}
           {banner.button_text && (
-            <button className="group/btn inline-flex items-center gap-1.5 md:gap-2 px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-orange-500 to-emerald-600 hover:from-orange-600 hover:to-emerald-700 text-white font-semibold rounded-lg md:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 text-xs md:text-sm">
+            <button className="group/btn inline-flex items-center gap-1.5 md:gap-2 px-4 py-2 md:px-6 md:py-3 bg-[#E67E22] hover:bg-[#D35400] text-white font-semibold rounded-lg md:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 text-xs md:text-sm">
               <span>{banner.button_text}</span>
               <ArrowRight size={14} className="md:w-4 md:h-4 group-hover/btn:translate-x-1 transition-transform" />
             </button>
