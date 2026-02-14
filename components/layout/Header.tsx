@@ -405,13 +405,13 @@ const Header: React.FC = () => {
             {/* Categories - Desktop only */}
             <div className="flex items-center space-x-4 overflow-x-auto hide-scrollbar">
               {visibleCategories.map((category) => (
-                <Link 
+                <a 
                   key={category.id} 
-                  href={`/category/${category.slug}`} 
+                  href={`https://hypermarket.co.ke/categories/${category.slug}`}
                   className="text-gray-700 hover:text-[#E67E22] whitespace-nowrap text-sm font-medium transition-colors"
                 >
                   {category.name}
-                </Link>
+                </a>
               ))}
             </div>
           </div>
@@ -472,14 +472,14 @@ const Header: React.FC = () => {
               </div>
               <div className="flex flex-col space-y-1">
                 {categories.map((category) => (
-                  <Link 
+                  <a 
                     key={category.id} 
-                    href={`/category/${category.slug}`}
+                    href={`https://hypermarket.co.ke/categories/${category.slug}`}
                     onClick={() => setMobileMenuOpen(false)}
                     className="text-gray-700 hover:text-[#E67E22] hover:bg-[#E6F3E6] px-4 py-3 rounded-md text-base font-medium transition-colors border-b border-gray-100 last:border-0"
                   >
                     {category.name}
-                  </Link>
+                  </a>
                 ))}
               </div>
             </div>
@@ -495,14 +495,14 @@ const Header: React.FC = () => {
               All Categories
             </div>
             {categories.map((category) => (
-              <Link
+              <a
                 key={category.id}
-                href={`/category/${category.slug}`}
+                href={`https://hypermarket.co.ke/categories/${category.slug}`}
                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-[#E6F3E6] hover:text-[#E67E22] transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {category.name}
-              </Link>
+              </a>
             ))}
           </div>
         </div>
