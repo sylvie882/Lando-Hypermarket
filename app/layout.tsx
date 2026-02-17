@@ -1,4 +1,4 @@
-// app/layout.tsx - UPDATED WITH COMPREHENSIVE PRODUCT RANGE
+// app/layout.tsx - COMPREHENSIVE SEO OPTIMIZATION
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -26,51 +26,53 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Hypermarket Kenya | Farm Fresh & Organic Groceries, Baby Products, Maternity & More — Shop Online & Save',
-  description: 'Your one-stop online grocery store in Kenya. Shop farm fresh vegetables & fruits, organic products, stationery, maternity pads, baby products, cleaning supplies & more. Express delivery in Nairobi. Cash on Delivery available.',
+  title: {
+    default: 'Hypermarket Kenya | Farm Fresh Groceries & Organic Products Delivered in Nairobi',
+    template: '%s | Hypermarket Kenya'
+  },
+  description: 'Kenya\'s fastest growing online supermarket. Shop farm fresh vegetables, organic fruits, baby products, maternity essentials & household items. Free delivery in Nairobi over KES 2000. Order now in 45-99 mins!',
   keywords: [
-    // Core grocery keywords
-    'Hypermarket Kenya',
-    'online grocery shopping Kenya',
-    'buy groceries online Nairobi',
-    'grocery delivery Nairobi',
+    // Primary keywords
     'online supermarket Kenya',
-    'farm fresh products Kenya',
+    'grocery delivery Nairobi',
+    'farm fresh vegetables Kenya',
     'organic products Nairobi',
-    'fresh vegetables delivery Nairobi',
-    'fruits delivery Kenya',
+    'buy groceries online Kenya',
     
-    // Additional product categories
-    'stationery supplies Nairobi',
-    'buy stationery online Kenya',
-    'maternity pads Kenya',
-    'baby products Nairobi',
-    'baby diapers delivery',
-    'baby formula Kenya',
-    'baby wipes online',
-    'cleaning products Kenya',
-    'household cleaning supplies Nairobi',
-    'dish soap delivery',
-    'laundry detergent Kenya',
-    'organic vegetables Nairobi',
+    // Product categories
+    'fresh vegetables delivery',
     'organic fruits Kenya',
-    'pesticide free vegetables',
-    'chemical free produce',
+    'baby products Nairobi',
+    'maternity pads Kenya',
+    'cleaning supplies Nairobi',
+    'stationery online Kenya',
     
-    // Existing keywords preserved
-    'food delivery Nairobi',
-    'Nairobi grocery store',
-    'Kenya ecommerce',
+    // Location-based
+    'supermarket in Nairobi',
+    'food delivery Westlands',
+    'groceries Kilimani',
+    'online shopping Lavington',
+    
+    // Service keywords
     'same day delivery Nairobi',
-    'free delivery groceries',
-    'online shopping Kenya',
-    'grocery app Kenya',
-    'cash on delivery Nairobi',
-    'express delivery Nairobi'
+    'cash on delivery groceries',
+    'M-Pesa online payment',
+    'express grocery delivery',
+    
+    // Long-tail keywords
+    'where to buy organic vegetables in Nairobi',
+    'best online grocery store Kenya',
+    'affordable baby diapers delivery',
+    'fresh produce home delivery'
   ],
-  authors: [{ name: 'Hypermarket Kenya' }],
+  authors: [{ name: 'Hypermarket Kenya', url: 'https://hypermarket.co.ke/about' }],
   creator: 'Hypermarket Kenya',
   publisher: 'Hypermarket Kenya',
+  formatDetection: {
+    email: true,
+    address: true,
+    telephone: true,
+  },
   robots: {
     index: true,
     follow: true,
@@ -86,43 +88,51 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_KE',
     url: SITE_URL,
-    title: 'Hypermarket Kenya | Farm Fresh & Organic Groceries, Baby Products, Maternity & More',
-    description: 'Your one-stop online grocery store: Farm fresh produce, organic products, stationery, maternity pads, baby essentials, cleaning supplies. Express delivery Nairobi. Shop now & save!',
     siteName: SITE_NAME,
+    title: 'Hypermarket Kenya - Your Everyday Online Supermarket in Nairobi',
+    description: '🛒 Farm fresh produce • Organic products • Baby essentials • Maternity supplies • Cleaning items. Free delivery over KES 2000. Shop now!',
     images: [
       {
-        url: `${SITE_URL}/images/og-image.jpg`,
+        url: `${SITE_URL}/og-image.jpg`,
         width: 1200,
         height: 630,
-        alt: 'Hypermarket Kenya - Farm Fresh Groceries, Organic Products, Baby & Maternity Essentials',
+        alt: 'Hypermarket Kenya - Online Grocery Shopping',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Hypermarket Kenya | Farm Fresh, Organic & Everyday Essentials',
-    description: 'Farm fresh vegetables & fruits 🥬 | Organic products 🌱 | Baby & maternity 👶 | Stationery 📚 | Cleaning supplies 🧹 | Express delivery Nairobi',
-    images: [`${SITE_URL}/images/twitter-card.jpg`],
-    creator: '@hypermarket_ke',
     site: '@hypermarket_ke',
+    creator: '@hypermarket_ke',
+    title: 'Hypermarket Kenya | Online Grocery Delivery',
+    description: 'Farm fresh groceries delivered to your doorstep in Nairobi. Shop vegetables, fruits, baby products & more!',
+    images: [`${SITE_URL}/twitter-image.jpg`],
   },
-  icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/favicon.ico',
+  alternates: {
+    canonical: SITE_URL,
+    languages: {
+      'en-KE': SITE_URL,
+    },
   },
-  category: 'Grocery & E-commerce',
-  applicationName: SITE_NAME,
+  category: 'grocery',
+  classification: 'Online Supermarket',
+  verification: {
+    google: '5696457e6978be87', // Your Google Search Console verification
+    other: {
+      'facebook-domain-verification': ['your-fb-verification-code'],
+    },
+  },
   other: {
-    'geo.region': 'KE-NBO',
+    'geo.region': 'KE-30', // Nairobi county code
     'geo.placename': 'Nairobi',
-    'geo.position': '-1.2921,36.8219',
-    'ICBM': '-1.2921, 36.8219',
-    
-    // Additional product-focused meta tags
-    'product-categories': 'Farm Fresh, Organic, Groceries, Stationery, Maternity, Baby Products, Cleaning Supplies',
-    'delivery-area': 'Nairobi, Kenya',
-    'payment-methods': 'Cash on Delivery, M-Pesa, Card Payments',
+    'geo.position': '-1.286389;36.817223',
+    'ICBM': '-1.286389, 36.817223',
+    'og:email': BUSINESS_EMAIL,
+    'og:phone_number': BUSINESS_PHONE,
+    'og:country-name': 'Kenya',
+    'business:contact_data:street_address': 'Nairobi, Kenya',
+    'business:contact_data:locality': 'Nairobi',
+    'business:contact_data:country': 'KE',
   },
 };
 
@@ -134,148 +144,259 @@ export default function RootLayout({
   return (
     <html lang="en-KE">
       <head>
-        {/* GOOGLE SITE VERIFICATION - CRITICAL */}
+        {/* Essential Meta Tags */}
+        <meta charSet="utf-8" />
+        <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        
+        {/* Google Site Verification */}
         <meta name="google-site-verification" content="5696457e6978be87" />
         
-        {/* Enhanced description meta tag with full product range */}
-        <meta name="description" content="🛒 Hypermarket Kenya: Your complete online grocery store. Shop farm fresh vegetables & fruits, certified organic products, office stationery, maternity pads, baby diapers & formula, household cleaning supplies. Express delivery within 60-90 mins in Nairobi. Free delivery for orders above Ksh 2,000. Cash on Delivery available." />
+        {/* Enhanced Description with Rich Snippets */}
+        <meta name="description" content="✓ Fresh vegetables ✓ Organic fruits ✓ Baby products ✓ Maternity supplies ✓ Cleaning items. Free delivery Nairobi over KES 2000. Order online now!" />
+        
+        {/* Canonical URL */}
+        <link rel="canonical" href={SITE_URL} />
         
         {/* hreflang tags */}
-        <link rel="alternate" href={SITE_URL} hrefLang="en-ke" />
+        <link rel="alternate" href={SITE_URL} hrefLang="en-KE" />
         <link rel="alternate" href={SITE_URL} hrefLang="en" />
         <link rel="alternate" href={SITE_URL} hrefLang="x-default" />
         
-        {/* Preconnect */}
+        {/* Preconnect for Performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://api.hypermarket.co.ke" />
+        <link rel="preconnect" href="https://api.hypermarket.co.ke" />
+        <link rel="dns-prefetch" href="https://www.google-analytics.com" />
         
-        {/* Structured Data - Updated with comprehensive product offerings */}
+        {/* Favicon & Icons */}
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        <meta name="msapplication-TileColor" content="#10b981" />
+        <meta name="theme-color" content="#10b981" />
+        
+        {/* Mobile App Meta Tags */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Hypermarket" />
+        <meta name="format-detection" content="telephone=yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        
+        {/* Category & Service Tags */}
+        <meta name="service-type" content="Grocery Delivery" />
+        <meta name="delivery-areas" content="Nairobi, Kiambu, Westlands, Kilimani, Lavington, Kileleshwa" />
+        <meta name="payment-methods" content="M-Pesa, Cash on Delivery, Credit Card, Debit Card" />
+        <meta name="delivery-time" content="45-99 minutes" />
+        <meta name="free-delivery-threshold" content="KES 2000" />
+        
+        {/* Comprehensive Schema.org Structured Data */}
         <Script
-          id="schema-org"
+          id="schema-organization"
           type="application/ld+json"
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify([
-              {
-                "@context": "https://schema.org",
-                "@type": "GroceryStore",
-                "@id": `${SITE_URL}/#store`,
-                "name": "Hypermarket Kenya",
-                "image": `${SITE_URL}/logo.jpeg`,
-                "description": "Online grocery store offering farm fresh produce, organic products, stationery, maternity supplies, baby products, and household cleaning essentials in Nairobi, Kenya.",
-                "url": SITE_URL,
-                "telephone": BUSINESS_PHONE,
-                "email": BUSINESS_EMAIL,
-                "address": {
-                  "@type": "PostalAddress",
-                  "streetAddress": "Nairobi",
-                  "addressLocality": "Nairobi",
-                  "addressRegion": "Nairobi County",
-                  "postalCode": "00100",
-                  "addressCountry": "KE"
-                },
-                "geo": {
-                  "@type": "GeoCoordinates",
-                  "latitude": -1.2921,
-                  "longitude": 36.8219
-                },
-                "openingHoursSpecification": [
-                  {
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "@id": `${SITE_URL}/#organization`,
+              "name": SITE_NAME,
+              "url": SITE_URL,
+              "logo": `${SITE_URL}/logo.png`,
+              "image": `${SITE_URL}/og-image.jpg`,
+              "description": "Kenya's premier online supermarket offering farm fresh groceries, organic products, baby essentials, and household items with express delivery in Nairobi.",
+              "address": {
+                "@type": "PostalAddress",
+                "addressLocality": "Nairobi",
+                "addressRegion": "Nairobi",
+                "addressCountry": "KE"
+              },
+              "contactPoint": [
+                {
+                  "@type": "ContactPoint",
+                  "telephone": BUSINESS_PHONE,
+                  "contactType": "customer service",
+                  "availableLanguage": ["English", "Swahili"],
+                  "hoursAvailable": {
                     "@type": "OpeningHoursSpecification",
-                    "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+                    "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
                     "opens": "08:00",
                     "closes": "20:00"
-                  },
-                  {
-                    "@type": "OpeningHoursSpecification",
-                    "dayOfWeek": "Sunday",
-                    "opens": "09:00",
-                    "closes": "18:00"
                   }
-                ],
-                "priceRange": "$$",
-                "servesCuisine": [
-                  "Fresh Produce", 
-                  "Organic Products", 
-                  "Groceries", 
-                  "Dairy", 
-                  "Beverages",
-                  "Baby Products",
-                  "Maternity Supplies",
-                  "Stationery",
-                  "Cleaning Products"
-                ],
-                "hasOfferCatalog": {
-                  "@type": "OfferCatalog",
-                  "name": "Product Categories",
-                  "itemListElement": [
-                    {
-                      "@type": "OfferCatalog",
-                      "name": "Farm Fresh",
-                      "description": "Fresh vegetables and fruits sourced directly from farms"
-                    },
-                    {
-                      "@type": "OfferCatalog",
-                      "name": "Organic Products",
-                      "description": "Certified organic vegetables, fruits, and groceries"
-                    },
-                    {
-                      "@type": "OfferCatalog",
-                      "name": "Baby Products",
-                      "description": "Diapers, formula, baby food, wipes, and nursery essentials"
-                    },
-                    {
-                      "@type": "OfferCatalog",
-                      "name": "Maternity Supplies",
-                      "description": "Maternity pads, nursing supplies, and postnatal care products"
-                    },
-                    {
-                      "@type": "OfferCatalog",
-                      "name": "Stationery",
-                      "description": "Office supplies, school stationery, and writing materials"
-                    },
-                    {
-                      "@type": "OfferCatalog",
-                      "name": "Cleaning Supplies",
-                      "description": "Household cleaning products, detergents, and sanitizers"
-                    }
-                  ]
                 },
-                "areaServed": {
-                  "@type": "GeoCircle",
-                  "geoMidpoint": {
-                    "@type": "GeoCoordinates",
-                    "latitude": -1.2921,
-                    "longitude": 36.8219
-                  },
-                  "geoRadius": "25000"
-                },
-                "offers": {
-                  "@type": "Offer",
-                  "name": "Online Exclusive Deals",
-                  "description": "Save more on farm fresh produce, organic items, baby products, and everyday essentials",
-                  "availability": "https://schema.org/InStock"
+                {
+                  "@type": "ContactPoint",
+                  "telephone": BUSINESS_PHONE,
+                  "contactType": "sales",
+                  "availableLanguage": ["English", "Swahili"]
                 }
-              },
-              {
-                "@context": "https://schema.org",
-                "@type": "WebSite",
-                "@id": `${SITE_URL}/#website`,
-                "url": SITE_URL,
-                "name": "Hypermarket Kenya",
-                "description": "Farm fresh groceries, organic products, stationery, maternity supplies, baby essentials & cleaning products - all delivered to your door",
-                "publisher": {
-                  "@id": `${SITE_URL}/#store`
-                }
-              }
-            ])
+              ],
+              "sameAs": [
+                "https://www.facebook.com/hypermarketkenya",
+                "https://www.instagram.com/hypermarket_ke",
+                "https://twitter.com/hypermarket_ke"
+              ]
+            })
           }}
         />
         
-        {/* Breadcrumb Schema */}
         <Script
-          id="breadcrumb-schema"
+          id="schema-grocery-store"
+          type="application/ld+json"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "GroceryStore",
+              "@id": `${SITE_URL}/#store`,
+              "name": "Hypermarket Kenya",
+              "image": `${SITE_URL}/store-image.jpg`,
+              "url": SITE_URL,
+              "telephone": BUSINESS_PHONE,
+              "email": BUSINESS_EMAIL,
+              "priceRange": "$$",
+              "menu": `${SITE_URL}/products`,
+              "acceptsReservations": "False",
+              "servesCuisine": "Groceries, Fresh Produce, Organic Foods",
+              "areaServed": {
+                "@type": "GeoCircle",
+                "geoMidpoint": {
+                  "@type": "GeoCoordinates",
+                  "latitude": -1.286389,
+                  "longitude": 36.817223
+                },
+                "geoRadius": "20000"
+              },
+              "openingHoursSpecification": [
+                {
+                  "@type": "OpeningHoursSpecification",
+                  "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+                  "opens": "08:00",
+                  "closes": "20:00"
+                },
+                {
+                  "@type": "OpeningHoursSpecification",
+                  "dayOfWeek": "Sunday",
+                  "opens": "09:00",
+                  "closes": "18:00"
+                }
+              ],
+              "hasOfferCatalog": {
+                "@type": "OfferCatalog",
+                "name": "Product Categories",
+                "itemListElement": [
+                  {
+                    "@type": "OfferCatalog",
+                    "name": "Farm Fresh",
+                    "itemListElement": [
+                      {"@type": "Product", "name": "Fresh Vegetables"},
+                      {"@type": "Product", "name": "Fresh Fruits"},
+                      {"@type": "Product", "name": "Fresh Herbs"}
+                    ]
+                  },
+                  {
+                    "@type": "OfferCatalog",
+                    "name": "Organic Products",
+                    "itemListElement": [
+                      {"@type": "Product", "name": "Organic Vegetables"},
+                      {"@type": "Product", "name": "Organic Fruits"},
+                      {"@type": "Product", "name": "Organic Grains"}
+                    ]
+                  },
+                  {
+                    "@type": "OfferCatalog",
+                    "name": "Baby Products",
+                    "itemListElement": [
+                      {"@type": "Product", "name": "Baby Diapers"},
+                      {"@type": "Product", "name": "Baby Formula"},
+                      {"@type": "Product", "name": "Baby Food"}
+                    ]
+                  }
+                ]
+              }
+            })
+          }}
+        />
+        
+        <Script
+          id="schema-website"
+          type="application/ld+json"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "@id": `${SITE_URL}/#website`,
+              "url": SITE_URL,
+              "name": SITE_NAME,
+              "description": "Online supermarket in Nairobi offering farm fresh groceries, organic products, baby essentials, and household items with express delivery.",
+              "publisher": {
+                "@id": `${SITE_URL}/#organization`
+              },
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": {
+                  "@type": "EntryPoint",
+                  "urlTemplate": `${SITE_URL}/search?q={search_term_string}`
+                },
+                "query-input": "required name=search_term_string"
+              }
+            })
+          }}
+        />
+        
+        <Script
+          id="schema-local-business"
+          type="application/ld+json"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "LocalBusiness",
+              "@id": `${SITE_URL}/#localbusiness`,
+              "name": "Hypermarket Kenya",
+              "image": `${SITE_URL}/store-front.jpg`,
+              "url": SITE_URL,
+              "telephone": BUSINESS_PHONE,
+              "priceRange": "KES 50 - 5000",
+              "openingHours": "Mo-Sa 08:00-20:00, Su 09:00-18:00",
+              "address": {
+                "@type": "PostalAddress",
+                "addressLocality": "Nairobi",
+                "addressCountry": "KE"
+              },
+              "geo": {
+                "@type": "GeoCoordinates",
+                "latitude": -1.286389,
+                "longitude": 36.817223
+              },
+              "areaServed": "Nairobi, Kenya",
+              "makesOffer": [
+                {
+                  "@type": "Offer",
+                  "itemOffered": {
+                    "@type": "Service",
+                    "name": "Grocery Delivery",
+                    "description": "Express grocery delivery in 45-99 minutes"
+                  }
+                },
+                {
+                  "@type": "Offer",
+                  "itemOffered": {
+                    "@type": "Product",
+                    "name": "Farm Fresh Vegetables",
+                    "description": "Locally sourced fresh vegetables"
+                  }
+                }
+              ]
+            })
+          }}
+        />
+        
+        <Script
+          id="schema-breadcrumb"
           type="application/ld+json"
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
@@ -306,34 +427,23 @@ export default function RootLayout({
                   "position": 4,
                   "name": "Baby Products",
                   "item": `${SITE_URL}/baby-products`
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 5,
+                  "name": "Maternity",
+                  "item": `${SITE_URL}/maternity`
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 6,
+                  "name": "Cleaning Supplies",
+                  "item": `${SITE_URL}/cleaning-supplies`
                 }
               ]
             })
           }}
         />
-        
-        {/* Favicon */}
-        <link rel="icon" href="/favicon.png" type="image/png" />
-        <link rel="shortcut icon" href="/favicon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/favicon.png" />
-        <link rel="manifest" href="/manifest.json" />
-        
-        {/* Mobile meta */}
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-title" content="Hypermarket" />
-        <meta name="format-detection" content="telephone=yes" />
-        
-        {/* Enhanced promotional meta tags for all product categories */}
-        <meta name="category-farm-fresh" content="Fresh vegetables, fruits, herbs from local farms" />
-        <meta name="category-organic" content="Certified organic produce, pesticide-free vegetables, natural products" />
-        <meta name="category-baby" content="Baby diapers, formula, baby food, wipes, nursery essentials" />
-        <meta name="category-maternity" content="Maternity pads, nursing pads, postnatal care" />
-        <meta name="category-stationery" content="Office stationery, school supplies, writing materials, notebooks" />
-        <meta name="category-cleaning" content="Household cleaning products, dish soap, laundry detergent, sanitizers" />
-        <meta name="delivery" content="Express delivery within 60-90 minutes in Nairobi" />
-        <meta name="payment" content="Cash On Delivery, M-Pesa, Card Payments Available" />
-        
       </head>
       <body className={inter.className}>
         <QueryProvider>
@@ -362,7 +472,7 @@ export default function RootLayout({
           </AuthProvider>
         </QueryProvider>
         
-        {/* Google Analytics */}
+        {/* Google Analytics 4 */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
           strategy="afterInteractive"
@@ -372,7 +482,27 @@ export default function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-XXXXXXXXXX');
+            gtag('config', 'G-XXXXXXXXXX', {
+              'send_page_view': true,
+              'transport_type': 'beacon',
+              'anonymize_ip': true
+            });
+          `}
+        </Script>
+        
+        {/* Facebook Pixel */}
+        <Script id="facebook-pixel" strategy="afterInteractive">
+          {`
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', 'YOUR_PIXEL_ID');
+            fbq('track', 'PageView');
           `}
         </Script>
       </body>
