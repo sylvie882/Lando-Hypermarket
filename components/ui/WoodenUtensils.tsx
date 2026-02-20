@@ -103,7 +103,7 @@ const WoodenUtensils: React.FC = () => {
       
       // Handle paginated response
       const productsData = response.data?.data || response.data || [];
-      const pagination = response.data?.meta || response.meta;
+      const pagination = response.data?.meta;
       
       setProducts(productsData);
       
