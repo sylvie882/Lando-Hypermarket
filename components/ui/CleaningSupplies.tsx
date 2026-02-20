@@ -119,18 +119,41 @@ const CleaningSupplies: React.FC = () => {
       
       const response = await api.products.getAll(params);
       
-      // Handle paginated response
-      const productsData = response.data?.data || response.data || [];
-      const pagination = response.data?.meta || response.meta;
+      // Handle paginated response - FIXED HERE
+      // The response structure might be different - let's check
+      const responseData = response.data;
       
-      setProducts(productsData);
-      
-      if (pagination) {
-        setCurrentPage(pagination.current_page || page);
-        setTotalPages(pagination.last_page || 1);
-        setTotalProducts(pagination.total || productsData.length);
-      } else {
-        setTotalProducts(productsData.length);
+      // Check if the response has a data property that contains the products
+      if (responseData && responseData.data && Array.isArray(responseData.data)) {
+        // Structure: { data: [...products], meta: {...} }
+        setProducts(responseData.data);
+        
+        // Check for pagination in meta or links
+        if (responseData.meta) {
+          setCurrentPage(responseData.meta.current_page || page);
+          setTotalPages(responseData.meta.last_page || 1);
+          setTotalProducts(responseData.meta.total || responseData.data.length);
+        } else if (responseData.links) {
+          // Alternative pagination structure
+          setTotalProducts(responseData.total || responseData.data.length);
+        } else {
+          setTotalProducts(responseData.data.length);
+        }
+      } 
+      // Check if response.data is directly an array
+      else if (Array.isArray(responseData)) {
+        setProducts(responseData);
+        setTotalProducts(responseData.length);
+      }
+      // Check if response itself is the array
+      else if (Array.isArray(response)) {
+        setProducts(response as any);
+        setTotalProducts((response as any).length);
+      }
+      // Fallback
+      else {
+        setProducts([]);
+        setTotalProducts(0);
       }
       
     } catch (error) {
@@ -207,6 +230,7 @@ const CleaningSupplies: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero Section with Category Image */}
+     
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex flex-col lg:flex-row gap-8">
@@ -296,14 +320,12 @@ const CleaningSupplies: React.FC = () => {
                 </div>
               )}
 
-              {/* Quick Tips */}
+            
             </div>
           </div>
 
           {/* Right Side - Products */}
           <div className="lg:w-3/4">
-            {/* Sort and Filter Bar */}
-           
 
             {/* Products Grid */}
             {isLoading ? (
