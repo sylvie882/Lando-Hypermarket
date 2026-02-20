@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
-  Search, Menu, ShoppingCart, ChevronDown, X, Home, Store, User, LayoutGrid, ShoppingBag, MapPin, LogOut, Heart, Package, User as UserIcon
+  Search, Menu, ShoppingCart, ChevronDown, X, Home, Store, User, LayoutGrid, ShoppingBag, MapPin, LogOut, Heart, Package, User as UserIcon,
+  MenuIcon
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
+import DashboardCard from '../admin/DashboardCard';
 
 interface Category {
   id: number;
@@ -25,9 +27,36 @@ const Header: React.FC = () => {
   const [location, setLocation] = useState<string>('Detecting location...');
   const [isLocating, setIsLocating] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [showTopHeader, setShowTopHeader] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
+
+  // Handle scroll to hide/show top header
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Show header when scrolling up or at the top
+      if (currentScrollY < lastScrollY || currentScrollY < 10) {
+        setShowTopHeader(true);
+      } 
+      // Hide header when scrolling down and past 50px
+      else if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setShowTopHeader(false);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [lastScrollY]);
 
   // Fetch cart count
   const fetchCartCount = useCallback(async () => {
@@ -161,17 +190,21 @@ const Header: React.FC = () => {
 
   return (
     <>
-      {/* Single Sticky Container - Light Dim Green Background */}
-      <div className={`sticky top-0 z-50 bg-[#F8FAF5] shadow-md ${containerPadding}`}>
-        {/* Top Header - Same Light Dim Green with Warm Orange Borders */}
-        <div className="bg-[#F8FAF5] text-gray-700 py-2 border-b border-[#E67E22]">
+      {/* Single Sticky Container - White Background */}
+      <div className={`sticky top-0 z-50 bg-white shadow-md ${containerPadding} transition-all duration-300`}>
+        {/* Top Header - Hidden on scroll down */}
+        <div 
+          className={`bg-white text-gray-700 py-2 transition-all duration-300 overflow-hidden ${
+            showTopHeader ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0 py-0'
+          }`}
+        >
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
-              <span className="flex items-center px-3 py-1 border border-[#E67E22] rounded-full">
+              <span className="flex items-center px-3 py-1 border border-[#E67E22] rounded">
                 <img src="/images/schedule.png" alt="Scheduled" className="w-4 h-4 sm:w-5 sm:h-5 object-contain mr-1.5" />
                 <span className="text-xs sm:text-sm text-[#E67E22] font-medium">Scheduled</span>
               </span>
-              <span className="flex items-center px-3 py-1 border border-[#E67E22] rounded-full">
+              <span className="flex items-center px-3 py-1 border border-[#E67E22] rounded">
                 <img src="/images/express.png" alt="Express" className="w-4 h-4 sm:w-5 sm:h-5 object-contain mr-1.5" />
                 <span className="text-xs sm:text-sm text-[#E67E22] font-medium">Express</span>
               </span>
@@ -182,22 +215,19 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Desktop Header - Same Light Dim Green */}
-        <div className="hidden md:block bg-[#F8FAF5]">
+        {/* Desktop Header - White Background */}
+        <div className="hidden md:block bg-white">
           <div className="flex items-center justify-between py-3">
-            {/* Logo and Store Name - Stacked with Warm Orange Lando */}
+            {/* Logo and Store Name */}
             <Link href="/" className="flex items-center space-x-3">
               <Image 
-                src="/logotwo.png" 
+                src="/logo10.png" 
                 alt="Lando Logo" 
-                width={60} 
+                width={200} 
                 height={60} 
-                className="object-contain"
+                className="object-cover w-[190px] h-[70px]"
+                priority
               />
-              <div className="flex flex-col">
-                <span className="text-2xl font-bold text-[#E67E22] leading-tight">Lando</span>
-                <span className="text-sm font-medium text-[#2E7D32] tracking-wide">Hypermarket</span>
-              </div>
             </Link>
             
             {/* Location with GPS */}
@@ -221,7 +251,7 @@ const Header: React.FC = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#E67E22] bg-white"
               />
-              <button type="submit" className="bg-[#E67E22] text-white px-4 rounded-r-lg hover:bg-[#D35400] transition-colors">
+              <button type="submit" className="bg-emerald-500 text-white px-4 rounded-r-lg hover:bg-[#D35400] transition-colors">
                 <Search size={20} />
               </button>
             </form>
@@ -233,7 +263,7 @@ const Header: React.FC = () => {
                   onClick={() => setAccountMenuOpen(!accountMenuOpen)}
                   className="flex items-center space-x-2 text-gray-700 hover:text-[#E67E22] transition-colors group"
                 >
-                  <div className="w-8 h-8 rounded-full bg-[#E67E22] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center">
                     <User size={16} className="text-white" />
                   </div>
                   <div className="flex flex-col items-start">
@@ -304,14 +334,14 @@ const Header: React.FC = () => {
               <div className="flex items-center space-x-3">
                 <Link
                   href="/auth/login"
-                  className="text-sm font-medium text-[#E67E22] hover:text-[#D35400] transition-colors px-3 py-2 rounded-md hover:bg-white/50"
+                  className="text-sm font-medium text-[#E67E22] hover:text-[#D35400] transition-colors px-3 py-2 rounded-md hover:bg-gray-50"
                 >
                   Login
                 </Link>
                 <span className="text-gray-400">|</span>
                 <Link
                   href="/auth/register"
-                  className="text-sm font-medium text-[#E67E22] hover:text-[#D35400] transition-colors px-3 py-2 rounded-md hover:bg-white/50"
+                  className="text-sm font-medium text-[#E67E22] hover:text-[#D35400] transition-colors px-3 py-2 rounded-md hover:bg-gray-50"
                 >
                   Register
                 </Link>
@@ -320,7 +350,7 @@ const Header: React.FC = () => {
 
             {/* Cart Icon with Warm Orange */}
             <Link href="/cart" className="relative ml-2">
-              <ShoppingCart size={24} className="text-[#E67E22]" />
+              <ShoppingBag size={48} className="text-emerald-500" />
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-[#E67E22] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-md">
                   {cartCount}
@@ -330,22 +360,19 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Header - Same Light Dim Green */}
-        <div className="md:hidden py-3 bg-[#F8FAF5]">
+        {/* Mobile Header - White Background */}
+        <div className="md:hidden py-3 bg-white">
           {/* Logo and Location Row */}
           <div className="flex items-center justify-between mb-3">
-            <Link href="/" className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-3">
               <Image 
-                src="/logotwo.png" 
+                src="/logo10.png" 
                 alt="Lando Logo" 
-                width={45} 
-                height={45} 
-                className="object-contain"
+                width={200} 
+                height={60} 
+                className="object-cover w-[140px] h-[50px] md:w-[190px] md:h-[70px]"
+                priority
               />
-              <div className="flex flex-col">
-                <span className="text-xl font-bold text-[#E67E22] leading-tight">Lando</span>
-                <span className="text-[10px] font-medium text-[#2E7D32] tracking-wide">Hypermarket</span>
-              </div>
             </Link>
             
             {/* Location with GPS - Mobile */}
@@ -386,21 +413,21 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Desktop Categories - Same Light Dim Green with Warm Orange Accents */}
-        <nav className="bg-[#F8FAF5] hidden md:block border-t border-[#E67E22]/30">
+        {/* Desktop Categories - White Background */}
+        <nav className="bg-white hidden md:block">
           <div className="flex items-center py-2">
             {/* All Categories Button with Warm Orange */}
             <button
-              className="flex items-center px-3 py-2 text-[#E67E22] hover:bg-white/50 rounded-md transition-colors border border-transparent hover:border-[#E67E22]/30"
+              className="flex items-center px-3 py-2 text-[#E67E22] hover:bg-gray-50 rounded-md transition-colors border border-[#E67E22]/30"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              <Menu size={18} />
-              <span className="ml-2 text-sm font-medium">All Categories</span>
+              <MenuIcon size={18} />
+              <span className="ml-2 text-sm font-medium">Categories</span>
               <ChevronDown size={16} className="ml-1" />
             </button>
             
             {/* Divider */}
-            <div className="h-6 w-px bg-gray-400 mx-3"></div>
+            <div className="h-6 w-px bg-gray-300 mx-3"></div>
             
             {/* Categories - Desktop only */}
             <div className="flex items-center space-x-4 overflow-x-auto hide-scrollbar">
@@ -492,7 +519,7 @@ const Header: React.FC = () => {
         <div className="hidden md:block absolute z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[240px]" style={{ marginLeft: 'calc(1rem + 16px)' }}>
           <div className="py-2">
             <div className="px-4 py-2 text-xs font-semibold text-[#E67E22] uppercase tracking-wider border-b border-gray-100">
-              All Categories
+              Categories
             </div>
             {categories.map((category) => (
               <a
@@ -526,8 +553,5 @@ const Header: React.FC = () => {
     </>
   );
 };
-
-
-
 
 export default Header;

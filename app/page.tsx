@@ -4,6 +4,8 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import BannerCarousel from '@/components/ui/BannerCarousel';
 import TopCategories from '@/components/ui/TopCategories';
 import FeaturedProducts from '@/components/ui/FeaturedProducts';
+import WoodenUtensils from '@/components/ui/WoodenUtensils';
+import CleaningSuppliesPage from '@/components/ui/CleaningSupplies';
 import NewArrivals from '@/components/ui/NewArrivals';
 import PersonalizedRecommendations from '@/components/ui/PersonalizedRecommendations';
 import { 
@@ -15,6 +17,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
+import WoodenUtensilsPage from '@/components/ui/WoodenUtensils';
+import CleaningSupplies from '@/components/ui/CleaningSupplies';
 
 const HomePage: React.FC = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -256,6 +260,12 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
+
+            {/* New Arrivals Section - Using new component */}
+      <div ref={newArrivalsSectionRef}>
+        <WoodenUtensilsPage />
+      </div>
+
       {/* New Arrivals Section - Using new component */}
       <div ref={newArrivalsSectionRef}>
         <NewArrivals 
@@ -298,6 +308,10 @@ const HomePage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      <div ref={newArrivalsSectionRef}>
+        <CleaningSupplies />
+      </div>
 
       {/* Floating Action Buttons */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3">

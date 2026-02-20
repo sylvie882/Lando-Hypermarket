@@ -110,14 +110,14 @@ const NewArrivals: React.FC<NewArrivalsProps> = ({
         {showHeader && (
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
-              <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg">
+              <div className="p-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-lg">
                 <Clock4 size={20} className="text-white" />
               </div>
               <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h2>
             </div>
             <Link 
               href="/products?new=true" 
-              className="text-green-600 hover:text-green-700 font-medium flex items-center text-sm"
+              className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center text-sm"
             >
               View All
               <ArrowRight size={14} className="ml-1" />
@@ -129,17 +129,11 @@ const NewArrivals: React.FC<NewArrivalsProps> = ({
           {newArrivals.map((product, index) => (
             <div 
               key={product.id} 
-              className="scroll-hover bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-blue-300 overflow-hidden transition-all duration-300 relative group"
+              className="scroll-hover bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-emerald-300 overflow-hidden transition-all duration-300"
               style={{
                 animationDelay: `${index * 50}ms`
               }}
             >
-              {/* NEW badge on top left */}
-              <div className="absolute top-2 left-2 z-10">
-                <span className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded font-bold shadow-sm">
-                  NEW
-                </span>
-              </div>
               <ProductCard 
                 product={product} 
                 onViewTrack={trackProductView}
