@@ -6,6 +6,8 @@ import TopCategories from '@/components/ui/TopCategories';
 import FeaturedProducts from '@/components/ui/FeaturedProducts';
 import WoodenUtensils from '@/components/ui/WoodenUtensils';
 import CleaningSuppliesPage from '@/components/ui/CleaningSupplies';
+
+import HandicraftsPage from '@/components/ui/Handicrafts';
 import NewArrivals from '@/components/ui/NewArrivals';
 import PersonalizedRecommendations from '@/components/ui/PersonalizedRecommendations';
 import { 
@@ -205,6 +207,10 @@ const HomePage: React.FC = () => {
         />
       </div>
 
+        <div>
+        <HandicraftsPage />
+      </div>
+
       {/* PERSONALIZED RECOMMENDATIONS SECTION */}
       <section className="compact-section bg-white ">
         <div className="w-full">
@@ -308,6 +314,9 @@ const HomePage: React.FC = () => {
           </div>
         </div>
       </section>
+
+    
+
 
       <div ref={newArrivalsSectionRef}>
         <CleaningSupplies />
