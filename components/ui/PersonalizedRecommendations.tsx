@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import { Product } from '@/types';
 import ProductCard from '@/components/ui/ProductCard';
 import Link from 'next/link';
-import { ArrowRight, Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
+import { ArrowRight, Sparkles, RefreshCw, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PersonalizedRecommendationsProps {
   title?: string;
@@ -33,8 +33,40 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
   const [recommendations, setRecommendations] = useState<ProductWithMetadata[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [strategyUsed, setStrategyUsed] = useState<string>('hybrid');
-  const [totalRecommendations, setTotalRecommendations] = useState(0);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const checkScroll = () => {
+      if (scrollContainerRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+        setShowLeftArrow(scrollLeft > 0);
+        setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+      }
+    };
+
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScroll);
+      checkScroll();
+      return () => container.removeEventListener('scroll', checkScroll);
+    }
+  }, [recommendations]);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 300;
+      const newScrollLeft = direction === 'left' 
+        ? scrollContainerRef.current.scrollLeft - scrollAmount
+        : scrollContainerRef.current.scrollLeft + scrollAmount;
+      
+      scrollContainerRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   const fetchRecommendations = useCallback(async () => {
     try {
@@ -137,8 +169,6 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
         console.log('Sample transformed product:', transformedProducts[0]);
         
         setRecommendations(transformedProducts);
-        setStrategyUsed(response.strategy_used || 'hybrid');
-        setTotalRecommendations(response.total || 0);
       } else {
         console.error('Invalid response structure:', response);
         setError(response.message || 'Failed to load recommendations');
@@ -171,20 +201,20 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
   // Add a fallback for non-authenticated users
   if (isLoading) {
     return (
-      <div className={`py-8 px-4 sm:px-6 md:px-8 lg:px-12 ${className}`}>
+      <div className={`pt-4 pb-2 px-4 sm:px-6 md:px-8 lg:px-12 ${className}`}>
         {showHeader && (
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Sparkles className="text-yellow-500 animate-pulse" size={24} />
               <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
             </div>
           </div>
         )}
-        <div className="product-grid grid">
+        <div className="flex overflow-x-hidden space-x-4 pb-4">
           {Array.from({ length: Math.min(limit, 12) }).map((_, index) => (
             <div 
               key={index} 
-              className="animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-hover"
+              className="flex-none w-64 animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden scroll-hover"
               style={{
                 animationDelay: `${index * 50}ms`
               }}
@@ -204,9 +234,9 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
 
   if (error && recommendations.length === 0) {
     return (
-      <div className={`py-8 px-4 sm:px-6 md:px-8 lg:px-12 ${className}`}>
+      <div className={`pt-4 pb-2 px-4 sm:px-6 md:px-8 lg:px-12 ${className}`}>
         {showHeader && (
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Sparkles className="text-yellow-500" size={24} />
               <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
@@ -235,14 +265,45 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
   }
 
   return (
-    <div className={`py-8 px-4 sm:px-6 md:px-8 lg:px-12 ${className}`}>
+    <div className={`pt-4 px-4 sm:px-6 md:px-8 lg:px-12 ${className}`}>
       {showHeader && (
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-          <div className="flex items-center space-x-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg">
+              <Sparkles size={20} className="text-white" />
+            </div>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h2>
+          </div>
+          
+          {/* Scroll Controls and Actions */}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => scroll('left')}
+              disabled={!showLeftArrow}
+              className={`p-2 rounded-full border transition-all duration-200 ${
+                showLeftArrow 
+                  ? 'bg-white hover:bg-gray-50 border-gray-300 text-gray-700 cursor-pointer' 
+                  : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+              aria-label="Scroll left"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              onClick={() => scroll('right')}
+              disabled={!showRightArrow}
+              className={`p-2 rounded-full border transition-all duration-200 ${
+                showRightArrow 
+                  ? 'bg-white hover:bg-gray-50 border-gray-300 text-gray-700 cursor-pointer' 
+                  : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+              aria-label="Scroll right"
+            >
+              <ChevronRight size={20} />
+            </button>
             <button
               onClick={refreshRecommendations}
-              className="text-green-600 hover:text-green-700 font-medium flex items-center"
+              className="ml-2 text-green-600 hover:text-green-700 font-medium flex items-center"
             >
               <RefreshCw size={16} className="mr-1" />
               Refresh
@@ -259,31 +320,32 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
 
       {recommendations.length > 0 ? (
         <>
-          {/* REMOVED the recommendation type badges and relevance score indicators */}
-          <div className="product-grid grid">
+          {/* Horizontal Scrollable Products Row */}
+          <div
+            ref={scrollContainerRef}
+            className="flex overflow-x-auto overflow-y-hidden space-x-4 pb-4 scrollbar-hide scroll-smooth"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
             {recommendations.map((product, index) => (
               <div 
                 key={product.id} 
-                className="scroll-hover bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-300 relative"
+                className="flex-none w-64 md:w-72 bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-green-300 overflow-hidden transition-all duration-300 transform hover:-translate-y-1"
                 style={{
                   animationDelay: `${index * 50}ms`
                 }}
               >
-                {/* ProductCard with hideFeaturedBadge to remove featured text */}
                 <ProductCard 
                   product={product} 
                   onViewTrack={trackProductView}
-                  hideFeaturedBadge={true} // This removes featured text
+                  hideFeaturedBadge={true}
                 />
               </div>
             ))}
           </div>
-          
-          {recommendations.length < limit && (
-            <div className="mt-4 text-center text-sm text-gray-500">
-              Showing {recommendations.length} personalized recommendations
-            </div>
-          )}
         </>
       ) : (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
@@ -313,25 +375,9 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
       )}
 
       <style jsx global>{`
-        @media (max-width: 639px) {
-          .product-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 0.75rem !important;
-          }
-        }
-        
-        @media (min-width: 640px) and (max-width: 1023px) {
-          .product-grid {
-            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-            gap: 0.75rem !important;
-          }
-        }
-        
-        @media (min-width: 1024px) {
-          .product-grid {
-            grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-            gap: 0.75rem !important;
-          }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
         }
       `}</style>
     </div>

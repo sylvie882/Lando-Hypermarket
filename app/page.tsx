@@ -275,7 +275,7 @@ const HomePage: React.FC = () => {
       {/* New Arrivals Section - Using new component */}
       <div ref={newArrivalsSectionRef}>
         <NewArrivals 
-          limit={12}
+          limit={48}
           showHeader={true}
         />
       </div>

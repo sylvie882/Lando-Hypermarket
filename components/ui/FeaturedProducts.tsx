@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
 import { Product } from '@/types';
 import ProductCard from '@/components/ui/ProductCard';
 import Link from 'next/link';
-import { Flame, ArrowRight } from 'lucide-react';
+import { Flame, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface FeaturedProductsProps {
   limit?: number;
@@ -24,10 +24,44 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
 }) => {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchFeaturedProducts();
   }, []);
+
+  useEffect(() => {
+    const checkScroll = () => {
+      if (scrollContainerRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+        setShowLeftArrow(scrollLeft > 0);
+        setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+      }
+    };
+
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScroll);
+      checkScroll();
+      return () => container.removeEventListener('scroll', checkScroll);
+    }
+  }, [featuredProducts]);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 300;
+      const newScrollLeft = direction === 'left' 
+        ? scrollContainerRef.current.scrollLeft - scrollAmount
+        : scrollContainerRef.current.scrollLeft + scrollAmount;
+      
+      scrollContainerRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   const fetchFeaturedProducts = async () => {
     try {
@@ -83,14 +117,17 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
             {showHeader && (
               <div className="flex items-center justify-between mb-6">
                 <div className="h-8 w-48 bg-gray-200 rounded"></div>
-                <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                <div className="flex items-center space-x-2">
+                  <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+                  <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+                </div>
               </div>
             )}
-            <div className="product-grid grid gap-4">
+            <div className="flex overflow-x-hidden space-x-4 pb-4">
               {[...Array(Math.min(limit, 12))].map((_, i) => (
                 <div 
                   key={i} 
-                  className="animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                  className="flex-none w-64 animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
                   style={{
                     animationDelay: `${i * 50}ms`
                   }}
@@ -125,21 +162,58 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
               </div>
               <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h2>
             </div>
-            <Link 
-              href="/products?featured=true" 
-              className="text-green-600 hover:text-green-700 font-medium flex items-center text-sm"
-            >
-              View All
-              <ArrowRight size={14} className="ml-1" />
-            </Link>
+            
+            {/* Scroll Controls at the Top */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => scroll('left')}
+                disabled={!showLeftArrow}
+                className={`p-2 rounded-full border transition-all duration-200 ${
+                  showLeftArrow 
+                    ? 'bg-white hover:bg-gray-50 border-gray-300 text-gray-700 cursor-pointer' 
+                    : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+                aria-label="Scroll left"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={() => scroll('right')}
+                disabled={!showRightArrow}
+                className={`p-2 rounded-full border transition-all duration-200 ${
+                  showRightArrow 
+                    ? 'bg-white hover:bg-gray-50 border-gray-300 text-gray-700 cursor-pointer' 
+                    : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+                aria-label="Scroll right"
+              >
+                <ChevronRight size={20} />
+              </button>
+              <Link 
+                href="/products?featured=true" 
+                className="ml-2 text-green-600 hover:text-green-700 font-medium flex items-center text-sm"
+              >
+                View All
+                <ArrowRight size={14} className="ml-1" />
+              </Link>
+            </div>
           </div>
         )}
         
-        <div className="product-grid grid">
+        {/* Products Row */}
+        <div
+          ref={scrollContainerRef}
+          className="flex overflow-x-auto overflow-y-hidden space-x-4 pb-4 scrollbar-hide scroll-smooth"
+          style={{
+            scrollbarWidth: 'none', /* Firefox */
+            msOverflowStyle: 'none', /* IE and Edge */
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
           {featuredProducts.map((product, index) => (
             <div 
               key={product.id} 
-              className="scroll-hover bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-green-300 overflow-hidden transition-all duration-300"
+              className="flex-none w-64 md:w-72 scroll-hover bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-green-300 overflow-hidden transition-all duration-300"
               style={{
                 animationDelay: `${index * 50}ms`
               }}
@@ -147,40 +221,17 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
               <ProductCard 
                 product={product} 
                 onViewTrack={trackProductView}
-                hideFeaturedBadge={true} // This removes the "Featured" text from the card
+                hideFeaturedBadge={true}
               />
             </div>
           ))}
         </div>
-        
-        {/* Show count */}
-        {showHeader && (
-          <div className="mt-4 text-center text-sm text-gray-500">
-            Showing {featuredProducts.length} featured products
-          </div>
-        )}
       </div>
 
       <style jsx global>{`
-        @media (max-width: 639px) {
-          .product-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 0.75rem !important;
-          }
-        }
-        
-        @media (min-width: 640px) and (max-width: 1023px) {
-          .product-grid {
-            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-            gap: 0.75rem !important;
-          }
-        }
-        
-        @media (min-width: 1024px) {
-          .product-grid {
-            grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-            gap: 0.75rem !important;
-          }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
         }
       `}</style>
     </section>
