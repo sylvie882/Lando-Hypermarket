@@ -212,10 +212,10 @@ const NewArrivals: React.FC<NewArrivalsProps> = ({
           {showHeader && (
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-2">
-                <div className="p-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-lg">
+                {/* <div className="p-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-lg">
                   <Clock4 size={20} className="text-white" />
-                </div>
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h2>
+                </div> */}
+                <h2 className="text-xl md:text-2xl font-bold text-emerald-600">{title}</h2>
               </div>
               
               {/* Navigation Icons */}

@@ -227,10 +227,7 @@ const HandicraftsPage: React.FC = () => {
         {/* Header with Title and Scroll Controls */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2">
-            <div className="p-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg">
-              <Sparkles size={20} className="text-white" />
-            </div>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+            <h2 className="text-xl md:text-2xl font-bold text-emerald-600">
               {category?.name || 'Handicrafts & Artisan'}
             </h2>
           </div>

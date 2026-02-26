@@ -330,16 +330,16 @@ const Header: React.FC = () => {
           <div className="px-4 sm:px-6">
             <div className="py-3">
               <div className="flex items-center justify-between mb-3">
-                <Link href="/" className="flex items-center space-x-3">
-                  <Image 
-                    src="/logo10.png" 
-                    alt="Lando Logo" 
-                    width={200} 
-                    height={60} 
-                    className="object-cover w-[120px] h-[45px]"
-                    priority
-                  />
-                </Link>
+                        <Link href="/" className="inline-block ml-[-30px]">
+                              <Image 
+                                src="/logo10.png" 
+                                alt="Lando Logo" 
+                                width={160} 
+                                height={50} 
+                                className="object-cover w-[160px] h-[60px]"
+                                priority
+                              />
+                            </Link>
                 
                 <div className="flex items-center space-x-3">
                   {/* Cart Icon - Moved to top */}

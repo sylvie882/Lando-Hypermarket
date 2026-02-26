@@ -229,10 +229,10 @@ const WoodenUtensils: React.FC = () => {
           {/* Header with Title and Navigation Icons */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
-              <div className="p-2 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg">
+              {/* <div className="p-2 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg">
                 <Sparkles size={20} className="text-white" />
-              </div>
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+              </div> */}
+              <h2 className="text-xl md:text-2xl font-bold text-emerald-600">
                 {category?.name || 'Wooden Utensils'}
               </h2>
             </div>
