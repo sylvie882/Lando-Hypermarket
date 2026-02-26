@@ -45,7 +45,7 @@ const HandicraftsPage: React.FC = () => {
         setIsTablet(width >= 640 && width < 1024);
         
         if (width < 640) {
-          setVisibleCards(1);
+          setVisibleCards(2); // Changed from 1 to 2
         } else if (width < 768) {
           setVisibleCards(2);
         } else if (width < 1024) {
@@ -186,14 +186,17 @@ const HandicraftsPage: React.FC = () => {
   // Loading Skeleton
   if (isLoading && !category) {
     return (
-      <div className="min-h-screen bg-white px-4 sm:px-6 md:px-8 lg:px-12 py-8">
+      <div className="bg-white px-4 sm:px-6 md:px-8 lg:px-12 py-8">
         <div className="w-full">
           <div className="animate-pulse">
             <div className="flex items-center justify-between mb-6">
-              <div className="h-8 w-48 bg-gray-200 rounded"></div>
               <div className="flex items-center space-x-2">
-                <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
-                <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
+                <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                <div className="h-8 w-48 bg-gray-200 rounded"></div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
               </div>
             </div>
             
@@ -219,12 +222,15 @@ const HandicraftsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white px-4 sm:px-6 md:px-8 lg:px-12 py-8">
+    <div className="bg-white px-4 sm:px-6 md:px-8 lg:px-12 py-8">
       <div className="w-full">
         {/* Header with Title and Scroll Controls */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2">
-            <h2 className="text-xl md:text-2xl font-bold text-emerald-600">
+            <div className="p-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg">
+              <Sparkles size={20} className="text-white" />
+            </div>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
               {category?.name || 'Handicrafts & Artisan'}
             </h2>
           </div>
@@ -271,10 +277,10 @@ const HandicraftsPage: React.FC = () => {
                 key={product.id}
                 className="snap-start flex-none"
                 style={{
-                  width: isMobile ? '85vw' : 
+                  width: isMobile ? '44vw' : // Changed from 85vw to 44vw for 2 items
                          isTablet ? '45vw' : 
                          '23vw',
-                  minWidth: isMobile ? '85vw' : 
+                  minWidth: isMobile ? '44vw' : // Changed from 85vw to 44vw
                            isTablet ? '45vw' : 
                            '23vw',
                 }}

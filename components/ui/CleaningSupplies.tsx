@@ -44,7 +44,7 @@ const CleaningSupplies: React.FC = () => {
         setIsTablet(width >= 640 && width < 1024);
         
         if (width < 640) {
-          setVisibleCards(1);
+          setVisibleCards(2); // Changed from 1 to 2
         } else if (width < 768) {
           setVisibleCards(2);
         } else if (width < 1024) {
@@ -275,10 +275,10 @@ const CleaningSupplies: React.FC = () => {
                   key={product.id}
                   className="snap-start flex-none"
                   style={{
-                    width: isMobile ? '85vw' : 
+                    width: isMobile ? '44vw' : // Changed from 85vw to 44vw for 2 items
                            isTablet ? '45vw' : 
                            '23vw',
-                    minWidth: isMobile ? '85vw' : 
+                    minWidth: isMobile ? '44vw' : // Changed from 85vw to 44vw
                              isTablet ? '45vw' : 
                              '23vw',
                   }}
