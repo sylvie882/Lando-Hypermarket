@@ -185,16 +185,16 @@ const Header: React.FC = () => {
           <div className="px-4 sm:px-6 md:px-8 lg:px-12">
             <div className="flex items-center justify-between py-3">
               {/* Logo */}
-              <Link href="/" className="flex items-center space-x-3">
-                <Image 
-                  src="/logo10.png" 
-                  alt="Lando Logo" 
-                  width={200} 
-                  height={60} 
-                  className="object-cover w-[190px] h-[70px]"
-                  priority
-                />
-              </Link>
+            <Link href="/" className="flex items-center space-x-3 ml-[-30px]">
+              <Image 
+                src="/logo10.png" 
+                alt="Lando Logo" 
+                width={200} 
+                height={60} 
+                className="object-cover w-[190px] h-[70px]"
+                priority
+              />
+            </Link>
               
               {/* Location */}
               <button 
@@ -336,21 +336,33 @@ const Header: React.FC = () => {
                     alt="Lando Logo" 
                     width={200} 
                     height={60} 
-                    className="object-cover w-[140px] h-[50px]"
+                    className="object-cover w-[120px] h-[45px]"
                     priority
                   />
                 </Link>
                 
-                <button 
-                  onClick={getLocation}
-                  className="flex items-center space-x-1 text-gray-700 hover:text-[#E67E22] transition-colors"
-                >
-                  <MapPin size={16} className="text-[#E67E22]" />
-                  <span className="text-xs font-medium truncate max-w-[120px]">
-                    {isLocating ? 'Detecting...' : location}
-                  </span>
-                  <ChevronDown size={12} className="text-gray-500" />
-                </button>
+                <div className="flex items-center space-x-3">
+                  {/* Cart Icon - Moved to top */}
+                  <Link href="/cart" className="relative">
+                    <ShoppingCart size={22} className="text-emerald-500" />
+                    {cartCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-[#E67E22] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                        {cartCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  <button 
+                    onClick={getLocation}
+                    className="flex items-center space-x-1 text-gray-700 hover:text-[#E67E22] transition-colors"
+                  >
+                    <MapPin size={16} className="text-[#E67E22]" />
+                    <span className="text-xs font-medium truncate max-w-[100px]">
+                      {isLocating ? 'Detecting...' : location}
+                    </span>
+                    <ChevronDown size={12} className="text-gray-500" />
+                  </button>
+                </div>
               </div>
               
               <div className="flex items-center space-x-2">
@@ -409,7 +421,7 @@ const Header: React.FC = () => {
         </nav>
       </header>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation - Removed Cart from here */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50 shadow-lg">
         <div className="flex justify-around items-center py-1 px-4">
           <Link href="/" className="flex flex-col items-center p-1 w-16">
@@ -433,18 +445,6 @@ const Header: React.FC = () => {
           <Link href={isAuthenticated ? "/profile" : "/auth/login"} className="flex flex-col items-center p-1 w-16">
             <User size={20} className={pathname === '/profile' ? 'text-[#E67E22]' : 'text-gray-600'} />
             <span className={`text-[10px] mt-0.5 ${pathname === '/profile' ? 'text-[#E67E22] font-medium' : 'text-gray-600'}`}>Profile</span>
-          </Link>
-          
-          <Link href="/cart" className="flex flex-col items-center p-1 w-16 relative">
-            <div className="relative">
-              <ShoppingCart size={20} className={pathname === '/cart' ? 'text-[#E67E22]' : 'text-gray-600'} />
-              {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-[#E67E22] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                  {cartCount}
-                </span>
-              )}
-            </div>
-            <span className={`text-[10px] mt-0.5 ${pathname === '/cart' ? 'text-[#E67E22] font-medium' : 'text-gray-600'}`}>Cart</span>
           </Link>
         </div>
       </div>
@@ -503,7 +503,7 @@ const Header: React.FC = () => {
       <style jsx global>{`
         @media (max-width: 768px) {
           body {
-            padding-bottom: 70px;
+            padding-bottom: 60px;
           }
         }
         .hide-scrollbar::-webkit-scrollbar {

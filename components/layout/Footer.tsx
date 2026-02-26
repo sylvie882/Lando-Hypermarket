@@ -9,15 +9,9 @@ import {
   MapPin, 
   Phone, 
   Mail,
-  ShoppingBag,
-  Shield,
-  Package,
-  Award,
   Store,
   ChevronRight,
-  Clock,
-  Truck,
-  Headphones
+  Clock
 } from 'lucide-react';
 
 export default function Footer() {
@@ -26,182 +20,124 @@ export default function Footer() {
   return (
     <footer className="bg-gray-900 text-white">
       {/* Main Footer Content */}
-      <div className="px-4 sm:px-6 md:px-8 lg:px-12 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
+      <div className="px-4 sm:px-6 md:px-8 lg:px-12 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           
           {/* Brand & Contact */}
           <div>
-            <div className="flex items-center gap-3 mb-5">
-              <Link href="/" className="flex items-center space-x-3">
+            <Link href="/" className="inline-block ml-[-30px]">
               <Image 
-                src="/logotwo.png" 
+                src="/logo10.png" 
                 alt="Lando Logo" 
-                width={60} 
-                height={60} 
-                className="object-contain"
+                width={160} 
+                height={50} 
+                className="object-cover w-[160px] h-[60px]"
+                priority
               />
-              <div className="flex flex-col">
-                <span className="text-2xl font-bold text-[#E67E22] leading-tight">Lando</span>
-                <span className="text-sm font-medium text-[#2E7D32] tracking-wide">Hypermarket</span>
-              </div>
             </Link>
-                          
-            </div>
             
-            <p className="mb-6 text-gray-300 leading-relaxed">
-              Your premier online supermarket for fresh groceries and household essentials at competitive prices.
-            </p>
-            
-            {/* Contact */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Phone size={18} className="text-green-400" />
-                <span className="font-medium">+254 716 354 589</span>
+            <div className="space-y-2 mt-3">
+              <div className="flex items-center gap-2">
+                <Phone size={14} className="text-green-400" />
+                <span className="text-sm">+254 716 354 589</span>
               </div>
-              <div className="flex items-center gap-3">
-                <Mail size={18} className="text-green-400" />
-                <span className="text-gray-300">landoranchh@gmail.com</span>
+              <div className="flex items-center gap-2">
+                <Mail size={14} className="text-green-400" />
+                <span className="text-sm">landoranchh@gmail.com</span>
               </div>
-              <div className="flex items-center gap-3">
-                <MapPin size={18} className="text-green-400" />
-                <span className="text-gray-300">Nairobi, Kenya</span>
+              <div className="flex items-center gap-2">
+                <MapPin size={14} className="text-green-400" />
+                <span className="text-sm">Nairobi, Kenya</span>
               </div>
             </div>
             
             {/* Social */}
-            <div className="mt-6">
-              <div className="flex gap-3">
-                {[
-                  { icon: Facebook, color: '#1877F2', label: 'Facebook' },
-                  { icon: Twitter, color: '#1DA1F2', label: 'Twitter' },
-                  { icon: Instagram, color: '#E4405F', label: 'Instagram' },
-                  { icon: Youtube, color: '#FF0000', label: 'YouTube' }
-                ].map((social, index) => (
-                  <a 
-                    key={index}
-                    href="#"
-                    className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-all duration-300 hover:scale-110"
-                    style={{ backgroundColor: '#1f2937' }}
-                    aria-label={social.label}
-                  >
-                    <social.icon size={18} className="text-gray-300" />
-                  </a>
-                ))}
-              </div>
+            <div className="flex gap-2 mt-4">
+              {[
+                { icon: Facebook, label: 'Facebook' },
+                { icon: Twitter, label: 'Twitter' },
+                { icon: Instagram, label: 'Instagram' },
+                { icon: Youtube, label: 'YouTube' }
+              ].map((social, index) => (
+                <a 
+                  key={index}
+                  href="#"
+                  className="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 transition-all"
+                  aria-label={social.label}
+                >
+                  <social.icon size={16} className="text-gray-300" />
+                </a>
+              ))}
             </div>
           </div>
 
-          {/* Quick Categories */}
+          {/* Shop Categories */}
           <div>
-            <h3 className="text-lg font-bold mb-5 pb-3 uppercase tracking-wider border-b border-gray-700 text-green-400">
-              Shop Categories
+            <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider text-green-400">
+              Shop
             </h3>
-            <ul className="space-y-2.5">
-              {['Fresh Produce', 'Dairy & Eggs', 'Meat & Poultry', 'Bakery', 'Beverages', 'Household'].map((item) => (
+            <ul className="space-y-2">
+              {['Fresh Produce', 'Dairy & Eggs', 'Meat & Poultry', 'Bakery', 'Beverages'].map((item) => (
                 <li key={item}>
                   <Link 
                     href={`/categories/${item.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
-                    className="flex items-center justify-between group hover:translate-x-1 transition-transform duration-200"
+                    className="flex items-center justify-between group text-sm"
                   >
                     <span className="text-gray-300 group-hover:text-white">
                       {item}
                     </span>
-                    <ChevronRight size={16} className="text-green-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ChevronRight size={14} className="text-green-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Customer Service */}
+          {/* Support */}
           <div>
-            <h3 className="text-lg font-bold mb-5 pb-3 uppercase tracking-wider border-b border-gray-700 text-green-400">
-              Help & Support
+            <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider text-green-400">
+              Support
             </h3>
-            <ul className="space-y-2.5">
-              {[
-                { label: 'Contact Us', icon: Headphones },
-                { label: 'FAQs', icon: null },
-                { label: 'Delivery Info', icon: Truck },
-                { label: 'Returns', icon: null },
-                { label: 'Track Order', icon: null },
-                { label: 'Store Locations', icon: Store }
-              ].map((item) => (
-                <li key={item.label}>
+            <ul className="space-y-2">
+              {['Contact Us', 'FAQs', 'Delivery Info', 'Returns'].map((item) => (
+                <li key={item}>
                   <Link 
-                    href={`/${item.label.toLowerCase().replace(/ /g, '-')}`}
-                    className="flex items-center justify-between group hover:translate-x-1 transition-transform duration-200"
+                    href={`/${item.toLowerCase().replace(/ /g, '-')}`}
+                    className="flex items-center justify-between group text-sm"
                   >
-                    <div className="flex items-center gap-2">
-                      {item.icon && <item.icon size={16} className="text-green-400" />}
-                      <span className="text-gray-300 group-hover:text-white">
-                        {item.label}
-                      </span>
-                    </div>
-                    <ChevronRight size={16} className="text-green-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <span className="text-gray-300 group-hover:text-white">
+                      {item}
+                    </span>
+                    <ChevronRight size={14} className="text-green-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Newsletter */}
+          {/* Hours */}
           <div>
-            <h3 className="text-lg font-bold mb-5 pb-3 uppercase tracking-wider border-b border-gray-700 text-green-400">
-              Newsletter
+            <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider text-green-400">
+              Hours
             </h3>
-            <p className="text-gray-300 mb-5">
-              Subscribe to get exclusive offers and the latest news.
-            </p>
-            
-            <div className="space-y-3">
-              <div className="flex">
-          
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Clock size={14} className="text-green-400" />
+                <span className="text-sm">Mon-Sun: 6AM - 11PM</span>
               </div>
-              
-              <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <Shield size={18} className="text-green-400" />
-                  <span className="font-medium">Secure Shopping</span>
-                </div>
-                <p className="text-sm text-gray-400">
-                  100% secure payments with SSL encryption
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Trust & Payment Section */}
-        <div className="py-6 border-t border-b border-gray-800">
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
-            {/* Trust Badges */}
-            <div className="text-center lg:text-left">
-              <div className="text-sm font-medium mb-3">Why Shop With Us</div>
-              <div className="flex flex-wrap justify-center lg:justify-start gap-4">
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 rounded-lg">
-                  <Shield size={16} className="text-green-400" />
-                  <span className="text-sm">100% Secure</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 rounded-lg">
-                  <Truck size={16} className="text-green-400" />
-                  <span className="text-sm">Fast Delivery</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 rounded-lg">
-                  <Award size={16} className="text-green-400" />
-                  <span className="text-sm">Quality Guarantee</span>
-                </div>
+              <div className="flex items-center gap-2">
+                <Store size={14} className="text-green-400" />
+                <span className="text-sm">Nationwide</span>
               </div>
             </div>
             
             {/* Payment Methods */}
-            <div className="text-center lg:text-right">
-              <div className="text-sm font-medium mb-3">Payment Methods</div>
-              <div className="flex flex-wrap justify-center lg:justify-end gap-2">
-                {['M-Pesa', 'Visa', 'MasterCard', 'Cash on Delivery'].map((method) => (
+            <div className="mt-4">
+              <div className="flex flex-wrap gap-1.5">
+                {['M-Pesa', 'Visa', 'MasterCard'].map((method) => (
                   <span 
                     key={method}
-                    className="px-3 py-1.5 text-sm bg-gray-800 text-gray-300 rounded-lg border border-gray-700"
+                    className="px-2 py-1 text-xs bg-gray-800 text-gray-300 rounded border border-gray-700"
                   >
                     {method}
                   </span>
@@ -212,61 +148,22 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-6">
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-4">
-            <div className="text-center lg:text-left">
-              <p className="text-gray-400">
-                © {currentYear} <span className="font-bold text-white">LANDO HYPERMARKET</span>
-                <span className="hidden lg:inline mx-2">•</span>
-                <span className="block lg:inline mt-1 lg:mt-0">All rights reserved</span>
-              </p>
-            </div>
+        <div className="pt-4 border-t border-gray-800">
+          <div className="flex flex-col lg:flex-row justify-between items-center gap-3">
+            <p className="text-xs text-gray-400">
+              © {currentYear} LANDO HYPERMARKET. All rights reserved.
+            </p>
             
-            <div className="flex flex-wrap justify-center gap-4 text-sm">
-              <Link 
-                href="/privacy"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                Privacy Policy
+            <div className="flex flex-wrap justify-center gap-3 text-xs">
+              <Link href="/privacy" className="text-gray-400 hover:text-white">
+                Privacy
               </Link>
-              <Link 
-                href="/terms"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                Terms & Conditions
+              <Link href="/terms" className="text-gray-400 hover:text-white">
+                Terms
               </Link>
-              <Link 
-                href="/cookies"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
+              <Link href="/cookies" className="text-gray-400 hover:text-white">
                 Cookies
               </Link>
-              <Link 
-                href="/accessibility"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                Accessibility
-              </Link>
-            </div>
-          </div>
-          
-          {/* Store Info */}
-          <div className="text-center pt-4 border-t border-gray-800">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-sm">
-              <div className="flex items-center gap-2">
-                <Store size={14} className="text-green-400" />
-                <span className="text-gray-400">Multiple branches nationwide</span>
-              </div>
-              <div className="hidden sm:block text-gray-600">•</div>
-              <div className="flex items-center gap-2">
-                <Clock size={14} className="text-green-400" />
-                <span className="text-gray-400">Mon-Sun: 6AM - 11PM</span>
-              </div>
-              <div className="hidden sm:block text-gray-600">•</div>
-              <div className="flex items-center gap-2">
-                <Phone size={14} className="text-green-400" />
-                <span className="font-medium text-green-400">+254 716 354 589</span>
-              </div>
             </div>
           </div>
         </div>

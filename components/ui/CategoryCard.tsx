@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Category } from '@/types';
-import { ChevronRight, Star, ShoppingBag, Sparkles } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 interface CategoryCardProps {
   category: Category;
@@ -14,7 +14,6 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // Get category icon based on name
   const getCategoryIcon = () => {
     const name = category.name.toLowerCase();
     
@@ -37,7 +36,6 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
     return '🛒';
   };
 
-  // Get category color based on type
   const getCategoryColor = () => {
     const name = category.name.toLowerCase();
     
@@ -53,40 +51,30 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
     return 'from-gray-100 to-gray-200';
   };
 
-  // SIMPLE FIX: Always use api.hypermarket.co.ke
   const getImageUrl = (): string | null => {
-    // If we have image path, construct URL with api.hypermarket.co.ke
     if (category.image) {
       let cleanImage = category.image.trim();
       
-      // Remove leading slash if present
       if (cleanImage.startsWith('/')) {
         cleanImage = cleanImage.substring(1);
       }
       
-      // Remove 'storage/' if it's already in the path
       if (cleanImage.startsWith('storage/')) {
         cleanImage = cleanImage.substring('storage/'.length);
       }
       
-      // Remove 'categories/' if it's already in the path (some might have it)
       if (cleanImage.startsWith('categories/')) {
         cleanImage = cleanImage.substring('categories/'.length);
       }
       
-      // Construct URL with correct domain
       return `https://api.hypermarket.co.ke/storage/categories/${cleanImage}`;
     }
     
-    // If image_url exists, convert it to use api.hypermarket.co.ke
     if (category.image_url) {
       let url = category.image_url.trim();
-      
-      // Replace hypermarket.co.ke with api.hypermarket.co.ke
       url = url.replace('https://hypermarket.co.ke', 'https://api.hypermarket.co.ke');
       url = url.replace('http://hypermarket.co.ke', 'https://api.hypermarket.co.ke');
       url = url.replace('hypermarket.co.ke', 'api.hypermarket.co.ke');
-      
       return url;
     }
     
@@ -98,13 +86,6 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
   const icon = getCategoryIcon();
   const gradient = getCategoryColor();
 
-  // Debug: Log the constructed URL
-  React.useEffect(() => {
-    if (imageUrl) {
-      console.log(`Category ${category.name} image URL:`, imageUrl);
-    }
-  }, [category.name, imageUrl]);
-
   return (
     <Link
       href={`/categories/${category.slug || category.id}`}
@@ -112,153 +93,67 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Animated background glow */}
-      <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500 blur-xl`} />
-      
-      {/* Main card */}
-      <div className="relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 overflow-hidden">
+      <div className="relative bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-500 hover:-translate-y-1 overflow-hidden">
         {/* Image container */}
         <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
           {imageUrl && !imageError ? (
             <>
-              {/* Loading shimmer */}
               {!imageLoaded && (
                 <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
               )}
               
-              {/* Main image */}
               <img
                 src={imageUrl}
                 alt={category.name}
-                className={`w-full h-full object-cover transition-all duration-700 ${
+                className={`w-full h-full object-cover transition-transform duration-700 ${
                   isHovered ? 'scale-110' : 'scale-100'
                 } ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                 loading="lazy"
-                onLoad={() => {
-                  setImageLoaded(true);
-                  console.log(`✅ Category image loaded: ${category.name}`);
-                }}
-                onError={(e) => {
-                  console.error(`❌ Category image failed: ${imageUrl}`);
-                  setImageError(true);
-                  e.currentTarget.style.display = 'none';
-                }}
+                onLoad={() => setImageLoaded(true)}
+                onError={() => setImageError(true)}
               />
             </>
           ) : (
-            // Gradient fallback with icon
             <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${gradient}`}>
-              <span className="text-6xl">{icon}</span>
+              <span className="text-6xl opacity-80">{icon}</span>
             </div>
           )}
           
-          {/* Overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+          {/* Subtle overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
           
-          {/* Product count badge */}
+          {/* Minimal product count */}
           {productCount > 0 && (
-            <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm text-gray-800 px-3 py-1.5 rounded-full shadow-sm">
-              <div className="flex items-center gap-1.5 text-sm font-semibold">
-                <ShoppingBag size={14} />
-                <span>{productCount}</span>
-              </div>
+            <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-medium text-gray-700">
+              {productCount} items
             </div>
-          )}
-          
-          {/* Featured badge for certain categories */}
-          {productCount > 20 && (
-            <div className="absolute top-4 right-4 bg-gradient-to-r from-amber-400 to-orange-500 text-white px-3 py-1.5 rounded-full shadow-lg">
-              <div className="flex items-center gap-1.5 text-sm font-semibold">
-                <Star size={12} className="fill-white" />
-                <span>Popular</span>
-              </div>
-            </div>
-          )}
-          
-          {/* Hover indicator */}
-          <div className={`absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white text-gray-800 px-4 py-2 rounded-full shadow-lg transition-all duration-300 ${
-            isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-          }`}>
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <span>Browse Now</span>
-              <ChevronRight size={16} className={`transition-transform duration-300 ${
-                isHovered ? 'translate-x-1' : ''
-              }`} />
-            </div>
-          </div>
-          
-          {/* Sparkle effect on hover */}
-          {isHovered && (
-            <>
-              <div className="absolute top-1/4 left-1/4 animate-ping w-2 h-2 bg-yellow-400 rounded-full" />
-              <div className="absolute top-1/3 right-1/4 animate-ping w-1.5 h-1.5 bg-green-400 rounded-full delay-150" />
-              <div className="absolute bottom-1/4 right-1/3 animate-ping w-1 h-1 bg-blue-400 rounded-full delay-300" />
-            </>
           )}
         </div>
         
         {/* Content */}
-        <div className="p-6">
-          <div className="flex items-start justify-between mb-3">
+        <div className="p-5">
+          <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xl font-bold text-gray-900 group-hover:text-green-600 transition-colors duration-300 line-clamp-1">
+              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-green-600 transition-colors">
                 {category.name}
               </h3>
               
               {category.description && (
-                <p className="text-gray-600 text-sm mt-2 line-clamp-2 leading-relaxed">
+                <p className="text-sm text-gray-500 mt-1 line-clamp-1">
                   {category.description}
                 </p>
               )}
             </div>
             
-            {/* Animated arrow */}
-            <div className="relative">
-              <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center transition-all duration-300 ${
-                isHovered ? 'scale-110 rotate-12' : ''
-              }`}>
-                <ChevronRight size={20} className="text-green-600" />
-              </div>
-              
-              {/* Ring animation on hover */}
-              {isHovered && (
-                <div className="absolute inset-0 border-2 border-green-300 rounded-full animate-ping" />
-              )}
+            {/* Simple arrow indicator */}
+            <div className={`w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center transition-all duration-300 ${
+              isHovered ? 'bg-green-100 translate-x-1' : ''
+            }`}>
+              <ChevronRight size={18} className="text-gray-600" />
             </div>
-          </div>
-          
-          {/* Bottom info */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                <span className="text-lg">{icon}</span>
-              </div>
-              <span className="text-xs text-gray-500 font-medium">
-                {productCount > 0 ? `${productCount} items` : 'Coming soon'}
-              </span>
-            </div>
-            
-            {/* Quick stats */}
-            {productCount > 0 && (
-              <div className="flex items-center gap-2">
-                <Sparkles size={14} className="text-amber-500" />
-                <span className="text-xs text-amber-600 font-semibold">
-                  {productCount > 50 ? 'Premium' : productCount > 20 ? 'Popular' : 'Fresh'}
-                </span>
-              </div>
-            )}
           </div>
         </div>
       </div>
-      
-      {/* Floating particles on hover */}
-      {isHovered && (
-        <>
-          <div className="absolute -top-2 -left-2 w-4 h-4 bg-green-400 rounded-full opacity-50 animate-bounce" />
-          <div className="absolute -bottom-2 -right-2 w-3 h-3 bg-orange-400 rounded-full opacity-50 animate-bounce delay-100" />
-          <div className="absolute -top-2 -right-2 w-2 h-2 bg-blue-400 rounded-full opacity-50 animate-bounce delay-200" />
-        </>
-      )}
     </Link>
   );
 };
