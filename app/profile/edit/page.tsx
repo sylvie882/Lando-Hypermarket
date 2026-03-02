@@ -1006,6 +1006,9 @@ export default function EditProfilePage() {
                 <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-gray-700">Enable two-factor authentication if available</p>
               </div>
+
+
+              
               <div className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-gray-700">Never share your password with anyone</p>
