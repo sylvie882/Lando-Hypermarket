@@ -874,6 +874,8 @@ export default function ProfilePage() {
             <p className="text-amber-100 text-sm mb-4">
               Earn points with every purchase and unlock exclusive benefits
             </p>
+
+            
             <div className="bg-white/20 rounded-lg p-3">
               <div className="flex justify-between text-sm mb-1">
                 <span>Current Points</span>
