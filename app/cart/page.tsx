@@ -100,14 +100,13 @@ const CartPage: React.FC = () => {
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [selectedProductImages, setSelectedProductImages] = useState<{[key: number]: string[]}>({});
 
-  // Helper function to create empty cart - CORRECTED VERSION
+  // Helper function to create empty cart
   const getEmptyCart = (): Cart => ({
     items: [],
     id: 0,
     user_id: 0,
     total: 0,
     item_count: 0
-    // Removed created_at and updated_at as they're not in the Cart type
   });
 
   useEffect(() => {
@@ -169,12 +168,18 @@ const CartPage: React.FC = () => {
     }
   };
 
+  // FIXED: updateQuantity function with proper number handling
   const updateQuantity = async (itemId: number, newQuantity: number) => {
-    if (newQuantity < 1) return;
+    // Ensure we're working with numbers and parse as integer
+    const quantity = Math.floor(Number(newQuantity));
+    
+    // Validate quantity
+    if (isNaN(quantity) || quantity < 1) return;
     
     setUpdatingItems(prev => [...prev, itemId]);
     try {
-      await api.cart.updateItem(itemId, { quantity: newQuantity });
+      // Make sure we're sending a number, not a string
+      await api.cart.updateItem(itemId, { quantity: quantity });
       await fetchCart(); // Refresh cart
       
       // Dispatch event for header update
@@ -425,6 +430,7 @@ const CartPage: React.FC = () => {
                   const itemTotal = calculateItemTotal(item);
                   const isUpdating = updatingItems.includes(item.id);
                   const stockQuantity = safeParseNumber(item.product?.stock_quantity);
+                  const currentQuantity = safeParseNumber(item.quantity);
                   
                   return (
                     <div key={item.id} className="p-6 hover:bg-gray-50 transition-colors duration-200">
@@ -509,12 +515,12 @@ const CartPage: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Quantity Controls */}
+                          {/* Quantity Controls - FIXED: Added Number() wrappers */}
                           <div className="flex items-center justify-between mt-4">
                             <div className="flex items-center">
                               <button
-                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                disabled={isUpdating || item.quantity <= 1}
+                                onClick={() => updateQuantity(item.id, Number(currentQuantity) - 1)}
+                                disabled={isUpdating || Number(currentQuantity) <= 1}
                                 className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-l disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
                               >
                                 <Minus size={16} />
@@ -523,12 +529,12 @@ const CartPage: React.FC = () => {
                                 {isUpdating ? (
                                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
                                 ) : (
-                                  item.quantity
+                                  currentQuantity
                                 )}
                               </span>
                               <button
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                disabled={isUpdating || item.quantity >= stockQuantity}
+                                onClick={() => updateQuantity(item.id, Number(currentQuantity) + 1)}
+                                disabled={isUpdating || Number(currentQuantity) >= stockQuantity}
                                 className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-r disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
                               >
                                 <Plus size={16} />
