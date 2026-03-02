@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   Search, ShoppingCart, ChevronDown, X, Home, User, LayoutGrid, ShoppingBag, MapPin, LogOut, Heart, Package, User as UserIcon,
-  MenuIcon, Camera
+  MenuIcon, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -38,6 +38,11 @@ const Header: React.FC = () => {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [avatarError, setAvatarError] = useState(false);
+  
+  // Scroll state for categories
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showLeftScroll, setShowLeftScroll] = useState(false);
+  const [showRightScroll, setShowRightScroll] = useState(true);
   
   const pathname = usePathname();
   const router = useRouter();
@@ -173,7 +178,7 @@ const Header: React.FC = () => {
         const uniqueCategories = combined.filter((cat, index, self) => 
           index === self.findIndex((c) => c.slug === cat.slug)
         );
-        setCategories(uniqueCategories.slice(0, 11));
+        setCategories(uniqueCategories);
       } catch (error) {
         console.error('Error fetching categories:', error);
         const sampleCategories = [
@@ -194,6 +199,38 @@ const Header: React.FC = () => {
     };
     fetchCategories();
   }, []);
+
+  // Check scroll position to show/hide buttons
+  const checkScroll = useCallback(() => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setShowLeftScroll(scrollLeft > 0);
+      setShowRightScroll(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  }, []);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScroll);
+      // Initial check after categories load
+      setTimeout(checkScroll, 100);
+      return () => container.removeEventListener('scroll', checkScroll);
+    }
+  }, [categories, checkScroll]);
+
+  // Scroll functions
+  const scrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,8 +286,6 @@ const Header: React.FC = () => {
     if (user?.email) return user.email;
     return '';
   };
-
-  const visibleCategories = categories.slice(0, 11);
 
   return (
     <>
@@ -505,12 +540,12 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Desktop Categories */}
+        {/* Desktop Categories with Scroll Buttons */}
         <nav className="bg-white hidden md:block border-t border-gray-100">
           <div className="px-4 sm:px-6 md:px-8 lg:px-12">
-            <div className="flex items-center py-2">
+            <div className="flex items-center py-2 relative">
               <button
-                className="flex items-center px-3 py-2 text-[#E67E22] hover:bg-gray-50 rounded-md transition-colors border border-[#E67E22]/30"
+                className="flex items-center px-3 py-2 text-[#E67E22] hover:bg-gray-50 rounded-md transition-colors border border-[#E67E22]/30 flex-shrink-0"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 <MenuIcon size={18} />
@@ -518,18 +553,53 @@ const Header: React.FC = () => {
                 <ChevronDown size={16} className="ml-1" />
               </button>
               
-              <div className="h-6 w-px bg-gray-300 mx-3"></div>
+              <div className="h-6 w-px bg-gray-300 mx-3 flex-shrink-0"></div>
               
-              <div className="flex items-center space-x-4 overflow-x-auto hide-scrollbar">
-                {visibleCategories.map((category) => (
-                  <a 
-                    key={category.id} 
-                    href={`https://hypermarket.co.ke/categories/${category.slug}`}
-                    className="text-gray-700 hover:text-[#E67E22] whitespace-nowrap text-sm font-medium transition-colors"
+              {/* Categories Scroll Container */}
+              <div className="relative flex-1 overflow-hidden">
+                {/* Left Scroll Button */}
+                {showLeftScroll && (
+                  <button
+                    onClick={scrollLeft}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-emerald-600 shadow-md rounded-full p-1.5 hover:bg-gray-100 transition-colors border border-gray-200"
+                    aria-label="Scroll left"
                   >
-                    {category.name}
-                  </a>
-                ))}
+                    <ChevronLeft size={18} className="text-white" />
+                  </button>
+                )}
+                
+                {/* Scrollable Categories */}
+                <div
+                  ref={scrollContainerRef}
+                  className="flex items-center space-x-4 overflow-x-auto hide-scrollbar scroll-smooth"
+                  style={{
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                    paddingLeft: showLeftScroll ? '32px' : '0',
+                    paddingRight: showRightScroll ? '32px' : '0',
+                  }}
+                >
+                  {categories.map((category) => (
+                    <a 
+                      key={category.id} 
+                      href={`https://hypermarket.co.ke/categories/${category.slug}`}
+                      className="text-gray-700 hover:text-[#E67E22] whitespace-nowrap text-sm font-medium transition-colors py-2 flex-shrink-0"
+                    >
+                      {category.name}
+                    </a>
+                  ))}
+                </div>
+
+                {/* Right Scroll Button */}
+                {showRightScroll && (
+                  <button
+                    onClick={scrollRight}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-emerald-600 shadow-md rounded-full p-1.5 hover:bg-gray-100 transition-colors border border-gray-200"
+                    aria-label="Scroll right"
+                  >
+                    <ChevronRight size={18} className="text-white" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
