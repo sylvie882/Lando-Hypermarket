@@ -238,7 +238,7 @@ export default function EditProfilePage() {
       if (phone !== profile?.phone) formData.append('phone', phone);
       if (dateOfBirth !== profile?.date_of_birth) formData.append('date_of_birth', dateOfBirth);
       if (gender !== profile?.gender) formData.append('gender', gender);
-      if (bio !== profile?.bio) formData.append('bio', bio);
+      // if (bio !== profile?.bio) formData.append('bio', bio);
       if (avatar) formData.append('avatar', avatar);
       
       // Use the new api.user.updateProfile method
