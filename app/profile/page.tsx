@@ -8,24 +8,16 @@ import {
   ShoppingBag, 
   Heart, 
   MapPin, 
-  CreditCard, 
   Package,
-  MessageSquare,
-  Settings,
   Edit,
   Calendar,
   Mail,
   Phone,
-  MapPin as MapPinIcon,
   Star,
   Award,
-  TrendingUp,
   Clock,
   Bell,
   Shield,
-  Truck,
-  Percent,
-  Tag,
   CheckCircle,
   AlertCircle,
   ChevronRight,
@@ -35,11 +27,14 @@ import {
   Settings as SettingsIcon,
   HelpCircle,
   FileText,
-  LogOut
+  LogOut,
+  TrendingUp,
+  Gift
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
+import Image from 'next/image';
 
 interface UserProfile {
   id: number;
@@ -47,13 +42,20 @@ interface UserProfile {
   email: string;
   phone: string;
   avatar: string | null;
+  avatar_url?: string | null;
   email_verified_at: string | null;
   created_at: string;
   updated_at: string;
   is_admin: boolean;
+  role: string;
   referral_code?: string;
   loyalty_points?: number;
   membership_tier?: string;
+  email_verified?: boolean;
+  phone_verified?: boolean;
+  date_of_birth?: string;
+  gender?: string;
+  bio?: string;
 }
 
 interface Stats {
@@ -65,6 +67,7 @@ interface Stats {
   active_subscriptions: number;
   total_spent: number;
   review_count: number;
+  loyalty_points?: number;
 }
 
 interface RecentOrder {
@@ -131,6 +134,21 @@ const formatTime = (dateString: string): string => {
   });
 };
 
+// Helper function to get storage URL
+const getStorageUrl = (path: string | null | undefined): string => {
+  if (!path) return '/images/placeholder-avatar.jpeg';
+  
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+    return path;
+  }
+  
+  if (path.startsWith('avatars/')) {
+    return `https://api.hypermarket.co.ke/storage/${path}`;
+  }
+  
+  return `https://api.hypermarket.co.ke/storage/${path}`;
+};
+
 export default function ProfilePage() {
   const { user: authUser, isAuthenticated, logout } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -139,6 +157,7 @@ export default function ProfilePage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'account'>('overview');
+  const [avatarError, setAvatarError] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -150,9 +169,37 @@ export default function ProfilePage() {
     try {
       setLoading(true);
       
-      // Get user profile data
-      const profileRes = await api.auth.getUser();
-      setProfile(profileRes.data);
+      // Get user profile data using the new user.getProfile method
+      const profileResponse = await api.user.getProfile();
+      
+      if (profileResponse.data && profileResponse.data.user) {
+        const profileData = profileResponse.data.user;
+        setProfile(profileData);
+      } else {
+        // Fallback to auth user
+        if (authUser) {
+          setProfile({
+            id: authUser.id,
+            name: authUser.name || '',
+            email: authUser.email || '',
+            phone: authUser.phone || '',
+            avatar: authUser.avatar || null,
+            email_verified_at: authUser.email_verified_at || null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_admin: authUser.role === 'admin',
+            role: authUser.role || 'customer',
+          });
+        }
+      }
+      
+      // Get user stats using the new user.getStats method
+      try {
+        const statsResponse = await api.user.getStats();
+        setStats(statsResponse.data);
+      } catch (statsError) {
+        console.error('Failed to fetch stats:', statsError);
+      }
       
       // Fetch all data in parallel
       const [
@@ -164,57 +211,56 @@ export default function ProfilePage() {
         notificationsRes
       ] = await Promise.allSettled([
         api.orders.getAll({ per_page: 50 }),
-        api.wishlist.getCount(),
-        api.get('/addresses'),
-        api.get('/subscriptions'),
+        api.wishlist.getCount ? api.wishlist.getCount() : Promise.resolve({ data: { count: 0 } }),
+        api.addresses.getAll(),
+        api.subscriptions ? api.subscriptions.getAll() : Promise.resolve({ data: [] }),
         api.orders.getAll({ per_page: 5, sort: 'created_at', order: 'desc' }),
         api.notifications.getAll({ per_page: 5 })
       ]);
 
-      // Calculate stats from responses
-      const newStats: Stats = {
-        total_orders: 0,
-        pending_orders: 0,
-        completed_orders: 0,
-        wishlist_count: 0,
-        saved_addresses: 0,
-        active_subscriptions: 0,
-        total_spent: 0,
-        review_count: 0,
-      };
+      // Create a stats object to merge with API stats
+      const additionalStats: Partial<Stats> = {};
 
       // Process orders
       if (ordersRes.status === 'fulfilled') {
         const ordersData = ordersRes.value.data;
         if (ordersData?.data && Array.isArray(ordersData.data)) {
-          newStats.total_orders = ordersData.total || ordersData.data.length;
+          additionalStats.total_orders = ordersData.total || ordersData.data.length;
           
-          // Count orders by status
-          ordersData.data.forEach((order: any) => {
-            if (['pending', 'processing', 'shipped'].includes(order.status)) {
-              newStats.pending_orders++;
-            }
-            if (['delivered', 'completed'].includes(order.status)) {
-              newStats.completed_orders++;
-              newStats.total_spent += order.total || 0;
-            }
-          });
+          // Count orders by status if not already provided by API
+          if (!stats?.pending_orders) {
+            additionalStats.pending_orders = ordersData.data.filter(
+              (order: any) => ['pending', 'processing', 'shipped'].includes(order.status)
+            ).length;
+          }
+          
+          if (!stats?.completed_orders) {
+            additionalStats.completed_orders = ordersData.data.filter(
+              (order: any) => ['delivered', 'completed'].includes(order.status)
+            ).length;
+          }
+          
+          if (!stats?.total_spent) {
+            additionalStats.total_spent = ordersData.data
+              .filter((order: any) => ['delivered', 'completed'].includes(order.status))
+              .reduce((sum: number, order: any) => sum + (order.total || 0), 0);
+          }
         }
       }
 
       // Process wishlist
       if (wishlistRes.status === 'fulfilled') {
         const wishlistData = wishlistRes.value.data;
-        newStats.wishlist_count = wishlistData?.count || 0;
+        additionalStats.wishlist_count = wishlistData?.count || 0;
       }
 
       // Process addresses
       if (addressesRes.status === 'fulfilled') {
         const addressesData = addressesRes.value.data;
         if (addressesData?.data && Array.isArray(addressesData.data)) {
-          newStats.saved_addresses = addressesData.total || addressesData.data.length;
+          additionalStats.saved_addresses = addressesData.total || addressesData.data.length;
         } else if (Array.isArray(addressesData)) {
-          newStats.saved_addresses = addressesData.length;
+          additionalStats.saved_addresses = addressesData.length;
         }
       }
 
@@ -222,11 +268,11 @@ export default function ProfilePage() {
       if (subscriptionsRes.status === 'fulfilled') {
         const subscriptionsData = subscriptionsRes.value.data;
         if (subscriptionsData?.data && Array.isArray(subscriptionsData.data)) {
-          newStats.active_subscriptions = subscriptionsData.data.filter(
+          additionalStats.active_subscriptions = subscriptionsData.data.filter(
             (sub: any) => sub.status === 'active'
           ).length;
         } else if (Array.isArray(subscriptionsData)) {
-          newStats.active_subscriptions = subscriptionsData.filter(
+          additionalStats.active_subscriptions = subscriptionsData.filter(
             (sub: any) => sub.status === 'active'
           ).length;
         }
@@ -257,9 +303,12 @@ export default function ProfilePage() {
         }
       }
 
-      setStats(newStats);
+      // Merge stats
+      setStats(prev => ({ ...prev, ...additionalStats } as Stats));
+      
     } catch (error) {
       console.error('Failed to fetch profile data:', error);
+      
       // Set default stats if API fails
       setStats({
         total_orders: 0,
@@ -271,6 +320,22 @@ export default function ProfilePage() {
         total_spent: 0,
         review_count: 0,
       });
+      
+      // Use auth user as fallback
+      if (authUser) {
+        setProfile({
+          id: authUser.id,
+          name: authUser.name || '',
+          email: authUser.email || '',
+          phone: authUser.phone || '',
+          avatar: authUser.avatar || null,
+          email_verified_at: authUser.email_verified_at || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_admin: authUser.role === 'admin',
+          role: authUser.role || 'customer',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -308,6 +373,14 @@ export default function ProfilePage() {
       currency: 'KES',
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const getAvatarUrl = () => {
+    if (avatarError) return '/images/placeholder-avatar.jpeg';
+    
+    if (profile?.avatar_url) return profile.avatar_url;
+    if (profile?.avatar) return getStorageUrl(profile.avatar);
+    return '/images/placeholder-avatar.jpeg';
   };
 
   if (loading) {
@@ -402,12 +475,13 @@ export default function ProfilePage() {
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between">
           <div className="w-full lg:w-auto">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4 sm:mb-2">
-              <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-                {profile?.avatar ? (
+              <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {getAvatarUrl() ? (
                   <img
-                    src={profile.avatar}
-                    alt={profile.name}
-                    className="w-16 h-16 rounded-full object-cover"
+                    src={getAvatarUrl()}
+                    alt={profile?.name || 'User'}
+                    className="w-full h-full object-cover"
+                    onError={() => setAvatarError(true)}
                   />
                 ) : (
                   <User className="w-8 h-8" />
@@ -416,7 +490,7 @@ export default function ProfilePage() {
               <div>
                 <h2 className="text-2xl font-bold">{profile?.name || 'User'}</h2>
                 <p className="text-blue-100">
-                  {profile?.is_admin ? 'Administrator Account' : 'Premium Member'}
+                  {profile?.is_admin ? 'Administrator' : profile?.role === 'vendor' ? 'Vendor' : 'Customer'}
                 </p>
               </div>
             </div>
@@ -440,7 +514,7 @@ export default function ProfilePage() {
                 <p className="text-sm text-blue-200">Loyalty Points</p>
                 <p className="font-bold flex items-center gap-2">
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  {profile?.loyalty_points || 0} points
+                  {profile?.loyalty_points || stats?.loyalty_points || 0} points
                 </p>
               </div>
             </div>
@@ -475,7 +549,7 @@ export default function ProfilePage() {
                 {stats?.total_orders || 0}
               </p>
               <div className="flex items-center gap-2 mt-2">
-                {stats?.pending_orders && stats.pending_orders > 0 ? (
+                {(stats?.pending_orders && stats.pending_orders > 0) ? (
                   <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800">
                     <Clock className="w-3 h-3 mr-1" />
                     {stats.pending_orders} pending
@@ -626,14 +700,14 @@ export default function ProfilePage() {
                   <div>
                     <p className="font-medium text-gray-900">Email Verification</p>
                     <p className="text-sm text-gray-500">
-                      {profile?.email_verified_at 
-                        ? 'Verified on ' + formatDate(profile.email_verified_at, 'short')
+                      {profile?.email_verified || profile?.email_verified_at 
+                        ? 'Verified on ' + (profile.email_verified_at ? formatDate(profile.email_verified_at, 'short') : '')
                         : 'Not verified yet'
                       }
                     </p>
                   </div>
                 </div>
-                {!profile?.email_verified_at && (
+                {!profile?.email_verified && !profile?.email_verified_at && (
                   <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 mt-2 sm:mt-0">
                     Verify Now
                   </button>
@@ -722,6 +796,19 @@ export default function ProfilePage() {
             <h2 className="font-bold text-gray-900 mb-4">Quick Actions</h2>
             <div className="space-y-2">
               <Link
+                href="/profile/edit"
+                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-gray-200">
+                    <Edit className="w-4 h-4 text-gray-600" />
+                  </div>
+                  <span className="text-sm text-gray-700">Edit Profile</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </Link>
+
+              <Link
                 href="/profile/settings"
                 className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
               >
@@ -730,6 +817,19 @@ export default function ProfilePage() {
                     <SettingsIcon className="w-4 h-4 text-gray-600" />
                   </div>
                   <span className="text-sm text-gray-700">Account Settings</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </Link>
+
+              <Link
+                href="/profile/preferences"
+                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200">
+                    <SettingsIcon className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <span className="text-sm text-gray-700">Preferences</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-400" />
               </Link>
@@ -759,19 +859,6 @@ export default function ProfilePage() {
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-400" />
               </Link>
-
-              <Link
-                href="/profile/preferences"
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200">
-                    <Settings className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <span className="text-sm text-gray-700">Preferences</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
-              </Link>
             </div>
           </div>
 
@@ -790,7 +877,7 @@ export default function ProfilePage() {
             <div className="bg-white/20 rounded-lg p-3">
               <div className="flex justify-between text-sm mb-1">
                 <span>Current Points</span>
-                <span className="font-bold">{profile?.loyalty_points || 0}</span>
+                <span className="font-bold">{profile?.loyalty_points || stats?.loyalty_points || 0}</span>
               </div>
               <div className="w-full bg-white/30 rounded-full h-2">
                 <div 
@@ -801,6 +888,16 @@ export default function ProfilePage() {
               <p className="text-xs text-amber-100 mt-2">
                 {1000 - (profile?.loyalty_points || 0)} points to Gold Tier
               </p>
+            </div>
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <span className="flex items-center gap-1">
+                <Gift className="w-4 h-4" />
+                Rewards
+              </span>
+              <span className="flex items-center gap-1">
+                <TrendingUp className="w-4 h-4" />
+                Benefits
+              </span>
             </div>
           </div>
         </div>

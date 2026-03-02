@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   Search, ShoppingCart, ChevronDown, X, Home, User, LayoutGrid, ShoppingBag, MapPin, LogOut, Heart, Package, User as UserIcon,
-  MenuIcon
+  MenuIcon, Camera
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -18,6 +18,16 @@ interface Category {
   is_active: boolean;
 }
 
+interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  avatar: string | null;
+  avatar_url?: string | null;
+  role: string;
+}
+
 const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
@@ -26,10 +36,46 @@ const Header: React.FC = () => {
   const [location, setLocation] = useState<string>('Detecting location...');
   const [isLocating, setIsLocating] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
   
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
+
+  // Fetch user profile data
+  const fetchUserProfile = useCallback(async () => {
+    if (!isAuthenticated || !user) return;
+    
+    try {
+      // Try to get full profile data
+      const response = await api.user.getProfile();
+      if (response.data && response.data.user) {
+        setProfile(response.data.user);
+      } else {
+        // Fallback to auth user
+        setProfile({
+          id: user.id,
+          name: user.name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          avatar: user.avatar || null,
+          role: user.role || 'customer',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      // Fallback to auth user
+      setProfile({
+        id: user.id,
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        avatar: user.avatar || null,
+        role: user.role || 'customer',
+      });
+    }
+  }, [isAuthenticated, user]);
 
   // Fetch cart count
   const fetchCartCount = useCallback(async () => {
@@ -49,7 +95,22 @@ const Header: React.FC = () => {
 
   useEffect(() => {
     fetchCartCount();
-  }, [fetchCartCount, isAuthenticated]);
+    fetchUserProfile();
+  }, [fetchCartCount, fetchUserProfile]);
+
+  // Listen for profile update events
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      fetchUserProfile();
+    };
+
+    // Custom event for profile updates
+    window.addEventListener('profile:updated', handleProfileUpdate);
+    
+    return () => {
+      window.removeEventListener('profile:updated', handleProfileUpdate);
+    };
+  }, [fetchUserProfile]);
 
   // Get user location
   const getLocation = () => {
@@ -134,7 +195,6 @@ const Header: React.FC = () => {
     fetchCategories();
   }, []);
 
-  
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -148,9 +208,46 @@ const Header: React.FC = () => {
       await logout();
       router.push('/');
       setAccountMenuOpen(false);
+      setProfile(null);
     } catch (error) {
       console.error('Error logging out:', error);
     }
+  };
+
+  const getAvatarUrl = () => {
+    if (avatarError) return '/images/placeholder-avatar.jpeg';
+    
+    const avatar = profile?.avatar_url || profile?.avatar || user?.avatar;
+    
+    if (!avatar) return '/images/placeholder-avatar.jpeg';
+    
+    if (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('data:')) {
+      return avatar;
+    }
+    
+    if (avatar.startsWith('avatars/')) {
+      return `https://api.hypermarket.co.ke/storage/${avatar}`;
+    }
+    
+    return `https://api.hypermarket.co.ke/storage/${avatar}`;
+  };
+
+  const getDisplayName = () => {
+    if (profile?.name) return profile.name.split(' ')[0];
+    if (user?.name) return user.name.split(' ')[0];
+    return 'Account';
+  };
+
+  const getFullName = () => {
+    if (profile?.name) return profile.name;
+    if (user?.name) return user.name;
+    return 'User';
+  };
+
+  const getEmail = () => {
+    if (profile?.email) return profile.email;
+    if (user?.email) return user.email;
+    return '';
   };
 
   const visibleCategories = categories.slice(0, 11);
@@ -223,17 +320,26 @@ const Header: React.FC = () => {
               </form>
 
               {/* Account */}
-              {isAuthenticated && user ? (
+              {isAuthenticated && (user || profile) ? (
                 <div className="relative">
                   <button
                     onClick={() => setAccountMenuOpen(!accountMenuOpen)}
                     className="flex items-center space-x-2 text-gray-700 hover:text-[#E67E22] transition-colors group"
                   >
-                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center">
-                      <User size={16} className="text-white" />
+                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center overflow-hidden">
+                      {getAvatarUrl() ? (
+                        <img
+                          src={getAvatarUrl()}
+                          alt={getDisplayName()}
+                          className="w-full h-full object-cover"
+                          onError={() => setAvatarError(true)}
+                        />
+                      ) : (
+                        <User size={16} className="text-white" />
+                      )}
                     </div>
                     <div className="flex flex-col items-start">
-                      <span className="text-sm font-medium group-hover:text-[#E67E22]">{user.name?.split(' ')[0] || 'Account'}</span>
+                      <span className="text-sm font-medium group-hover:text-[#E67E22]">{getDisplayName()}</span>
                       <span className="text-xs text-gray-500">My Account</span>
                     </div>
                     <ChevronDown size={16} className={`text-gray-500 transition-transform duration-200 ${accountMenuOpen ? 'rotate-180' : ''}`} />
@@ -246,12 +352,21 @@ const Header: React.FC = () => {
                       <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
                         <div className="bg-[#E6F3E6] p-4 border-b border-gray-200">
                           <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 rounded-full bg-[#E67E22] flex items-center justify-center">
-                              <User size={20} className="text-white" />
+                            <div className="w-12 h-12 rounded-full bg-[#E67E22] flex items-center justify-center overflow-hidden">
+                              {getAvatarUrl() ? (
+                                <img
+                                  src={getAvatarUrl()}
+                                  alt={getFullName()}
+                                  className="w-full h-full object-cover"
+                                  onError={() => setAvatarError(true)}
+                                />
+                              ) : (
+                                <User size={20} className="text-white" />
+                              )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
-                              <p className="text-xs text-gray-600 truncate">{user.email}</p>
+                              <p className="text-sm font-semibold text-gray-900 truncate">{getFullName()}</p>
+                              <p className="text-xs text-gray-600 truncate">{getEmail()}</p>
                             </div>
                           </div>
                         </div>

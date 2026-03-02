@@ -247,7 +247,7 @@ class ApiService {
 
     checkRole: () => this.api.get('/user/check-role'),
 
-    // Google OAuth Methods - ADDED
+    // Google OAuth Methods
     getGoogleAuthUrl: () => 
       this.api.get('/social/google'),
     
@@ -318,14 +318,56 @@ class ApiService {
     },
   };
 
-  // Promotion APIs (Public)
-  // promotions = {
-  //   getAll: (params?: { type?: string }) => 
-  //     this.api.get('/promotions', { params }),
+  // User APIs (for profile management) - FIXED SECTION
+  user = {
+    // Get full profile with all details
+    getProfile: () => this.api.get('/user/profile'),
     
-  //   validate: (data: { code: string; order_amount: number }) => 
-  //     this.api.post('/promotions/validate', data),
-  // };
+    // Update profile (supports FormData for file uploads)
+    updateProfile: (data: FormData | any) => {
+      if (data instanceof FormData) {
+        // For FormData, we need to use POST with _method=PUT for Laravel
+        if (!data.has('_method')) {
+          data.append('_method', 'PUT');
+        }
+        return this.api.post('/user/profile', data);
+      } else {
+        return this.api.put('/user/profile', data);
+      }
+    },
+    
+    // Change password
+    changePassword: (data: { 
+      current_password: string; 
+      new_password: string; 
+      new_password_confirmation: string 
+    }) => this.api.post('/user/change-password', data),
+    
+    // Get user statistics
+    getStats: () => this.api.get('/user/stats'),
+    
+    // Get user preferences
+    getPreferences: () => this.api.get('/user/preferences'),
+    
+    // Update user preferences
+    updatePreferences: (data: any) => this.api.put('/user/preferences', data),
+    
+    // Upload avatar only
+    uploadAvatar: (file: File) => {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      return this.api.post('/user/avatar', formData);
+    },
+    
+    // Remove avatar
+    removeAvatar: () => this.api.delete('/user/avatar'),
+    
+    // Delete account
+    deleteAccount: (password: string, reason?: string) => 
+      this.api.delete('/user/account', { 
+        data: { password, reason } 
+      }),
+  };
 
   // Cart APIs (including promo apply)
   cart = {
@@ -339,6 +381,15 @@ class ApiService {
     getCount: () => this.api.get('/cart/count'),
     applyPromo: (promoCode: string) => 
       this.api.post('/cart/apply-promo', { promo_code: promoCode }),
+  };
+
+  // Promotion APIs (Public)
+  promotions = {
+    getAll: (params?: { type?: string }) => 
+      this.api.get('/promotions', { params }),
+    
+    validate: (data: { code: string; order_amount: number }) => 
+      this.api.post('/promotions/validate', data),
   };
 
   // Admin APIs
@@ -583,7 +634,7 @@ class ApiService {
     trackImpression: (id: number) => this.api.post(`/banners/${id}/track-impression`),
   };
 
-   products = {
+  products = {
     // Basic product operations
     getAll: (params?: any) => this.api.get('/products', { params }),
     getById: (id: string | number) => this.api.get(`/products/${id}`),
@@ -602,13 +653,13 @@ class ApiService {
       this.api.get('/products/search/autocomplete', { params: { query } }),
     
     getPersonalizedRecommendations: (params?: { 
-  limit?: number; 
-  strategy?: string;
-  per_page?: number;
-}) => {
-  return this.api.get('/personalized/recommendations', { params })
-    .then(response => response.data); // Extract the data
-},
+      limit?: number; 
+      strategy?: string;
+      per_page?: number;
+    }) => {
+      return this.api.get('/personalized/recommendations', { params })
+        .then(response => response.data); // Extract the data
+    },
     
     // Track product view for recommendations
     trackView: (productId: number, duration?: number) => 
@@ -702,26 +753,13 @@ class ApiService {
     updateSettings: (data: any) => this.api.put('/notifications/settings', data),
   };
 
-   payments = {
-    getMethods: () => this.get('/payment/methods'),
-    createPaymentIntent: (data: any) => this.post('/payment/intent', data),
+  payments = {
+    getMethods: () => this.api.get('/payment/methods'),
+    createPaymentIntent: (data: any) => this.api.post('/payment/intent', data),
     processPayment: (orderId: number, data: any) => 
-      this.post(`/orders/${orderId}/pay`, data),
-    getHistory: () => this.get('/payment/history'),
+      this.api.post(`/orders/${orderId}/pay`, data),
+    getHistory: () => this.api.get('/payment/history'),
   };
-
-  promotions = {
-    validate: (data: { code: string; order_amount: number }) => 
-      this.post('/promotions/validate', data),
-  };
-
-  // payments = {
-  //   getMethods: () => this.api.get('/payment/methods'),
-  //   createIntent: (data: any) => this.api.post('/payment/intent', data),
-  //   process: (orderId: number, data: any) => 
-  //     this.api.post(`/orders/${orderId}/pay`, data),
-  //   getHistory: () => this.api.get('/payment/history'),
-  // };
 
   // Generic methods
   get = <T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => 

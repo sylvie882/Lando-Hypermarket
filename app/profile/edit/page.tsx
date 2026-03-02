@@ -7,7 +7,6 @@ import {
   User, 
   ArrowLeft,
   Save,
-  Upload,
   Camera,
   X,
   CheckCircle,
@@ -20,17 +19,14 @@ import {
   Eye,
   EyeOff,
   Smartphone,
-  Bell,
   Lock,
-  UploadCloud,
   ChevronRight,
   FileText
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { toast } from 'react-hot-toast';
-
-const API_BASE_URL = 'https://api.hypermarket.co.ke/api';
 
 interface UserProfile {
   id: number;
@@ -38,6 +34,7 @@ interface UserProfile {
   email: string;
   phone: string;
   avatar: string | null;
+  avatar_url?: string | null;
   email_verified_at: string | null;
   created_at: string;
   updated_at: string;
@@ -46,21 +43,10 @@ interface UserProfile {
   date_of_birth?: string;
   gender?: string;
   is_active: boolean;
-}
-
-interface ProfileUpdateData {
-  name?: string;
-  email?: string;
-  phone?: string;
-  date_of_birth?: string;
-  gender?: string;
-  avatar?: File;
-}
-
-interface PasswordChangeData {
-  current_password: string;
-  new_password: string;
-  new_password_confirmation: string;
+  loyalty_points?: number;
+  membership_tier?: string;
+  email_verified?: boolean;
+  phone_verified?: boolean;
 }
 
 export default function EditProfilePage() {
@@ -79,6 +65,7 @@ export default function EditProfilePage() {
   const [gender, setGender] = useState('');
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [bio, setBio] = useState('');
   
   // Password change states
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -104,54 +91,11 @@ export default function EditProfilePage() {
       setLoading(true);
       setFetchError(null);
       
-      // Get user profile data using direct API call
-      const response = await fetch(`${API_BASE_URL}/user`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-        },
-      });
+      // Use the new api.user.getProfile method
+      const response = await api.user.getProfile();
       
-      if (!response.ok) {
-        if (response.status === 500) {
-          // Try an alternative endpoint or fallback to auth user data
-          if (authUser) {
-            setProfile({
-              id: authUser.id,
-              name: authUser.name || '',
-              email: authUser.email || '',
-              phone: authUser.phone || '',
-              avatar: authUser.avatar || null,
-              email_verified_at: authUser.email_verified_at || null,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              is_admin: authUser.role === 'admin',
-              role: authUser.role || 'customer',
-              is_active: true
-            });
-            setName(authUser.name || '');
-            setEmail(authUser.email || '');
-            setPhone(authUser.phone || '');
-            if (authUser.avatar) {
-              setAvatarPreview(authUser.avatar);
-            }
-            toast('Using cached user data. Some features may be limited.', {
-                icon: '⚠️', // Optional warning icon
-                style: {
-                    background: '#fef3c7',
-                    color: '#92400e',
-                    border: '1px solid #f59e0b'
-                }
-                });
-          } else {
-            throw new Error('API server error. Please try again later.');
-          }
-        } else {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-      } else {
-        const data = await response.json();
-        const profileData = data.user;
+      if (response.data && response.data.user) {
+        const profileData = response.data.user;
         setProfile(profileData);
         
         // Set form fields
@@ -160,16 +104,17 @@ export default function EditProfilePage() {
         setPhone(profileData.phone || '');
         setDateOfBirth(profileData.date_of_birth || '');
         setGender(profileData.gender || '');
+        setBio(profileData.bio || '');
         
-        if (profileData.avatar) {
-          // If avatar is a path, construct full URL
-          if (profileData.avatar.startsWith('avatars/')) {
-            setAvatarPreview(`https://api.hypermarket.co.ke/storage/${profileData.avatar}`);
-          } else if (profileData.avatar.startsWith('http')) {
-            setAvatarPreview(profileData.avatar);
-          } else {
-            setAvatarPreview(`https://api.hypermarket.co.ke/storage/${profileData.avatar}`);
-          }
+        // Set avatar preview
+        if (profileData.avatar_url) {
+          setAvatarPreview(profileData.avatar_url);
+        } else if (profileData.avatar) {
+          // Use the api's getImageUrl helper if available
+          const imageUrl = api.getImageUrl ? 
+            api.getImageUrl(profileData.avatar) : 
+            `https://api.hypermarket.co.ke/storage/${profileData.avatar}`;
+          setAvatarPreview(imageUrl);
         }
       }
       
@@ -179,7 +124,7 @@ export default function EditProfilePage() {
       
       // Fallback to auth user data if available
       if (authUser) {
-        setProfile({
+        const fallbackProfile = {
           id: authUser.id,
           name: authUser.name || '',
           email: authUser.email || '',
@@ -191,13 +136,30 @@ export default function EditProfilePage() {
           is_admin: authUser.role === 'admin',
           role: authUser.role || 'customer',
           is_active: true
-        });
+        };
+        
+        setProfile(fallbackProfile);
         setName(authUser.name || '');
         setEmail(authUser.email || '');
         setPhone(authUser.phone || '');
+        
         if (authUser.avatar) {
-          setAvatarPreview(authUser.avatar);
+          // Try to construct avatar URL
+          if (authUser.avatar.startsWith('http')) {
+            setAvatarPreview(authUser.avatar);
+          } else {
+            setAvatarPreview(`https://api.hypermarket.co.ke/storage/${authUser.avatar}`);
+          }
         }
+        
+        toast('Using cached user data. Some features may be limited.', {
+          icon: '⚠️',
+          style: {
+            background: '#fef3c7',
+            color: '#92400e',
+            border: '1px solid #f59e0b'
+          }
+        });
       } else {
         toast.error('Failed to load profile data');
       }
@@ -232,13 +194,32 @@ export default function EditProfilePage() {
     }
   };
 
-  const removeAvatar = () => {
-    setAvatar(null);
-    setAvatarPreview(profile?.avatar ? 
-      (profile.avatar.startsWith('avatars/') ? 
-        `https://api.hypermarket.co.ke/storage/${profile.avatar}` : 
-        profile.avatar
-      ) : null);
+  const removeAvatar = async () => {
+    if (avatar) {
+      // Just remove the selected file
+      setAvatar(null);
+      if (profile?.avatar_url) {
+        setAvatarPreview(profile.avatar_url);
+      } else if (profile?.avatar) {
+        const imageUrl = api.getImageUrl ? 
+          api.getImageUrl(profile.avatar) : 
+          `https://api.hypermarket.co.ke/storage/${profile.avatar}`;
+        setAvatarPreview(imageUrl);
+      } else {
+        setAvatarPreview(null);
+      }
+    } else {
+      // Call API to remove avatar from server
+      try {
+        await api.user.removeAvatar();
+        setAvatarPreview(null);
+        toast.success('Avatar removed successfully');
+        fetchProfileData(); // Refresh profile data
+      } catch (error: any) {
+        console.error('Failed to remove avatar:', error);
+        toast.error(error.message || 'Failed to remove avatar');
+      }
+    }
   };
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
@@ -257,30 +238,15 @@ export default function EditProfilePage() {
       if (phone !== profile?.phone) formData.append('phone', phone);
       if (dateOfBirth !== profile?.date_of_birth) formData.append('date_of_birth', dateOfBirth);
       if (gender !== profile?.gender) formData.append('gender', gender);
+      if (bio !== profile?.bio) formData.append('bio', bio);
       if (avatar) formData.append('avatar', avatar);
       
-      const response = await fetch(`${API_BASE_URL}/profile`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-        },
-        body: formData,
-      });
-      
-      const responseData = await response.json();
-      
-      if (!response.ok) {
-        if (responseData.errors) {
-          setErrors(responseData.errors);
-          throw new Error('Validation failed');
-        }
-        throw new Error(responseData.message || 'Failed to update profile');
-      }
+      // Use the new api.user.updateProfile method
+      const response = await api.user.updateProfile(formData);
       
       // Update local auth user
-      if (responseData.user) {
-        updateUser(responseData.user);
+      if (response.data && response.data.user) {
+        updateUser(response.data.user);
       }
       
       setSuccess('Profile updated successfully!');
@@ -296,7 +262,15 @@ export default function EditProfilePage() {
       
     } catch (error: any) {
       console.error('Profile update failed:', error);
-      toast.error(error.message || 'Failed to update profile');
+      
+      // Handle validation errors
+      if (error.response?.data?.errors) {
+        setErrors(error.response.data.errors);
+        const errorMessages = Object.values(error.response.data.errors).flat();
+        toast.error(errorMessages.join(', '));
+      } else {
+        toast.error(error.message || 'Failed to update profile');
+      }
     } finally {
       setSaving(false);
     }
@@ -337,28 +311,8 @@ export default function EditProfilePage() {
         new_password_confirmation: confirmPassword,
       };
       
-      const response = await fetch(`${API_BASE_URL}/change-password`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(passwordData),
-      });
-      
-      const responseData = await response.json();
-      
-      if (!response.ok) {
-        if (responseData.errors) {
-          // Handle specific password errors
-          const errorMessages = Object.values(responseData.errors).flat();
-          toast.error(errorMessages.join(', '));
-        } else {
-          toast.error(responseData.message || 'Failed to change password');
-        }
-        return;
-      }
+      // Use the new api.user.changePassword method
+      await api.user.changePassword(passwordData);
       
       toast.success('Password changed successfully!');
       
@@ -370,37 +324,54 @@ export default function EditProfilePage() {
       
     } catch (error: any) {
       console.error('Password change failed:', error);
-      toast.error(error.message || 'Failed to change password');
+      
+      // Handle validation errors
+      if (error.response?.data?.errors) {
+        const errorMessages = Object.values(error.response.data.errors).flat();
+        toast.error(errorMessages.join(', '));
+      } else {
+        toast.error(error.response?.data?.message || error.message || 'Failed to change password');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUploadAvatarOnly = async () => {
+    if (!avatar) return;
+    
+    setSaving(true);
+    try {
+      // Use the new api.user.uploadAvatar method
+      const response = await api.user.uploadAvatar(avatar);
+      
+      toast.success('Avatar uploaded successfully');
+      setAvatar(null);
+      fetchProfileData(); // Refresh profile data
+      
+    } catch (error: any) {
+      console.error('Avatar upload failed:', error);
+      toast.error(error.message || 'Failed to upload avatar');
     } finally {
       setSaving(false);
     }
   };
 
   const handleLinkGoogleAccount = async () => {
-  toast('Google account linking would redirect to Google OAuth. This feature needs to be implemented on the backend.', {
-    icon: 'ℹ️',
-    style: {
-      background: '#dbeafe',
-      color: '#1e40af',
-      border: '1px solid #3b82f6'
-    }
-  });
-};
+    toast('Google account linking would redirect to Google OAuth. This feature needs to be implemented on the backend.', {
+      icon: 'ℹ️',
+      style: {
+        background: '#dbeafe',
+        color: '#1e40af',
+        border: '1px solid #3b82f6'
+      }
+    });
+  };
 
   const handleUnlinkGoogleAccount = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/social/google/unlink`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to unlink Google account');
-      }
-      
+      // Use the auth method for unlinking
+      await api.auth.unlinkGoogleAccount();
       toast.success('Google account unlinked successfully');
       fetchProfileData();
     } catch (error: any) {
@@ -418,27 +389,22 @@ export default function EditProfilePage() {
     if (!password) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/user/deactivate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ password }),
-      });
+      const reason = prompt('Please tell us why you are leaving (optional):');
       
-      const responseData = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(responseData.message || 'Failed to deactivate account');
-      }
+      // Use the new api.user.deleteAccount method
+      await api.user.deleteAccount(password, reason || undefined);
       
       toast.success('Account deactivated successfully');
-      // Logout and redirect to home
+      
+      // Clear local storage and redirect
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // Redirect after short delay
       setTimeout(() => {
         router.push('/');
       }, 1500);
+      
     } catch (error: any) {
       console.error('Failed to deactivate account:', error);
       toast.error(error.message || 'Failed to deactivate account');
@@ -540,6 +506,9 @@ export default function EditProfilePage() {
                         src={avatarPreview}
                         alt="Profile preview"
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = '/images/placeholder-avatar.jpg';
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -557,7 +526,7 @@ export default function EditProfilePage() {
                         onChange={handleAvatarChange}
                       />
                     </label>
-                    {avatarPreview && avatar && (
+                    {(avatarPreview || avatar) && (
                       <button
                         type="button"
                         onClick={removeAvatar}
@@ -573,6 +542,16 @@ export default function EditProfilePage() {
                   <p className="text-sm text-gray-500 mb-4">
                     Upload a clear photo of yourself. Max file size: 2MB. Supported formats: JPG, PNG, GIF.
                   </p>
+                  {avatar && (
+                    <button
+                      type="button"
+                      onClick={handleUploadAvatarOnly}
+                      disabled={saving}
+                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm disabled:opacity-50"
+                    >
+                      Upload Avatar Only
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -614,7 +593,12 @@ export default function EditProfilePage() {
                     placeholder="Enter your email"
                     required
                   />
-                  {profile?.email_verified_at ? (
+                  {profile?.email_verified ? (
+                    <div className="absolute right-3 top-3 flex items-center gap-1 text-green-600">
+                      <CheckCircle className="w-4 h-4" />
+                      <span className="text-xs font-medium">Verified</span>
+                    </div>
+                  ) : profile?.email_verified_at ? (
                     <div className="absolute right-3 top-3 flex items-center gap-1 text-green-600">
                       <CheckCircle className="w-4 h-4" />
                       <span className="text-xs font-medium">Verified</span>
@@ -629,7 +613,7 @@ export default function EditProfilePage() {
                 {errors.email && (
                   <p className="text-sm text-red-600">{errors.email[0]}</p>
                 )}
-                {!profile?.email_verified_at && (
+                {!profile?.email_verified && !profile?.email_verified_at && (
                   <p className="text-sm text-amber-600">
                     Please verify your email address to access all features
                   </p>
@@ -653,6 +637,28 @@ export default function EditProfilePage() {
                 />
                 {errors.phone && (
                   <p className="text-sm text-red-600">{errors.phone[0]}</p>
+                )}
+                {profile?.phone_verified && (
+                  <p className="text-sm text-green-600 flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" /> Verified
+                  </p>
+                )}
+              </div>
+
+              {/* Bio Field */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Bio (Optional)
+                </label>
+                <textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-colors"
+                  placeholder="Tell us a little about yourself"
+                />
+                {errors.bio && (
+                  <p className="text-sm text-red-600">{errors.bio[0]}</p>
                 )}
               </div>
 
@@ -720,20 +726,20 @@ export default function EditProfilePage() {
                       <div>
                         <p className="font-medium text-gray-900">Google Account</p>
                         <p className="text-sm text-gray-500">
-                          {profile?.email_verified_at ? 'Linked' : 'Not linked'}
+                          {profile?.email_verified ? 'Linked' : 'Not linked'}
                         </p>
                       </div>
                     </div>
                     <button
                       type="button"
-                      onClick={profile?.email_verified_at ? handleUnlinkGoogleAccount : handleLinkGoogleAccount}
+                      onClick={profile?.email_verified ? handleUnlinkGoogleAccount : handleLinkGoogleAccount}
                       className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                        profile?.email_verified_at
+                        profile?.email_verified
                           ? 'bg-red-100 text-red-700 hover:bg-red-200'
                           : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                       }`}
                     >
-                      {profile?.email_verified_at ? 'Unlink' : 'Link Google'}
+                      {profile?.email_verified ? 'Unlink' : 'Link Google'}
                     </button>
                   </div>
                 </div>
@@ -912,6 +918,20 @@ export default function EditProfilePage() {
                 <p className="text-sm text-gray-500">Account Status</p>
                 <p className={`font-medium ${profile?.is_active ? 'text-green-600' : 'text-red-600'}`}>
                   {profile?.is_active ? 'Active' : 'Inactive'}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500">Loyalty Points</p>
+                <p className="font-medium text-gray-900">
+                  {profile?.loyalty_points || 0} points
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500">Membership Tier</p>
+                <p className="font-medium text-gray-900 capitalize">
+                  {profile?.membership_tier || 'Bronze'}
                 </p>
               </div>
 
