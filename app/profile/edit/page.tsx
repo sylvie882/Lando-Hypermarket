@@ -47,6 +47,7 @@ interface UserProfile {
   membership_tier?: string;
   email_verified?: boolean;
   phone_verified?: boolean;
+  bio?: string;
 }
 
 export default function EditProfilePage() {
@@ -238,7 +239,7 @@ export default function EditProfilePage() {
       if (phone !== profile?.phone) formData.append('phone', phone);
       if (dateOfBirth !== profile?.date_of_birth) formData.append('date_of_birth', dateOfBirth);
       if (gender !== profile?.gender) formData.append('gender', gender);
-      // if (bio !== profile?.bio) formData.append('bio', bio);
+      if (bio !== profile?.bio) formData.append('bio', bio);
       if (avatar) formData.append('avatar', avatar);
       
       // Use the new api.user.updateProfile method
@@ -1006,9 +1007,6 @@ export default function EditProfilePage() {
                 <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-gray-700">Enable two-factor authentication if available</p>
               </div>
-
-
-              
               <div className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-gray-700">Never share your password with anyone</p>
