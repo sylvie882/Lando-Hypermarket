@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { Cart, CartItem } from '@/types';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Tag } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Tag, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Add this interface for promo code response
@@ -405,24 +405,18 @@ const CartPage: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cart Items */}
+          {/* Cart Items - Table Style with Borders */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-lg font-semibold">
-                    {cartItems.length} {cartItems.length === 1 ? 'Item' : 'Items'} in Cart
-                  </h2>
-                  <button
-                    onClick={clearCart}
-                    className="text-sm text-red-600 hover:text-red-700 hover:underline transition-colors"
-                    disabled={cartItems.length === 0}
-                  >
-                    Clear Cart
-                  </button>
-                </div>
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+              {/* Table Header */}
+              <div className="hidden md:grid grid-cols-12 gap-4 p-4 bg-gray-50 border-b border-gray-200 font-medium text-gray-700">
+                <div className="col-span-6">Product</div>
+                <div className="col-span-2 text-center">Price</div>
+                <div className="col-span-2 text-center">Quantity</div>
+                <div className="col-span-2 text-center">Total</div>
               </div>
 
+              {/* Cart Items */}
               <div className="divide-y divide-gray-200">
                 {cartItems.map((item) => {
                   const imageUrl = getImageUrl(item.product?.thumbnail || item.product?.main_image);
@@ -433,153 +427,225 @@ const CartPage: React.FC = () => {
                   const currentQuantity = safeParseNumber(item.quantity);
                   
                   return (
-                    <div key={item.id} className="p-6 hover:bg-gray-50 transition-colors duration-200">
-                      <div className="flex flex-col sm:flex-row">
-                        {/* Product Image */}
-                        <div className="flex-shrink-0 mb-4 sm:mb-0 sm:mr-6">
-                          <div className="w-full sm:w-24 h-24 bg-gray-100 rounded-lg overflow-hidden relative">
-                            <img
-                              src={imageUrl}
-                              alt={item.product?.name || 'Product'}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = '/images/placeholder-product.jpg';
-                              }}
-                              loading="lazy"
-                            />
+                    <div key={item.id} className="p-4 hover:bg-gray-50 transition-colors duration-200 border-b border-gray-200 last:border-b-0">
+                      {/* Mobile View */}
+                      <div className="md:hidden">
+                        <div className="flex gap-4">
+                          {/* Product Image */}
+                          <div className="flex-shrink-0">
+                            <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden relative border border-gray-200">
+                              {imageUrl ? (
+                                <img
+                                  src={imageUrl}
+                                  alt={item.product?.name || 'Product'}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.src = '/images/placeholder-product.jpg';
+                                  }}
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                  <ImageIcon size={24} className="text-gray-400" />
+                                </div>
+                              )}
+                              {stockQuantity === 0 && (
+                                <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex items-center justify-center">
+                                  <span className="text-white font-bold text-xs">Out of Stock</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Product Info */}
+                          <div className="flex-1">
+                            <Link
+                              href={`/products/${item.product?.id}`}
+                              className="font-medium text-gray-900 hover:text-green-600 transition-colors"
+                            >
+                              {item.product?.name || 'Product'}
+                            </Link>
+                            
+                            {stockQuantity < 10 && stockQuantity > 0 && (
+                              <p className="text-xs text-orange-600 mt-1">
+                                Only {stockQuantity} left!
+                              </p>
+                            )}
+
+                            <div className="mt-2 flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-gray-500">Price:</p>
+                                <p className="font-medium">{formatKSH(item.price)}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm text-gray-500">Total:</p>
+                                <p className="font-bold text-green-600">{formatKSH(itemTotal)}</p>
+                              </div>
+                            </div>
+
+                            {/* Quantity Controls - Mobile */}
+                            <div className="mt-3 flex items-center justify-between">
+                              <div className="flex items-center border border-gray-300 rounded-lg">
+                                <button
+                                  onClick={() => updateQuantity(item.id, Number(currentQuantity) - 1)}
+                                  disabled={isUpdating || Number(currentQuantity) <= 1}
+                                  className="w-8 h-8 flex items-center justify-center rounded-l hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <Minus size={14} />
+                                </button>
+                                <span className="w-10 h-8 flex items-center justify-center border-l border-r border-gray-300 bg-gray-50 text-sm">
+                                  {isUpdating ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                                  ) : (
+                                    currentQuantity
+                                  )}
+                                </span>
+                                <button
+                                  onClick={() => updateQuantity(item.id, Number(currentQuantity) + 1)}
+                                  disabled={isUpdating || Number(currentQuantity) >= stockQuantity}
+                                  className="w-8 h-8 flex items-center justify-center rounded-r hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              </div>
+
+                              <button
+                                onClick={() => removeItem(item.id)}
+                                disabled={isUpdating}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded transition-colors disabled:opacity-50"
+                                title="Remove item"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Desktop View - Grid Layout */}
+                      <div className="hidden md:grid md:grid-cols-12 gap-4 items-center">
+                        {/* Product Info - Col Span 6 */}
+                        <div className="col-span-6 flex items-center gap-4">
+                          <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden relative flex-shrink-0 border border-gray-200">
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={item.product?.name || 'Product'}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = '/images/placeholder-product.jpg';
+                                }}
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                <ImageIcon size={20} className="text-gray-400" />
+                              </div>
+                            )}
                             {stockQuantity === 0 && (
                               <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex items-center justify-center">
-                                <span className="text-white font-bold text-sm">Out of Stock</span>
+                                <span className="text-white font-bold text-xs">Out of Stock</span>
                               </div>
                             )}
                           </div>
-                          
-                          {/* Gallery Images Thumbnails */}
-                          {galleryImages.length > 0 && (
-                            <div className="flex mt-2 space-x-1 overflow-x-auto">
-                              {galleryImages.slice(0, 3).map((img, index) => (
-                                <div key={index} className="w-8 h-8 flex-shrink-0">
-                                  <img
-                                    src={img}
-                                    alt={`Gallery ${index + 1}`}
-                                    className="w-full h-full object-cover rounded"
-                                    onError={(e) => {
-                                      e.currentTarget.src = '/images/placeholder-product.jpg';
-                                    }}
-                                  />
-                                </div>
-                              ))}
-                              {galleryImages.length > 3 && (
-                                <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-gray-100 rounded text-xs">
-                                  +{galleryImages.length - 3}
-                                </div>
-                              )}
-                            </div>
+                          <div>
+                            <Link
+                              href={`/products/${item.product?.id}`}
+                              className="font-medium text-gray-900 hover:text-green-600 transition-colors"
+                            >
+                              {item.product?.name || 'Product'}
+                            </Link>
+                            {stockQuantity < 10 && stockQuantity > 0 && (
+                              <p className="text-xs text-orange-600 mt-1">
+                                Only {stockQuantity} left in stock!
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Price - Col Span 2 */}
+                        <div className="col-span-2 text-center">
+                          <span className="font-medium">{formatKSH(item.price)}</span>
+                          {item.price !== item.product?.price && (
+                            <p className="text-xs text-gray-500 line-through">
+                              {formatKSH(item.product?.price)}
+                            </p>
                           )}
                         </div>
 
-                        {/* Product Info */}
-                        <div className="flex-1">
-                          <div className="flex flex-col sm:flex-row sm:justify-between">
-                            <div className="mb-4 sm:mb-0">
-                              <Link
-                                href={`/products/${item.product?.id}`}
-                                className="font-medium text-gray-900 hover:text-green-600 text-lg transition-colors"
-                              >
-                                {item.product?.name || 'Product'}
-                              </Link>
-                              <p className="text-sm text-gray-500 mt-1">
-                                {item.product?.category?.name || 'Uncategorized'}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                Price: {formatKSH(item.price)} each
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                SKU: {item.product?.sku || 'N/A'}
-                              </p>
-                              {stockQuantity < 10 && stockQuantity > 0 && (
-                                <p className="text-xs text-orange-600 mt-1">
-                                  Only {stockQuantity} left in stock!
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-left sm:text-right">
-                              <div className="text-lg font-bold text-gray-900">
-                                {formatKSH(itemTotal)}
-                              </div>
-                              {item.price !== item.product?.price && (
-                                <p className="text-sm text-gray-500 line-through">
-                                  Original: {formatKSH(item.product?.price)}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Quantity Controls - FIXED: Added Number() wrappers */}
-                          <div className="flex items-center justify-between mt-4">
-                            <div className="flex items-center">
-                              <button
-                                onClick={() => updateQuantity(item.id, Number(currentQuantity) - 1)}
-                                disabled={isUpdating || Number(currentQuantity) <= 1}
-                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-l disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
-                              >
-                                <Minus size={16} />
-                              </button>
-                              <span className="w-12 h-8 flex items-center justify-center border-t border-b border-gray-300 bg-gray-50">
-                                {isUpdating ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-                                ) : (
-                                  currentQuantity
-                                )}
-                              </span>
-                              <button
-                                onClick={() => updateQuantity(item.id, Number(currentQuantity) + 1)}
-                                disabled={isUpdating || Number(currentQuantity) >= stockQuantity}
-                                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-r disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
-                              >
-                                <Plus size={16} />
-                              </button>
-                              <span className="ml-2 text-sm text-gray-500">
-                                Max: {stockQuantity}
-                              </span>
-                            </div>
-
+                        {/* Quantity - Col Span 2 */}
+                        <div className="col-span-2 flex justify-center">
+                          <div className="flex items-center border border-gray-300 rounded-lg">
                             <button
-                              onClick={() => removeItem(item.id)}
-                              disabled={isUpdating}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded transition-colors disabled:opacity-50"
-                              title="Remove item"
+                              onClick={() => updateQuantity(item.id, Number(currentQuantity) - 1)}
+                              disabled={isUpdating || Number(currentQuantity) <= 1}
+                              className="w-8 h-8 flex items-center justify-center rounded-l hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                              <Trash2 size={18} />
+                              <Minus size={14} />
+                            </button>
+                            <span className="w-10 h-8 flex items-center justify-center border-l border-r border-gray-300 bg-gray-50 text-sm">
+                              {isUpdating ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                              ) : (
+                                currentQuantity
+                              )}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.id, Number(currentQuantity) + 1)}
+                              disabled={isUpdating || Number(currentQuantity) >= stockQuantity}
+                              className="w-8 h-8 flex items-center justify-center rounded-r hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <Plus size={14} />
                             </button>
                           </div>
+                        </div>
+
+                        {/* Total & Actions - Col Span 2 */}
+                        <div className="col-span-2 flex items-center justify-between">
+                          <span className="font-bold text-green-600">{formatKSH(itemTotal)}</span>
+                          <button
+                            onClick={() => removeItem(item.id)}
+                            disabled={isUpdating}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded transition-colors disabled:opacity-50"
+                            title="Remove item"
+                          >
+                            <Trash2 size={18} />
+                          </button>
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
 
-            {/* Continue Shopping */}
-            <div className="mt-6">
-              <Link
-                href="/products"
-                className="inline-flex items-center text-green-600 hover:text-green-700 font-medium hover:underline transition-colors"
-                onClick={() => {
-                  // Dispatch event to refresh header cart count
-                  window.dispatchEvent(new Event('cart:updated'));
-                }}
-              >
-                ← Continue Shopping
-              </Link>
+              {/* Cart Footer with Actions */}
+              <div className="p-4 bg-gray-50 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <Link
+                    href="/products"
+                    className="text-green-600 hover:text-green-700 font-medium hover:underline transition-colors"
+                    onClick={() => {
+                      window.dispatchEvent(new Event('cart:updated'));
+                    }}
+                  >
+                    ← Continue Shopping
+                  </Link>
+                  <button
+                    onClick={clearCart}
+                    className="text-red-600 hover:text-red-700 font-medium hover:underline transition-colors"
+                    disabled={cartItems.length === 0}
+                  >
+                    Clear Cart
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h3>
+            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-8 border border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-200">Order Summary</h3>
 
               {/* Promo Code */}
               <div className="mb-6">
@@ -667,7 +733,8 @@ const CartPage: React.FC = () => {
                   </div>
                 )}
                 
-                <hr className="my-4 border-gray-300" />
+                <div className="border-t border-gray-200 my-4"></div>
+                
                 <div className="flex justify-between items-center text-xl font-bold text-gray-900">
                   <span>Total</span>
                   <span>{formatKSH(total)}</span>
@@ -688,9 +755,8 @@ const CartPage: React.FC = () => {
               <div className="space-y-4">
                 <Link
                   href="/checkout"
-                  className="block w-full text-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="block w-full text-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed border border-orange-700"
                   onClick={() => {
-                    // Dispatch event to refresh header cart count before checkout
                     window.dispatchEvent(new Event('cart:updated'));
                   }}
                 >
@@ -701,7 +767,6 @@ const CartPage: React.FC = () => {
                   href="/products"
                   className="block w-full text-center border-2 border-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-50 transition-colors"
                   onClick={() => {
-                    // Dispatch event to refresh header cart count
                     window.dispatchEvent(new Event('cart:updated'));
                   }}
                 >
