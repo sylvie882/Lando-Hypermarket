@@ -82,7 +82,7 @@ const Header: React.FC = () => {
     }
   }, [isAuthenticated, user]);
 
-  
+
 
   // Fetch cart count
   const fetchCartCount = useCallback(async () => {
@@ -254,11 +254,11 @@ const Header: React.FC = () => {
   };
 
   const getAvatarUrl = () => {
-    if (avatarError) return '/images/placeholder-avatar.jpeg';
+    if (avatarError) return '/images/avatar.jpeg';
     
     const avatar = profile?.avatar_url || profile?.avatar || user?.avatar;
     
-    if (!avatar) return '/images/placeholder-avatar.jpeg';
+    if (!avatar) return '/images/avatar.jpeg';
     
     if (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('data:')) {
       return avatar;

@@ -136,7 +136,7 @@ const formatTime = (dateString: string): string => {
 
 // Helper function to get storage URL
 const getStorageUrl = (path: string | null | undefined): string => {
-  if (!path) return '/images/placeholder-avatar.jpeg';
+  if (!path) return '/images/avatar.jpeg';
   
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
     return path;
@@ -376,11 +376,11 @@ export default function ProfilePage() {
   };
 
   const getAvatarUrl = () => {
-    if (avatarError) return '/images/placeholder-avatar.jpeg';
+    if (avatarError) return '/images/avatar.jpeg';
     
     if (profile?.avatar_url) return profile.avatar_url;
     if (profile?.avatar) return getStorageUrl(profile.avatar);
-    return '/images/placeholder-avatar.jpeg';
+    return '/images/avatar.jpeg';
   };
 
   if (loading) {
