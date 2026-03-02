@@ -82,6 +82,8 @@ const Header: React.FC = () => {
     }
   }, [isAuthenticated, user]);
 
+  
+
   // Fetch cart count
   const fetchCartCount = useCallback(async () => {
     if (!isAuthenticated) {
