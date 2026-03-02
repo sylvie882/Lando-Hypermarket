@@ -300,11 +300,11 @@ const Header: React.FC = () => {
               <div className="flex items-center space-x-4">
                 <span className="flex items-center px-3 py-1 border border-[#E67E22] rounded">
                   <img src="/images/schedule.png" alt="Scheduled" className="w-4 h-4 sm:w-5 sm:h-5 object-contain mr-1.5" />
-                  <span className="text-xs sm:text-sm text-[#E67E22] font-medium">Scheduled</span>
+                  <span className="text-xs sm:text-sm text-emerald-500 font-medium">Scheduled</span>
                 </span>
                 <span className="flex items-center px-3 py-1 border border-[#E67E22] rounded">
                   <img src="/images/express.png" alt="Express" className="w-4 h-4 sm:w-5 sm:h-5 object-contain mr-1.5" />
-                  <span className="text-xs sm:text-sm text-[#E67E22] font-medium">Express</span>
+                  <span className="text-xs sm:text-sm text-emerald-500 font-medium">Express</span>
                 </span>
               </div>
               <div className="hidden md:flex items-center">
