@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   Search, ShoppingCart, ChevronDown, X, Home, User, LayoutGrid, ShoppingBag, MapPin, LogOut, Heart, Package, User as UserIcon,
-  MenuIcon, ChevronLeft, ChevronRight
+  MenuIcon, ChevronLeft, ChevronRight, LogIn, UserPlus
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -38,6 +38,7 @@ const Header: React.FC = () => {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [avatarError, setAvatarError] = useState(false);
+  const [mobileAccountMenuOpen, setMobileAccountMenuOpen] = useState(false);
   
   // Scroll state for categories
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -81,8 +82,6 @@ const Header: React.FC = () => {
       });
     }
   }, [isAuthenticated, user]);
-
-
 
   // Fetch cart count
   const fetchCartCount = useCallback(async () => {
@@ -247,6 +246,7 @@ const Header: React.FC = () => {
       await logout();
       router.push('/');
       setAccountMenuOpen(false);
+      setMobileAccountMenuOpen(false);
       setProfile(null);
     } catch (error) {
       console.error('Error logging out:', error);
@@ -477,67 +477,104 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Header */}
+        {/* Mobile Header - IMPROVED VERSION */}
         <div className="md:hidden bg-white">
-          <div className="px-4 sm:px-6">
-            <div className="py-3">
-              <div className="flex items-center justify-between mb-3">
-                        <Link href="/" className="inline-block ml-[-30px]">
-                              <Image 
-                                src="/logo10.png" 
-                                alt="Lando Logo" 
-                                width={160} 
-                                height={50} 
-                                className="object-cover w-[160px] h-[60px]"
-                                priority
-                              />
-                            </Link>
-                
-                <div className="flex items-center space-x-3">
-                  {/* Cart Icon - Moved to top */}
-                  <Link href="/cart" className="relative">
-                    <ShoppingCart size={22} className="text-emerald-500" />
-                    {cartCount > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-[#E67E22] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                        {cartCount}
-                      </span>
-                    )}
-                  </Link>
-
-                  <button 
-                    onClick={getLocation}
-                    className="flex items-center space-x-1 text-gray-700 hover:text-[#E67E22] transition-colors"
-                  >
-                    <MapPin size={16} className="text-[#E67E22]" />
-                    <span className="text-xs font-medium truncate max-w-[100px]">
-                      {isLocating ? 'Detecting...' : location}
-                    </span>
-                    <ChevronDown size={12} className="text-gray-500" />
-                  </button>
-                </div>
-              </div>
+          <div className="px-3">
+            {/* First Row: Logo + Location + Cart */}
+            <div className="flex items-center justify-between py-2">
+              {/* Logo with negative margin to maintain alignment */}
+              <Link href="/" className="inline-block -ml-3">
+                <Image 
+                  src="/logo10.png" 
+                  alt="Lando Logo" 
+                  width={130} 
+                  height={45} 
+                  className="object-cover w-[130px] h-[45px]"
+                  priority
+                />
+              </Link>
               
               <div className="flex items-center space-x-2">
-                <form onSubmit={handleSearch} className="flex flex-1">
-                  <input
-                    type="search"
-                    placeholder="50,000+ items"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#E67E22] text-sm bg-white"
-                  />
-                  <button type="submit" className="bg-[#E67E22] text-white px-3 rounded-r-lg">
-                    <Search size={18} />
-                  </button>
-                </form>
-                
-                <Link 
-                  href={isAuthenticated ? "/profile" : "/auth/login"} 
-                  className="p-2 bg-white rounded-lg border border-gray-300"
+                {/* Location with shorter text */}
+                <button 
+                  onClick={getLocation}
+                  className="flex items-center space-x-0.5 text-gray-700 bg-gray-50 px-2 py-1 rounded-full border border-gray-200"
                 >
-                  <User size={18} className="text-[#E67E22]" />
+                  <MapPin size={14} className="text-[#E67E22]" />
+                  <span className="text-xs font-medium truncate max-w-[80px]">
+                    {isLocating ? '...' : location.length > 8 ? location.substring(0, 8) + '...' : location}
+                  </span>
+                  <ChevronDown size={10} className="text-gray-500" />
+                </button>
+
+                {/* Cart Icon */}
+                <Link href="/cart" className="relative p-1.5">
+                  <ShoppingCart size={20} className="text-emerald-500" />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-[#E67E22] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-md">
+                      {cartCount}
+                    </span>
+                  )}
                 </Link>
               </div>
+            </div>
+            
+            {/* Second Row: Search + Auth Buttons */}
+            <div className="flex items-center space-x-2 pb-3">
+              {/* Search Bar - Compact */}
+              <form onSubmit={handleSearch} className="flex flex-1">
+                <input
+                  type="search"
+                  placeholder="Search 50k+ items..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-[#E67E22] text-sm bg-white"
+                />
+                <button type="submit" className="bg-emerald-500 text-white px-3 rounded-r-lg hover:bg-[#D35400] transition-colors">
+                  <Search size={16} />
+                </button>
+              </form>
+              
+              {/* Auth Buttons for Non-Authenticated Users */}
+              {!isAuthenticated ? (
+                <div className="flex items-center space-x-1">
+                  <Link 
+                    href="/auth/login" 
+                    className="flex items-center px-2 py-2 bg-emerald-500 text-white rounded-lg hover:bg-[#D35400] transition-colors"
+                    title="Login"
+                  >
+                    <LogIn size={16} />
+                    <span className="ml-1 text-xs font-medium hidden sm:inline">Login</span>
+                  </Link>
+                  <Link 
+                    href="/auth/register" 
+                    className="flex items-center px-2 py-2 bg-[#E67E22] text-white rounded-lg hover:bg-[#D35400] transition-colors"
+                    title="Register"
+                  >
+                    <UserPlus size={16} />
+                    <span className="ml-1 text-xs font-medium hidden sm:inline">Register</span>
+                  </Link>
+                </div>
+              ) : (
+                /* Profile Button for Authenticated Users */
+                <button 
+                  onClick={() => setMobileAccountMenuOpen(!mobileAccountMenuOpen)}
+                  className="relative p-1.5 bg-emerald-500 rounded-lg flex items-center"
+                >
+                  <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center overflow-hidden">
+                    {getAvatarUrl() ? (
+                      <img
+                        src={getAvatarUrl()}
+                        alt={getDisplayName()}
+                        className="w-full h-full object-cover"
+                        onError={() => setAvatarError(true)}
+                      />
+                    ) : (
+                      <User size={14} className="text-emerald-500" />
+                    )}
+                  </div>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -608,6 +645,81 @@ const Header: React.FC = () => {
         </nav>
       </header>
 
+      {/* Mobile Account Menu Drawer for Authenticated Users */}
+      {mobileAccountMenuOpen && isAuthenticated && (
+        <div className="fixed inset-0 z-[70] md:hidden">
+          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setMobileAccountMenuOpen(false)} />
+          <div className="absolute right-0 top-0 bottom-0 w-4/5 max-w-sm bg-white shadow-xl overflow-y-auto">
+            <div className="p-5">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-[#E67E22]">My Account</h2>
+                <button onClick={() => setMobileAccountMenuOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              {/* User Info */}
+              <div className="bg-[#E6F3E6] p-4 rounded-lg mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-14 h-14 rounded-full bg-[#E67E22] flex items-center justify-center overflow-hidden">
+                    {getAvatarUrl() ? (
+                      <img
+                        src={getAvatarUrl()}
+                        alt={getFullName()}
+                        className="w-full h-full object-cover"
+                        onError={() => setAvatarError(true)}
+                      />
+                    ) : (
+                      <User size={24} className="text-white" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-base font-semibold text-gray-900 truncate">{getFullName()}</p>
+                    <p className="text-xs text-gray-600 truncate">{getEmail()}</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Menu Items */}
+              <div className="space-y-1">
+                <Link
+                  href="/profile"
+                  className="flex items-center px-4 py-3 text-gray-700 hover:bg-[#E6F3E6] hover:text-[#E67E22] rounded-lg transition-colors"
+                  onClick={() => setMobileAccountMenuOpen(false)}
+                >
+                  <UserIcon size={18} className="mr-3 text-gray-500" />
+                  <span className="font-medium">My Profile</span>
+                </Link>
+                <Link
+                  href="/orders"
+                  className="flex items-center px-4 py-3 text-gray-700 hover:bg-[#E6F3E6] hover:text-[#E67E22] rounded-lg transition-colors"
+                  onClick={() => setMobileAccountMenuOpen(false)}
+                >
+                  <Package size={18} className="mr-3 text-gray-500" />
+                  <span className="font-medium">My Orders</span>
+                </Link>
+                <Link
+                  href="/wishlist"
+                  className="flex items-center px-4 py-3 text-gray-700 hover:bg-[#E6F3E6] hover:text-[#E67E22] rounded-lg transition-colors"
+                  onClick={() => setMobileAccountMenuOpen(false)}
+                >
+                  <Heart size={18} className="mr-3 text-gray-500" />
+                  <span className="font-medium">Wishlist</span>
+                </Link>
+                <div className="border-t border-gray-200 my-2"></div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <LogOut size={18} className="mr-3" />
+                  <span className="font-medium">Logout</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Bottom Navigation - Removed Cart from here */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50 shadow-lg">
         <div className="flex justify-around items-center py-1 px-4">
@@ -629,10 +741,31 @@ const Header: React.FC = () => {
             <span className={`text-[10px] mt-0.5 ${mobileMenuOpen ? 'text-[#E67E22] font-medium' : 'text-gray-600'}`}>Categories</span>
           </button>
           
-          <Link href={isAuthenticated ? "/profile" : "/auth/login"} className="flex flex-col items-center p-1 w-16">
-            <User size={20} className={pathname === '/profile' ? 'text-[#E67E22]' : 'text-gray-600'} />
-            <span className={`text-[10px] mt-0.5 ${pathname === '/profile' ? 'text-[#E67E22] font-medium' : 'text-gray-600'}`}>Profile</span>
-          </Link>
+          {isAuthenticated ? (
+            <button 
+              onClick={() => setMobileAccountMenuOpen(true)}
+              className="flex flex-col items-center p-1 w-16"
+            >
+              <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center overflow-hidden">
+                {getAvatarUrl() ? (
+                  <img
+                    src={getAvatarUrl()}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    onError={() => setAvatarError(true)}
+                  />
+                ) : (
+                  <User size={12} className="text-white" />
+                )}
+              </div>
+              <span className={`text-[10px] mt-0.5 ${pathname === '/profile' ? 'text-[#E67E22] font-medium' : 'text-gray-600'}`}>Profile</span>
+            </button>
+          ) : (
+            <Link href="/auth/login" className="flex flex-col items-center p-1 w-16">
+              <User size={20} className="text-gray-600" />
+              <span className="text-[10px] mt-0.5 text-gray-600">Login</span>
+            </Link>
+          )}
         </div>
       </div>
 
