@@ -1,25 +1,26 @@
+// types/index.ts
+
 export interface User {
   id: number;
   name: string;
   email: string;
   phone?: string;
   role: 'customer' | 'admin' | 'delivery_staff' | 'vendor';
-  is_admin?: boolean; // Add this
+  is_admin?: boolean;
   avatar?: string;
   date_of_birth?: string;
   gender?: 'male' | 'female' | 'other';
   preferences?: any;
-  country?: string; // Add this
+  country?: string;
   loyalty_points: number;
-  email_verified_at?: string | null; // Add this
-  info?: string; // Add this
+  email_verified_at?: string | null;
+  info?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  profile_picture_url?: string; // Full URL
+  profile_picture_url?: string;
 }
-// types/index.ts
-// types/index.ts - Update the Product interface
+
 export interface Product {
   id: number;
   name: string;
@@ -29,8 +30,8 @@ export interface Product {
   discounted_price?: number;
   stock_quantity: number;
   sku: string;
-  thumbnail?: string; // Relative path from Laravel
-  gallery?: string[]; // Relative paths from Laravel
+  thumbnail?: string;
+  gallery?: string[];
   rating: number;
   review_count: number;
   sold_count: number;
@@ -43,20 +44,15 @@ export interface Product {
   created_at: string;
   updated_at: string;  
   final_price?: number | string;
-
-  images?: string[]; // Array of image URLs
-  attributes?: Record<string, any>; // For specifications tab
+  images?: string[];
+  attributes?: Record<string, any>;
   is_free_shipping?: boolean;
-
-  // Computed attributes from Laravel accessors
   is_in_stock?: boolean;
-  main_image?: string; // Full URL from getMainImageAttribute()
-  gallery_urls?: string[]; // Full URLs from getGalleryUrlsAttribute()
-  
-  // Personalized recommendation properties (added)
-  relevance_score?: number; // Add this line
-  recommendation_type?: string; // Add this line
-  personalized_price?: { // Add this line
+  main_image?: string;
+  gallery_urls?: string[];
+  relevance_score?: number;
+  recommendation_type?: string;
+  personalized_price?: {
     original_price: number;
     final_price: number;
     discount_type?: 'percentage' | 'fixed';
@@ -66,36 +62,31 @@ export interface Product {
     is_personalized_offer: boolean;
     discount_rules_applied?: any;
   };
-  availability_status?: 'in_stock' | 'out_of_stock'; // Add this line
-  
-  // You might also want to add these common fields
-  thumbnail_url?: string; // Full URL
+  availability_status?: 'in_stock' | 'out_of_stock';
+  thumbnail_url?: string;
   views?: number;
   weight?: number | null;
   unit?: string | null;
   barcode?: string | null;
   min_stock_threshold?: number;
-
-
   metadata?: {
     relevance_score?: number;
     recommendation_type?: string;
   };
 }
-// types/index.ts
+
 export interface Category {
   id: number;
   name: string;
   slug: string;
   description?: string;
   image?: string;
-  image_url?: string; // Add this line
+  image_url?: string;
   parent_id?: number;
   order: number;
   is_active: boolean;
   parent?: Category;
   children?: Category[];
-  // You might also want to add these common fields
   products_count?: number;
   active_products_count?: number;
   created_at: string;
@@ -120,14 +111,33 @@ export interface CartItem {
   subtotal: number;
 }
 
+// ============================================
+// UPDATED PAYMENT TYPES WITH M-PESA SUPPORT
+// ============================================
+
+export type PaymentMethod = 
+  | 'cod' 
+  | 'credit_card' 
+  | 'debit_card' 
+  | 'digital_wallet' 
+  | 'bank_transfer'
+  | 'mpesa_till'
+  | 'mpesa_stk'
+  | 'paypal'
+  | 'google_pay'
+  | 'apple_pay'
+  | 'stripe';
+
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'pending_confirmation';
+
 export interface Order {
   id: number;
   order_number: string;
   user_id: number;
   address_id: number;
-  status: 'pending' | 'confirmed' | 'processing' | 'packed' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'returned';
-  payment_method: 'cod' | 'credit_card' | 'debit_card' | 'digital_wallet' | 'bank_transfer';
-  payment_status: 'pending' | 'paid' | 'failed' | 'refunded';
+  status: 'pending' | 'confirmed' | 'processing' | 'packed' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'returned' | 'pending_payment';
+  payment_method: PaymentMethod;
+  payment_status: PaymentStatus;
   subtotal: number;
   tax: number;
   shipping_fee: number;
@@ -175,17 +185,177 @@ export interface Address {
   updated_at: string;
 }
 
+// ============================================
+// UPDATED PAYMENT INTERFACE WITH M-PESA FIELDS
+// ============================================
+
 export interface Payment {
   id: number;
   order_id: number;
   transaction_id: string;
-  method: 'credit_card' | 'debit_card' | 'cod' | 'digital_wallet' | 'bank_transfer';
+  method: PaymentMethod;
   amount: number;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
-  payment_details?: any;
+  currency?: string;
+  status: PaymentStatus;
+  payment_details?: PaymentDetails;
+  provider_reference?: string;
+  payment_response?: any;
+  error_message?: string;
   created_at: string;
   updated_at: string;
+  order?: Order;
 }
+
+// Payment details types for different methods
+export interface MpesaTillPaymentDetails {
+  till_number: string;
+  till_name: string;
+  phone_number?: string;
+  transaction_reference?: string;
+  amount_paid?: number;
+  confirmed_at?: string;
+  payment_confirmed?: boolean;
+}
+
+export interface MpesaStkPaymentDetails {
+  phone_number: string;
+  checkout_request_id?: string;
+  merchant_request_id?: string;
+  response_code?: string;
+  response_description?: string;
+  customer_message?: string;
+}
+
+export interface CardPaymentDetails {
+  card_number?: string;
+  card_last4?: string;
+  card_brand?: string;
+  payment_intent_id?: string;
+  client_secret?: string;
+  save_card?: boolean;
+}
+
+export interface BankTransferDetails {
+  bank_name: string;
+  account_number: string;
+  routing_number?: string;
+  reference: string;
+  instructions?: string;
+}
+
+export interface PayPalPaymentDetails {
+  payment_id?: string;
+  order_id?: string;
+  payer_id?: string;
+  payer_email?: string;
+}
+
+export interface GooglePayPaymentDetails {
+  payment_method_id?: string;
+  token?: string;
+}
+
+export interface ApplePayPaymentDetails {
+  token?: string;
+}
+
+export type PaymentDetails = 
+  | (MpesaTillPaymentDetails & { method: 'mpesa_till' })
+  | (MpesaStkPaymentDetails & { method: 'mpesa_stk' })
+  | (CardPaymentDetails & { method: 'credit_card' | 'debit_card' | 'stripe' })
+  | (BankTransferDetails & { method: 'bank_transfer' })
+  | (PayPalPaymentDetails & { method: 'paypal' })
+  | (GooglePayPaymentDetails & { method: 'google_pay' })
+  | (ApplePayPaymentDetails & { method: 'apple_pay' })
+  | { method: 'cod' };
+
+// M-Pesa specific types
+export interface MpesaTillInfo {
+  till_number: string;
+  till_name: string;
+  amount: number;
+  order_number?: string;
+  instructions: string[];
+  business_name: string;
+}
+
+export interface MpesaPaymentRequest {
+  phone_number: string;
+  amount: number;
+  order_id: number;
+  payment_method: 'mpesa_till' | 'mpesa_stk';
+}
+
+export interface MpesaPaymentConfirmation {
+  order_id: number;
+  transaction_reference: string;
+  phone_number: string;
+  amount_paid: number;
+  payment_method: 'mpesa_till';
+}
+
+export interface MpesaStkResponse {
+  checkout_request_id: string;
+  response_code: string;
+  response_description: string;
+  customer_message: string;
+  merchant_request_id: string;
+}
+
+export interface MpesaCallbackData {
+  Body: {
+    stkCallback: {
+      MerchantRequestID: string;
+      CheckoutRequestID: string;
+      ResultCode: number;
+      ResultDesc: string;
+      CallbackMetadata?: {
+        Item: Array<{
+          Name: string;
+          Value: string | number;
+        }>;
+      };
+    };
+  };
+}
+
+// Payment method configuration
+export interface PaymentMethodConfig {
+  id: PaymentMethod;
+  name: string;
+  description: string;
+  icon: string;
+  available: boolean;
+  supported_countries?: string[];
+  min_amount?: number;
+  max_amount?: number;
+  instructions?: string;
+  processing_time?: string;
+  till_number?: string; // For M-Pesa Till
+  till_name?: string; // For M-Pesa Till
+  supported_cards?: string[];
+}
+
+// Payment intent response
+export interface PaymentIntent {
+  client_secret: string;
+  payment_intent_id: string;
+  publishable_key: string;
+}
+
+// Payment processing result
+export interface PaymentResult {
+  success: boolean;
+  transaction_id?: string;
+  provider_reference?: string;
+  message?: string;
+  response_data?: any;
+  mpesa_details?: MpesaTillInfo;
+}
+
+// ============================================
+// END OF UPDATED PAYMENT TYPES
+// ============================================
 
 export interface Delivery {
   id: number;
@@ -257,7 +427,7 @@ export interface Subscription {
   user_id: number;
   name: string;
   frequency: 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
-  products: any; // JSON array
+  products: any;
   start_date: string;
   next_delivery_date: string;
   status: 'active' | 'paused' | 'cancelled' | 'completed';
@@ -320,5 +490,74 @@ export interface PaginatedResponse<T> {
     last: string;
     prev: string | null;
     next: string | null;
+  };
+}
+
+// ============================================
+// ADDED: Payment method specific types for frontend
+// ============================================
+
+// M-Pesa Till display data
+export interface MpesaTillDisplayData {
+  tillNumber: string;
+  tillName: string;
+  amount: number;
+  steps: string[];
+  businessName: string;
+}
+
+// M-Pesa confirmation form data
+export interface MpesaConfirmationFormData {
+  transaction_reference: string;
+  phone_number: string;
+  amount_paid: string;
+}
+
+// Payment method option for checkout
+export interface PaymentMethodOption {
+  id: PaymentMethod;
+  name: string;
+  description: string;
+  icon: string;
+  instructions?: string;
+  available: boolean;
+  supported_countries?: string[];
+  till_number?: string;
+  till_name?: string;
+  min_amount?: number;
+  max_amount?: number;
+}
+
+// Payment processing state
+export interface PaymentProcessingState {
+  isProcessing: boolean;
+  isSuccess: boolean;
+  isError: boolean;
+  errorMessage?: string;
+  transactionId?: string;
+  providerReference?: string;
+  mpesaDetails?: MpesaTillDisplayData;
+}
+
+// Order with payment details
+export interface OrderWithPayment extends Order {
+  payment?: Payment & {
+    mpesa_details?: MpesaTillPaymentDetails;
+  };
+}
+
+// M-Pesa payment response from API
+export interface MpesaPaymentResponse {
+  success: boolean;
+  transaction_id: string;
+  provider_reference: string;
+  message: string;
+  response_data?: any;
+  mpesa_details?: {
+    till_number: string;
+    till_name: string;
+    amount: number;
+    order_number: string;
+    instructions: string;
   };
 }
