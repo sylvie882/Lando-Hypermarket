@@ -443,116 +443,152 @@ const CheckoutPage: React.FC = () => {
     }
   };
 
-  const handlePlaceOrder = async () => {
-    if (!selectedAddressId) {
-      toast.error('Please select a delivery address');
-      return;
+  // Update these functions in your CheckoutPage.tsx
+
+const handlePlaceOrder = async () => {
+  if (!selectedAddressId) {
+    toast.error('Please select a delivery address');
+    return;
+  }
+
+  if (!selectedPaymentMethod) {
+    toast.error('Please select a payment method');
+    return;
+  }
+
+  setIsSubmitting(true);
+  setProcessingPayment(true);
+
+  try {
+    // First, create the order
+    const orderData = {
+      address_id: selectedAddressId,
+      payment_method: selectedPaymentMethod,
+      shipping_method: selectedShippingMethod,
+      notes: deliveryNotes,
+      carrier: 'Lando Delivery',
+      ...(deliverySlot && { delivery_slot: deliverySlot }),
+      ...(appliedPromo?.code && { promo_code: appliedPromo.code })
+    };
+
+    console.log('Placing order with data:', orderData);
+    
+    const orderResponse = await api.orders.create(orderData);
+    
+    // IMPORTANT: Make sure we're getting the order ID correctly
+    // Check different possible response structures
+    let orderId: number | null = null;
+    let order: any = null;
+    
+    if (orderResponse.data?.order?.id) {
+      orderId = orderResponse.data.order.id;
+      order = orderResponse.data.order;
+    } else if (orderResponse.data?.id) {
+      orderId = orderResponse.data.id;
+      order = orderResponse.data;
+    } else if (orderResponse.data?.data?.id) {
+      orderId = orderResponse.data.data.id;
+      order = orderResponse.data.data;
     }
-
-    if (!selectedPaymentMethod) {
-      toast.error('Please select a payment method');
-      return;
+    
+    if (!orderId) {
+      throw new Error('Could not get order ID from response');
     }
+    
+    console.log('Order created with ID:', orderId);
+    
+    // Set the order ID in state immediately
+    setCurrentOrderId(orderId);
+    setOrderData(order);
 
-    setIsSubmitting(true);
-    setProcessingPayment(true);
-
-    try {
-      // First, create the order
-      const orderData = {
-        address_id: selectedAddressId,
-        payment_method: selectedPaymentMethod,
-        shipping_method: selectedShippingMethod,
-        notes: deliveryNotes,
-        carrier: 'Lando Delivery',
-        ...(deliverySlot && { delivery_slot: deliverySlot }),
-        ...(appliedPromo?.code && { promo_code: appliedPromo.code })
-      };
-
-      console.log('Placing order with data:', orderData);
-      
-      const orderResponse = await api.orders.create(orderData);
-      const orderId = orderResponse.data.order.id;
-      const order = orderResponse.data.order;
-      
-      console.log('Order created:', orderResponse.data);
-      
-      setCurrentOrderId(orderId);
-      setOrderData(order);
-
-      // For M-Pesa Till (manual payment)
-      if (selectedPaymentMethod === 'mpesa_till') {
+    // For M-Pesa Till (manual payment)
+    if (selectedPaymentMethod === 'mpesa_till') {
+      try {
         // Process payment to create pending record
-        await processPayment(orderId);
+        const paymentResult = await processPayment(orderId);
+        console.log('Payment processing result:', paymentResult);
         
         toast.success('Order created! Please complete M-Pesa payment and confirm.');
         
         // Show M-Pesa confirmation form
         setShowMpesaConfirmation(true);
         setStep(3); // Go to review step but show confirmation
+        
+        // Don't redirect - stay on page to show confirmation form
+        return;
+      } catch (paymentError: any) {
+        console.error('Payment processing failed:', paymentError);
+        toast.error(`Payment processing failed: ${paymentError.message}`);
+        // Still show confirmation form? Or redirect?
+        setShowMpesaConfirmation(true);
+        setStep(3);
         return;
       }
+    }
 
-      // For M-Pesa STK Push
-      if (selectedPaymentMethod === 'mpesa_stk') {
-        try {
-          const paymentResult = await processPayment(orderId);
-          console.log('Payment result:', paymentResult);
-          
-          if (paymentResult.mpesa_details) {
-            // STK push sent, waiting for user to enter PIN
-            toast.success('STK push sent! Please check your phone and enter PIN to complete payment.');
-            setCurrentOrderId(orderId);
-            // Poll for payment status or show waiting screen
-            // For now, redirect to order page
-            router.push(`/orders/${orderId}`);
-          } else {
-            toast.success('Order placed successfully! Payment initiated.');
-            router.push(`/orders/${orderId}`);
-          }
-        } catch (paymentError: any) {
-          console.error('Payment failed:', paymentError);
-          toast.error(`Payment failed: ${paymentError.message}`);
+    // For M-Pesa STK Push
+    if (selectedPaymentMethod === 'mpesa_stk') {
+      try {
+        const paymentResult = await processPayment(orderId);
+        console.log('Payment result:', paymentResult);
+        
+        if (paymentResult?.mpesa_details) {
+          toast.success('STK push sent! Please check your phone and enter PIN to complete payment.');
+          router.push(`/orders/${orderId}`);
+        } else {
+          toast.success('Order placed successfully! Payment initiated.');
           router.push(`/orders/${orderId}`);
         }
-      }
-      // Cash on Delivery
-      else if (selectedPaymentMethod === 'cod') {
-        toast.success('Order placed successfully! Pay on delivery.');
+      } catch (paymentError: any) {
+        console.error('Payment failed:', paymentError);
+        toast.error(`Payment failed: ${paymentError.message}`);
         router.push(`/orders/${orderId}`);
       }
-      // Other payment methods
-      else {
-        try {
-          const paymentResult = await processPayment(orderId);
-          console.log('Payment result:', paymentResult);
-          
-          toast.success('Order placed successfully! Payment completed.');
-          router.push(`/orders/${orderId}`);
-        } catch (paymentError: any) {
-          console.error('Payment failed:', paymentError);
-          toast.error(`Order placed but payment failed: ${paymentError.message}`);
-          router.push(`/orders/${orderId}`);
-        }
-      }
-    } catch (error: any) {
-      console.error('Place order error:', error);
-      
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const errorMessages = Object.values(errors).flat().join(', ');
-        toast.error(`Validation error: ${errorMessages}`);
-      } else {
-        const errorMessage = error.response?.data?.message || 
-                            error.response?.data?.error || 
-                            'Failed to place order. Please try again.';
-        toast.error(errorMessage);
-      }
-    } finally {
-      setIsSubmitting(false);
-      setProcessingPayment(false);
     }
-  };
+    // Cash on Delivery
+    else if (selectedPaymentMethod === 'cod') {
+      toast.success('Order placed successfully! Pay on delivery.');
+      router.push(`/orders/${orderId}`);
+    }
+    // Other payment methods
+    else {
+      try {
+        const paymentResult = await processPayment(orderId);
+        console.log('Payment result:', paymentResult);
+        
+        toast.success('Order placed successfully! Payment completed.');
+        router.push(`/orders/${orderId}`);
+      } catch (paymentError: any) {
+        console.error('Payment failed:', paymentError);
+        toast.error(`Order placed but payment failed: ${paymentError.message}`);
+        router.push(`/orders/${orderId}`);
+      }
+    }
+  } catch (error: any) {
+    console.error('Place order error:', error);
+    
+    if (error.response?.data?.errors) {
+      const errors = error.response.data.errors;
+      const errorMessages = Object.values(errors).flat().join(', ');
+      toast.error(`Validation error: ${errorMessages}`);
+    } else {
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          'Failed to place order. Please try again.';
+      toast.error(errorMessage);
+    }
+  } finally {
+    setIsSubmitting(false);
+    setProcessingPayment(false);
+  }
+};
+
+// Also add this useEffect to log when currentOrderId changes
+useEffect(() => {
+  console.log('currentOrderId changed:', currentOrderId);
+}, [currentOrderId]);
+
+
 
   const handlePaymentMethodChange = (methodId: string) => {
     setSelectedPaymentMethod(methodId);
