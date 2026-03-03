@@ -753,66 +753,12 @@ class ApiService {
     updateSettings: (data: any) => this.api.put('/notifications/settings', data),
   };
 
-  // ============================================
-  // UPDATED PAYMENTS API WITH M-PESA TILL SUPPORT
-  // ============================================
   payments = {
-    // Get available payment methods
     getMethods: () => this.api.get('/payment/methods'),
-    
-    // Create payment intent (for cards/stripe)
-    createPaymentIntent: (data: {
-      order_id: number;
-      amount: number;
-      currency?: string;
-      payment_method_types?: string[];
-    }) => this.api.post('/payment/intent', data),
-    
-    // Process payment for an order
-    processPayment: (orderId: number, data: {
-      payment_method: string;
-      payment_details: any;
-      currency?: string;
-    }) => this.api.post(`/orders/${orderId}/pay`, data),
-    
-    // Get payment history
-    getHistory: (params?: any) => this.api.get('/payment/history', { params }),
-    
-    // ============================================
-    // NEW M-PESA SPECIFIC METHODS
-    // ============================================
-    
-    // Confirm M-Pesa payment manually (for Till payments)
-    confirmMpesaPayment: (orderId: number, data: {
-      transaction_reference: string;
-      phone_number: string;
-      amount_paid: number;
-    }) => this.api.post(`/payments/mpesa/confirm/${orderId}`, data),
-    
-    // Get M-Pesa payment status (for STK push)
-    getMpesaPaymentStatus: (checkoutRequestId: string) => 
-      this.api.get(`/payments/mpesa/status/${checkoutRequestId}`),
-    
-    // M-Pesa Till Number (constant for frontend use)
-    mpesaTillNumber: '3080789',
-    mpesaTillName: 'HYPERMARKET LTD',
-    
-    // Helper method to get M-Pesa instructions
-    getMpesaInstructions: (amount: number) => ({
-      till_number: '3080789',
-      till_name: 'HYPERMARKET LTD',
-      amount: amount,
-      steps: [
-        'Go to M-Pesa on your phone',
-        'Select "Lipa Na M-Pesa"',
-        'Select "Pay Bill"',
-        `Enter Till Number: 3080789`,
-        `Enter Amount: KES ${amount.toLocaleString()}`,
-        'Enter your M-Pesa PIN',
-        'Confirm payment',
-        'Enter the transaction reference below to verify'
-      ]
-    }),
+    createPaymentIntent: (data: any) => this.api.post('/payment/intent', data),
+    processPayment: (orderId: number, data: any) => 
+      this.api.post(`/orders/${orderId}/pay`, data),
+    getHistory: () => this.api.get('/payment/history'),
   };
 
   // Generic methods
