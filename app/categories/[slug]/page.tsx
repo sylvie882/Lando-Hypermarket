@@ -266,13 +266,6 @@ const CategoryPage = () => {
               )}
 
               <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 px-4 py-2 rounded-lg">
-                  <ShoppingBag size={18} className="text-orange-600" />
-                  <span className="font-medium text-gray-900">
-                    {productCount} {productCount === 1 ? 'product' : 'products'}
-                  </span>
-                </div>
-                
                 <Link
                   href="/categories"
                   className="inline-flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium text-sm bg-white border border-orange-200 hover:border-orange-300 px-4 py-2 rounded-lg transition-colors"
