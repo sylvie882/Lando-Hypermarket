@@ -1,3 +1,5 @@
+// app/profile/edit/page.tsx - Fix the removeAvatar function
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -48,6 +50,18 @@ interface UserProfile {
   email_verified?: boolean;
   phone_verified?: boolean;
   bio?: string;
+}
+
+// Define the User type expected by useAuth
+interface AuthUser {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  avatar?: string | null;
+  email_verified_at?: string | null;
+  role?: string;
+  // Add other properties as needed
 }
 
 export default function EditProfilePage() {
@@ -189,6 +203,7 @@ export default function EditProfilePage() {
     }
   };
 
+  // FIXED: removeAvatar function with proper null handling
   const removeAvatar = () => {
     if (avatar) {
       setAvatar(null);
@@ -217,8 +232,11 @@ export default function EditProfilePage() {
             setProfile({ ...profile, avatar: null, avatar_url: null });
           }
           
+          // FIXED: Convert null to undefined for updateUser
           if (authUser) {
-            updateUser({ ...authUser, avatar: null });
+            // Create a new object without the avatar property or set it to undefined
+            const { avatar, ...rest } = authUser;
+            updateUser({ ...rest, avatar: undefined });
           }
           
           toast.success('Avatar removed successfully');
