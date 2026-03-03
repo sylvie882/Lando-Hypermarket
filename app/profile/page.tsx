@@ -29,7 +29,8 @@ import {
   FileText,
   LogOut,
   TrendingUp,
-  Gift
+  Gift,
+  Menu
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -158,6 +159,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'account'>('overview');
   const [avatarError, setAvatarError] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -354,9 +356,9 @@ export default function ProfilePage() {
     switch (status.toLowerCase()) {
       case 'delivered':
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-emerald-100 text-emerald-800';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-orange-100 text-orange-800';
       case 'processing':
       case 'shipped':
         return 'bg-blue-100 text-blue-800';
@@ -385,7 +387,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px] px-4 sm:px-6 lg:px-8">
+      <div className="flex justify-center items-center min-h-[400px] px-4">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -393,7 +395,7 @@ export default function ProfilePage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="text-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="text-center py-12 px-4">
         <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
           <User className="w-12 h-12 text-gray-400" />
         </div>
@@ -401,7 +403,7 @@ export default function ProfilePage() {
         <p className="text-gray-600 mb-6">You need to be logged in to view your profile.</p>
         <Link
           href="/auth/login"
-          className="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          className="inline-flex items-center px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
         >
           Login to Continue
         </Link>
@@ -410,38 +412,98 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-8 px-8 sm:px-8 lg:px-12">
-      {/* Header with Tabs */}
-      <div className="border-b border-gray-200">
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-            <p className="text-gray-600 mt-2">Welcome back, {profile?.name || authUser?.name}!</p>
+    <div className="space-y-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      {/* Mobile Header with Menu Button */}
+      <div className="lg:hidden flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
+          <p className="text-sm text-gray-600 mt-1">Welcome back, {profile?.name?.split(' ')[0] || authUser?.name?.split(' ')[0]}</p>
+        </div>
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 bg-orange-100 text-orange-600 rounded-lg"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+      </div>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden bg-white rounded-xl shadow-lg p-4 mb-4 border border-gray-200">
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 overflow-hidden">
+                <img
+                  src={getAvatarUrl()}
+                  alt={profile?.name || 'User'}
+                  className="w-full h-full object-cover"
+                  onError={() => setAvatarError(true)}
+                />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900">{profile?.name || 'User'}</p>
+                <p className="text-xs text-gray-500">{profile?.email}</p>
+              </div>
+            </div>
+            <button onClick={() => setMobileMenuOpen(false)} className="text-gray-500">
+              ✕
+            </button>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="space-y-2">
             <Link
               href="/profile/edit"
-              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center"
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 text-gray-700"
+              onClick={() => setMobileMenuOpen(false)}
             >
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Profile
+              <Edit className="w-5 h-5 text-orange-500" />
+              <span>Edit Profile</span>
             </Link>
             <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 flex items-center"
+              onClick={() => {
+                handleLogout();
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-50 text-red-600 w-full text-left"
             >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
+              <LogOut className="w-5 h-5" />
+              <span>Logout</span>
             </button>
           </div>
         </div>
-        
-        <div className="flex space-x-8">
+      )}
+
+      {/* Desktop Header */}
+      <div className="hidden lg:flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
+          <p className="text-gray-600 mt-2">Welcome back, {profile?.name || authUser?.name}!</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/profile/edit"
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center shadow-md"
+          >
+            <Edit className="w-4 h-4 mr-2" />
+            Edit Profile
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 flex items-center"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs - Mobile Scrollable */}
+      <div className="border-b border-gray-200 overflow-x-auto hide-scrollbar">
+        <div className="flex space-x-6 min-w-max px-1 pb-1">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`pb-3 px-1 border-b-2 font-medium text-sm ${
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeTab === 'overview'
-                ? 'border-primary-600 text-primary-600'
+                ? 'border-orange-500 text-orange-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -449,9 +511,9 @@ export default function ProfilePage() {
           </button>
           <button
             onClick={() => setActiveTab('orders')}
-            className={`pb-3 px-1 border-b-2 font-medium text-sm ${
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeTab === 'orders'
-                ? 'border-primary-600 text-primary-600'
+                ? 'border-orange-500 text-orange-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -459,9 +521,9 @@ export default function ProfilePage() {
           </button>
           <button
             onClick={() => setActiveTab('account')}
-            className={`pb-3 px-1 border-b-2 font-medium text-sm ${
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeTab === 'account'
-                ? 'border-primary-600 text-primary-600'
+                ? 'border-orange-500 text-orange-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -470,216 +532,197 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Profile Summary Card */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between">
-          <div className="w-full lg:w-auto">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4 sm:mb-2">
-              <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 overflow-hidden">
-                {getAvatarUrl() ? (
-                  <img
-                    src={getAvatarUrl()}
-                    alt={profile?.name || 'User'}
-                    className="w-full h-full object-cover"
-                    onError={() => setAvatarError(true)}
-                  />
-                ) : (
-                  <User className="w-8 h-8" />
-                )}
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold">{profile?.name || 'User'}</h2>
-                <p className="text-blue-100">
-                  {profile?.is_admin ? 'Administrator' : profile?.role === 'vendor' ? 'Vendor' : 'Customer'}
-                </p>
-              </div>
+      {/* Profile Summary Card - Mobile Optimized */}
+      <div className="bg-gradient-to-r from-emerald-500 to-orange-500 rounded-2xl shadow-lg p-5 text-white">
+        <div className="flex flex-col gap-4">
+          {/* Top Row with Avatar and Name */}
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-white/50">
+              <img
+                src={getAvatarUrl()}
+                alt={profile?.name || 'User'}
+                className="w-full h-full object-cover"
+                onError={() => setAvatarError(true)}
+              />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 sm:mt-6">
-              <div>
-                <p className="text-sm text-blue-200">Member Since</p>
-                <p className="font-bold">
-                  {profile?.created_at 
-                    ? new Date(profile.created_at).getFullYear()
-                    : 'N/A'
-                  }
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-blue-200">Total Spent</p>
-                <p className="font-bold">
-                  {formatCurrency(stats?.total_spent || 0)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-blue-200">Loyalty Points</p>
-                <p className="font-bold flex items-center gap-2">
-                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  {profile?.loyalty_points || stats?.loyalty_points || 0} points
-                </p>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold">{profile?.name || 'User'}</h2>
+              <p className="text-sm text-emerald-100">
+                {profile?.is_admin ? 'Administrator' : profile?.role === 'vendor' ? 'Vendor' : 'Customer'}
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="inline-flex items-center px-2 py-1 rounded-full bg-white/20 text-xs">
+                  {profile?.membership_tier || 'Silver'} Tier
+                  <Award className="w-3 h-3 ml-1" />
+                </span>
               </div>
             </div>
           </div>
-          <div className="mt-6 lg:mt-0 lg:text-right w-full lg:w-auto">
-            <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-4">
-              <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/20 text-sm">
-                {profile?.membership_tier || 'Silver'} Tier
-                <Award className="w-4 h-4 ml-2" />
-              </span>
-              {profile?.referral_code && (
-                <div className="mt-3 lg:mt-3">
-                  <p className="text-sm text-blue-200">Your Referral Code</p>
-                  <p className="font-mono font-bold text-lg">{profile.referral_code}</p>
-                </div>
-              )}
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            <div className="bg-white/10 rounded-lg p-3">
+              <p className="text-xs text-emerald-100">Member Since</p>
+              <p className="font-bold text-sm">
+                {profile?.created_at 
+                  ? new Date(profile.created_at).getFullYear()
+                  : 'N/A'
+                }
+              </p>
+            </div>
+            <div className="bg-white/10 rounded-lg p-3">
+              <p className="text-xs text-emerald-100">Total Spent</p>
+              <p className="font-bold text-sm">
+                {formatCurrency(stats?.total_spent || 0)}
+              </p>
             </div>
           </div>
+
+          {/* Referral Code - If Available */}
+          {profile?.referral_code && (
+            <div className="bg-white/10 rounded-lg p-3">
+              <p className="text-xs text-emerald-100 mb-1">Your Referral Code</p>
+              <p className="font-mono font-bold text-base">{profile.referral_code}</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* Quick Stats Grid - Mobile Optimized */}
+      <div className="grid grid-cols-2 gap-3">
         <Link
           href="/profile/orders"
-          className="bg-white rounded-xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow group"
+          className="bg-white rounded-xl shadow p-4 hover:shadow-md transition-shadow group"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Orders</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">
-                {stats?.total_orders || 0}
-              </p>
-              <div className="flex items-center gap-2 mt-2">
-                {(stats?.pending_orders && stats.pending_orders > 0) ? (
-                  <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {stats.pending_orders} pending
-                  </span>
-                ) : (
-                  <span className="text-xs text-green-600 font-medium">
-                    <CheckCircle className="w-3 h-3 inline mr-1" />
-                    All processed
-                  </span>
-                )}
-              </div>
+              <p className="text-xs text-gray-500">Orders</p>
+              <p className="text-xl font-bold text-gray-900 mt-1">{stats?.total_orders || 0}</p>
             </div>
-            <div className="p-2 sm:p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-              <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+            <div className="p-2 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
+              <ShoppingBag className="w-4 h-4 text-emerald-600" />
             </div>
           </div>
+          {stats?.pending_orders ? (
+            <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-orange-100 text-orange-800 mt-2">
+              <Clock className="w-3 h-3 mr-1" />
+              {stats.pending_orders} pending
+            </span>
+          ) : (
+            <span className="inline-flex items-center text-xs text-emerald-600 mt-2">
+              <CheckCircle className="w-3 h-3 mr-1" />
+              All processed
+            </span>
+          )}
         </Link>
 
         <Link
           href="/profile/wishlist"
-          className="bg-white rounded-xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow group"
+          className="bg-white rounded-xl shadow p-4 hover:shadow-md transition-shadow group"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-gray-500">Wishlist Items</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">
-                {stats?.wishlist_count || 0}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">Saved for later</p>
+              <p className="text-xs text-gray-500">Wishlist</p>
+              <p className="text-xl font-bold text-gray-900 mt-1">{stats?.wishlist_count || 0}</p>
             </div>
-            <div className="p-2 sm:p-3 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
-              <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
+            <div className="p-2 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
+              <Heart className="w-4 h-4 text-red-600" />
             </div>
           </div>
+          <p className="text-xs text-gray-500 mt-2">Saved items</p>
         </Link>
 
         <Link
           href="/profile/addresses"
-          className="bg-white rounded-xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow group"
+          className="bg-white rounded-xl shadow p-4 hover:shadow-md transition-shadow group"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-gray-500">Saved Addresses</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">
-                {stats?.saved_addresses || 0}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">Delivery locations</p>
+              <p className="text-xs text-gray-500">Addresses</p>
+              <p className="text-xl font-bold text-gray-900 mt-1">{stats?.saved_addresses || 0}</p>
             </div>
-            <div className="p-2 sm:p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
-              <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+            <div className="p-2 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
+              <MapPin className="w-4 h-4 text-emerald-600" />
             </div>
           </div>
+          <p className="text-xs text-gray-500 mt-2">Saved locations</p>
         </Link>
 
         <Link
           href="/profile/subscriptions"
-          className="bg-white rounded-xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow group"
+          className="bg-white rounded-xl shadow p-4 hover:shadow-md transition-shadow group"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-gray-500">Active Subscriptions</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">
-                {stats?.active_subscriptions || 0}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">Recurring orders</p>
+              <p className="text-xs text-gray-500">Subscriptions</p>
+              <p className="text-xl font-bold text-gray-900 mt-1">{stats?.active_subscriptions || 0}</p>
             </div>
-            <div className="p-2 sm:p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-              <Package className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
+            <div className="p-2 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors">
+              <Package className="w-4 h-4 text-orange-600" />
             </div>
           </div>
+          <p className="text-xs text-gray-500 mt-2">Active plans</p>
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-        {/* Recent Orders Section */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Recent Orders</h2>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Recent Orders & Security */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Recent Orders Section */}
+          <div className="bg-white rounded-xl shadow-lg p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">Recent Orders</h2>
               <Link
                 href="/profile/orders"
-                className="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center"
+                className="text-orange-600 hover:text-orange-700 font-medium text-sm flex items-center"
               >
-                View All Orders
+                View All
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Link>
             </div>
             
             {recentOrders.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {recentOrders.map((order) => (
                   <Link
                     key={order.id}
-                    href={`/profile/orders/${order.id}`}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors group gap-4 sm:gap-0"
+                    href={`/orders/${order.id}`}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-gray-200">
-                        <PackageOpen className="w-5 h-5 text-gray-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          Order #{order.order_number}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`px-2 py-1 rounded text-xs ${getStatusColor(order.status)}`}>
-                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            {formatDate(order.created_at, 'short')}
-                          </span>
-                        </div>
-                      </div>
+                    <div className="p-2 bg-emerald-100 rounded-lg flex-shrink-0">
+                      <PackageOpen className="w-4 h-4 text-emerald-600" />
                     </div>
-                    <div className="text-left sm:text-right">
-                      <p className="font-bold text-gray-900">{formatCurrency(order.total)}</p>
-                      <p className="text-sm text-gray-500">{order.items_count} items</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-medium text-sm text-gray-900 truncate">
+                          #{order.order_number}
+                        </p>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(order.status)}`}>
+                          {order.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-gray-500">
+                          {formatDate(order.created_at, 'short')}
+                        </span>
+                        <span className="text-xs text-gray-400">•</span>
+                        <span className="text-xs text-gray-500">{order.items_count} items</span>
+                      </div>
+                      <p className="text-sm font-bold text-gray-900 mt-2">{formatCurrency(order.total)}</p>
                     </div>
                   </Link>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+              <div className="text-center py-6">
+                <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
                   <ShoppingBag className="w-8 h-8 text-gray-400" />
                 </div>
-                <p className="text-gray-500 mb-3">No orders yet</p>
+                <p className="text-sm text-gray-500 mb-3">No orders yet</p>
                 <Link
                   href="/products"
-                  className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium"
+                  className="inline-flex items-center text-orange-600 hover:text-orange-700 font-medium text-sm"
                 >
                   Start Shopping
                   <ChevronRight className="w-4 h-4 ml-1" />
@@ -688,77 +731,60 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Account Security Section */}
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mt-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Account Security</h2>
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border border-gray-200 gap-4 sm:gap-0">
+          {/* Account Security Section - Mobile Optimized */}
+          <div className="bg-white rounded-xl shadow-lg p-5">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Account Security</h2>
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-gray-200 gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Shield className="w-5 h-5 text-blue-600" />
+                  <div className="p-2 bg-emerald-100 rounded-lg flex-shrink-0">
+                    <Shield className="w-4 h-4 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Email Verification</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-sm text-gray-900">Email Verification</p>
+                    <p className="text-xs text-gray-500">
                       {profile?.email_verified || profile?.email_verified_at 
-                        ? 'Verified on ' + (profile.email_verified_at ? formatDate(profile.email_verified_at, 'short') : '')
-                        : 'Not verified yet'
+                        ? 'Verified ✓'
+                        : 'Not verified'
                       }
                     </p>
                   </div>
                 </div>
                 {!profile?.email_verified && !profile?.email_verified_at && (
-                  <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 mt-2 sm:mt-0">
+                  <button className="px-3 py-1.5 text-xs bg-orange-500 text-white rounded-lg hover:bg-orange-600 w-full sm:w-auto">
                     Verify Now
                   </button>
                 )}
               </div>
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border border-gray-200 gap-4 sm:gap-0">
+              <Link
+                href="/profile/payments"
+                className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <CreditCardIcon className="w-5 h-5 text-green-600" />
+                  <div className="p-2 bg-emerald-100 rounded-lg">
+                    <CreditCardIcon className="w-4 h-4 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Payment Methods</p>
-                    <p className="text-sm text-gray-500">Manage saved payment options</p>
+                    <p className="font-medium text-sm text-gray-900">Payment Methods</p>
+                    <p className="text-xs text-gray-500">Manage saved cards</p>
                   </div>
                 </div>
-                <Link
-                  href="/profile/payments"
-                  className="text-primary-600 hover:text-primary-700 font-medium text-sm mt-2 sm:mt-0"
-                >
-                  Manage
-                </Link>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border border-gray-200 gap-4 sm:gap-0">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Eye className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Login Activity</p>
-                    <p className="text-sm text-gray-500">Review recent account access</p>
-                  </div>
-                </div>
-                <button className="text-primary-600 hover:text-primary-700 font-medium text-sm mt-2 sm:mt-0">
-                  View Logs
-                </button>
-              </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </Link>
             </div>
           </div>
         </div>
 
-        {/* Right Sidebar */}
+        {/* Right Sidebar - Mobile Optimized */}
         <div className="space-y-6">
           {/* Notifications */}
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+          <div className="bg-white rounded-xl shadow-lg p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-gray-900">Notifications</h2>
               <Link
                 href="/profile/notifications"
-                className="text-primary-600 hover:text-primary-700 text-sm"
+                className="text-orange-600 hover:text-orange-700 text-sm"
               >
                 See All
               </Link>
@@ -769,17 +795,17 @@ export default function ProfilePage() {
                 notifications.slice(0, 3).map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-3 rounded-lg ${notification.read_at ? 'bg-gray-50' : 'bg-blue-50'} border border-gray-200`}
+                    className={`p-3 rounded-lg ${notification.read_at ? 'bg-gray-50' : 'bg-orange-50'} border border-gray-200`}
                   >
                     <div className="flex items-start gap-2">
                       {!notification.read_at && (
-                        <div className="w-2 h-2 mt-1 bg-blue-600 rounded-full"></div>
+                        <div className="w-2 h-2 mt-1 bg-orange-500 rounded-full flex-shrink-0"></div>
                       )}
-                      <div className="flex-1">
-                        <p className="font-medium text-sm text-gray-900">{notification.title}</p>
-                        <p className="text-xs text-gray-600 mt-1">{notification.message}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-xs text-gray-900">{notification.title}</p>
+                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">{notification.message}</p>
                         <p className="text-xs text-gray-400 mt-2">
-                          {formatDate(notification.created_at, 'short')} {formatTime(notification.created_at)}
+                          {formatDate(notification.created_at, 'short')}
                         </p>
                       </div>
                     </div>
@@ -791,93 +817,59 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+          {/* Quick Actions - Mobile Optimized */}
+          <div className="bg-white rounded-xl shadow-lg p-5">
             <h2 className="font-bold text-gray-900 mb-4">Quick Actions</h2>
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
               <Link
                 href="/profile/edit"
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                className="flex flex-col items-center p-3 rounded-lg border border-gray-200 hover:bg-orange-50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-gray-200">
-                    <Edit className="w-4 h-4 text-gray-600" />
-                  </div>
-                  <span className="text-sm text-gray-700">Edit Profile</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <Edit className="w-5 h-5 text-orange-500 mb-2" />
+                <span className="text-xs text-gray-700">Edit Profile</span>
               </Link>
 
               <Link
                 href="/profile/settings"
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                className="flex flex-col items-center p-3 rounded-lg border border-gray-200 hover:bg-emerald-50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-gray-200">
-                    <SettingsIcon className="w-4 h-4 text-gray-600" />
-                  </div>
-                  <span className="text-sm text-gray-700">Account Settings</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
-              </Link>
-
-              <Link
-                href="/profile/preferences"
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200">
-                    <SettingsIcon className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <span className="text-sm text-gray-700">Preferences</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <SettingsIcon className="w-5 h-5 text-emerald-500 mb-2" />
+                <span className="text-xs text-gray-700">Settings</span>
               </Link>
 
               <Link
                 href="/support"
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                className="flex flex-col items-center p-3 rounded-lg border border-gray-200 hover:bg-blue-50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200">
-                    <HelpCircle className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <span className="text-sm text-gray-700">Help & Support</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <HelpCircle className="w-5 h-5 text-blue-500 mb-2" />
+                <span className="text-xs text-gray-700">Support</span>
               </Link>
 
               <Link
                 href="/profile/reviews"
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                className="flex flex-col items-center p-3 rounded-lg border border-gray-200 hover:bg-purple-50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200">
-                    <Star className="w-4 h-4 text-green-600" />
-                  </div>
-                  <span className="text-sm text-gray-700">My Reviews</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <Star className="w-5 h-5 text-purple-500 mb-2" />
+                <span className="text-xs text-gray-700">Reviews</span>
               </Link>
             </div>
           </div>
 
-          {/* Loyalty Program */}
-          <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl shadow-lg p-4 sm:p-6 text-white">
-            <div className="flex items-center justify-between mb-4">
-              <Award className="w-5 h-5 sm:w-6 sm:h-6" />
-              <span className="text-sm font-medium bg-white/20 px-2 py-1 rounded">
+          {/* Loyalty Program - Mobile Optimized */}
+          <div className="bg-gradient-to-r from-emerald-500 to-orange-500 rounded-xl shadow-lg p-5 text-white">
+            <div className="flex items-center justify-between mb-3">
+              <Award className="w-5 h-5" />
+              <span className="text-xs font-medium bg-white/20 px-2 py-1 rounded">
                 {profile?.membership_tier || 'Silver'} Tier
               </span>
             </div>
-            <h3 className="font-bold text-lg mb-2">Loyalty Program</h3>
-            <p className="text-amber-100 text-sm mb-4">
-              Earn points with every purchase and unlock exclusive benefits
+            <h3 className="font-bold text-base mb-2">Loyalty Program</h3>
+            <p className="text-emerald-100 text-xs mb-4">
+              Earn points with every purchase
             </p>
 
-            
             <div className="bg-white/20 rounded-lg p-3">
-              <div className="flex justify-between text-sm mb-1">
+              <div className="flex justify-between text-xs mb-1">
                 <span>Current Points</span>
                 <span className="font-bold">{profile?.loyalty_points || stats?.loyalty_points || 0}</span>
               </div>
@@ -887,23 +879,41 @@ export default function ProfilePage() {
                   style={{ width: `${Math.min(((profile?.loyalty_points || 0) / 1000) * 100, 100)}%` }}
                 ></div>
               </div>
-              <p className="text-xs text-amber-100 mt-2">
-                {1000 - (profile?.loyalty_points || 0)} points to Gold Tier
+              <p className="text-xs text-emerald-100 mt-2">
+                {1000 - (profile?.loyalty_points || 0)} points to Gold
               </p>
             </div>
-            <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="flex items-center gap-1">
-                <Gift className="w-4 h-4" />
-                Rewards
-              </span>
-              <span className="flex items-center gap-1">
-                <TrendingUp className="w-4 h-4" />
-                Benefits
-              </span>
-            </div>
+          </div>
+
+          {/* Desktop Logout Button */}
+          <div className="hidden lg:block">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 p-3 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">Logout</span>
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Global Styles */}
+      <style jsx global>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      `}</style>
     </div>
   );
 }

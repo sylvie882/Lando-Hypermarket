@@ -380,7 +380,7 @@ const BannerSlide: React.FC<{
           <h2 className={`font-bold leading-tight mb-2 md:mb-4 ${
             isMobile ? 'text-xl md:text-2xl' : 'text-2xl md:text-3xl lg:text-4xl'
           }`}>
-            <span className="bg-gradient-to-r from-white via-orange-100 to-[#E67E22]/30 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r text-white bg-clip-text text-transparent">
               {banner.title}
             </span>
           </h2>

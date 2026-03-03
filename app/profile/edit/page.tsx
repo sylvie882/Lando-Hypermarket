@@ -92,7 +92,6 @@ export default function EditProfilePage() {
       setLoading(true);
       setFetchError(null);
       
-      // Use the new api.user.getProfile method
       const response = await api.user.getProfile();
       
       if (response.data && response.data.user) {
@@ -111,7 +110,6 @@ export default function EditProfilePage() {
         if (profileData.avatar_url) {
           setAvatarPreview(profileData.avatar_url);
         } else if (profileData.avatar) {
-          // Use the api's getImageUrl helper if available
           const imageUrl = api.getImageUrl ? 
             api.getImageUrl(profileData.avatar) : 
             `https://api.hypermarket.co.ke/storage/${profileData.avatar}`;
@@ -145,7 +143,6 @@ export default function EditProfilePage() {
         setPhone(authUser.phone || '');
         
         if (authUser.avatar) {
-          // Try to construct avatar URL
           if (authUser.avatar.startsWith('http')) {
             setAvatarPreview(authUser.avatar);
           } else {
@@ -172,13 +169,11 @@ export default function EditProfilePage() {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         toast.error('Please select an image file');
         return;
       }
       
-      // Validate file size (max 2MB as per backend)
       if (file.size > 2 * 1024 * 1024) {
         toast.error('Image size should be less than 2MB');
         return;
@@ -186,7 +181,6 @@ export default function EditProfilePage() {
       
       setAvatar(file);
       
-      // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
@@ -195,9 +189,8 @@ export default function EditProfilePage() {
     }
   };
 
-  const removeAvatar = async () => {
+  const removeAvatar = () => {
     if (avatar) {
-      // Just remove the selected file
       setAvatar(null);
       if (profile?.avatar_url) {
         setAvatarPreview(profile.avatar_url);
@@ -210,16 +203,34 @@ export default function EditProfilePage() {
         setAvatarPreview(null);
       }
     } else {
-      // Call API to remove avatar from server
-      try {
-        await api.user.removeAvatar();
-        setAvatarPreview(null);
-        toast.success('Avatar removed successfully');
-        fetchProfileData(); // Refresh profile data
-      } catch (error: any) {
-        console.error('Failed to remove avatar:', error);
-        toast.error(error.message || 'Failed to remove avatar');
+      if (!confirm('Are you sure you want to remove your profile picture?')) {
+        return;
       }
+      
+      const removeAvatarFromServer = async () => {
+        try {
+          setSaving(true);
+          await api.user.removeAvatar();
+          
+          setAvatarPreview(null);
+          if (profile) {
+            setProfile({ ...profile, avatar: null, avatar_url: null });
+          }
+          
+          if (authUser) {
+            updateUser({ ...authUser, avatar: null });
+          }
+          
+          toast.success('Avatar removed successfully');
+        } catch (error: any) {
+          console.error('Failed to remove avatar:', error);
+          toast.error(error.message || 'Failed to remove avatar');
+        } finally {
+          setSaving(false);
+        }
+      };
+      
+      removeAvatarFromServer();
     }
   };
 
@@ -233,30 +244,39 @@ export default function EditProfilePage() {
     try {
       const formData = new FormData();
       
-      // Only append fields that have changed
-      if (name !== profile?.name) formData.append('name', name);
-      if (email !== profile?.email) formData.append('email', email);
-      if (phone !== profile?.phone) formData.append('phone', phone);
-      if (dateOfBirth !== profile?.date_of_birth) formData.append('date_of_birth', dateOfBirth);
-      if (gender !== profile?.gender) formData.append('gender', gender);
-      if (bio !== profile?.bio) formData.append('bio', bio);
-      if (avatar) formData.append('avatar', avatar);
+      formData.append('name', name);
+      formData.append('email', email);
+      formData.append('phone', phone || '');
       
-      // Use the new api.user.updateProfile method
+      if (dateOfBirth) formData.append('date_of_birth', dateOfBirth);
+      if (gender) formData.append('gender', gender);
+      if (bio) formData.append('bio', bio);
+      
+      if (avatar) {
+        formData.append('avatar', avatar);
+      }
+      
+      console.log('Submitting profile update with:');
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
+      
       const response = await api.user.updateProfile(formData);
       
-      // Update local auth user
+      console.log('Profile update response:', response.data);
+      
       if (response.data && response.data.user) {
-        updateUser(response.data.user);
+        const updatedProfile = response.data.user;
+        setProfile(updatedProfile);
+        updateUser(updatedProfile);
+        setAvatar(null);
       }
       
       setSuccess('Profile updated successfully!');
       toast.success('Profile updated successfully!');
       
-      // Refresh profile data
-      fetchProfileData();
+      await fetchProfileData();
       
-      // Redirect after short delay
       setTimeout(() => {
         router.push('/profile');
       }, 1500);
@@ -264,13 +284,12 @@ export default function EditProfilePage() {
     } catch (error: any) {
       console.error('Profile update failed:', error);
       
-      // Handle validation errors
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
         const errorMessages = Object.values(error.response.data.errors).flat();
         toast.error(errorMessages.join(', '));
       } else {
-        toast.error(error.message || 'Failed to update profile');
+        toast.error(error.response?.data?.message || error.message || 'Failed to update profile');
       }
     } finally {
       setSaving(false);
@@ -280,7 +299,6 @@ export default function EditProfilePage() {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate passwords
     if (newPassword !== confirmPassword) {
       toast.error('Passwords do not match');
       return;
@@ -291,7 +309,6 @@ export default function EditProfilePage() {
       return;
     }
     
-    // Check password complexity
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
     if (!passwordRegex.test(newPassword)) {
       toast.error('Password must contain at least one uppercase letter, one lowercase letter, one number and one special character (@$!%*?&#).');
@@ -312,12 +329,10 @@ export default function EditProfilePage() {
         new_password_confirmation: confirmPassword,
       };
       
-      // Use the new api.user.changePassword method
       await api.user.changePassword(passwordData);
       
       toast.success('Password changed successfully!');
       
-      // Reset form
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -326,7 +341,6 @@ export default function EditProfilePage() {
     } catch (error: any) {
       console.error('Password change failed:', error);
       
-      // Handle validation errors
       if (error.response?.data?.errors) {
         const errorMessages = Object.values(error.response.data.errors).flat();
         toast.error(errorMessages.join(', '));
@@ -343,41 +357,20 @@ export default function EditProfilePage() {
     
     setSaving(true);
     try {
-      // Use the new api.user.uploadAvatar method
       const response = await api.user.uploadAvatar(avatar);
       
+      console.log('Avatar upload response:', response.data);
+      
       toast.success('Avatar uploaded successfully');
+      
+      await fetchProfileData();
       setAvatar(null);
-      fetchProfileData(); // Refresh profile data
       
     } catch (error: any) {
       console.error('Avatar upload failed:', error);
       toast.error(error.message || 'Failed to upload avatar');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleLinkGoogleAccount = async () => {
-    toast('Google account linking would redirect to Google OAuth. This feature needs to be implemented on the backend.', {
-      icon: 'ℹ️',
-      style: {
-        background: '#dbeafe',
-        color: '#1e40af',
-        border: '1px solid #3b82f6'
-      }
-    });
-  };
-
-  const handleUnlinkGoogleAccount = async () => {
-    try {
-      // Use the auth method for unlinking
-      await api.auth.unlinkGoogleAccount();
-      toast.success('Google account unlinked successfully');
-      fetchProfileData();
-    } catch (error: any) {
-      console.error('Failed to unlink Google account:', error);
-      toast.error(error.message || 'Failed to unlink Google account');
     }
   };
 
@@ -392,16 +385,13 @@ export default function EditProfilePage() {
     try {
       const reason = prompt('Please tell us why you are leaving (optional):');
       
-      // Use the new api.user.deleteAccount method
       await api.user.deleteAccount(password, reason || undefined);
       
       toast.success('Account deactivated successfully');
       
-      // Clear local storage and redirect
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       
-      // Redirect after short delay
       setTimeout(() => {
         router.push('/');
       }, 1500);
@@ -437,7 +427,7 @@ export default function EditProfilePage() {
         <p className="text-gray-600 mb-6">You need to be logged in to edit your profile.</p>
         <Link
           href="/auth/login"
-          className="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          className="inline-flex items-center px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
         >
           Login to Continue
         </Link>
@@ -508,6 +498,7 @@ export default function EditProfilePage() {
                         alt="Profile preview"
                         className="w-full h-full object-cover"
                         onError={(e) => {
+                          console.error('Avatar preview failed to load:', avatarPreview);
                           e.currentTarget.src = '/images/placeholder-avatar.jpg';
                         }}
                       />
@@ -518,20 +509,22 @@ export default function EditProfilePage() {
                     )}
                   </div>
                   <div className="absolute -bottom-2 -right-2 flex gap-2">
-                    <label className="cursor-pointer p-2 bg-primary-600 text-white rounded-full shadow-lg hover:bg-primary-700 transition-colors">
+                    <label className={`cursor-pointer p-2 bg-emerald-600 text-white rounded-full shadow-lg hover:bg-emerald-700 transition-colors ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}>
                       <Camera className="w-4 h-4" />
                       <input
                         type="file"
                         className="hidden"
                         accept="image/*"
                         onChange={handleAvatarChange}
+                        disabled={saving}
                       />
                     </label>
                     {(avatarPreview || avatar) && (
                       <button
                         type="button"
                         onClick={removeAvatar}
-                        className="p-2 bg-red-600 text-white rounded-full shadow-lg hover:bg-red-700 transition-colors"
+                        disabled={saving}
+                        className={`p-2 bg-red-600 text-white rounded-full shadow-lg hover:bg-red-700 transition-colors ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -548,7 +541,7 @@ export default function EditProfilePage() {
                       type="button"
                       onClick={handleUploadAvatarOnly}
                       disabled={saving}
-                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm disabled:opacity-50"
+                      className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm disabled:opacity-50"
                     >
                       Upload Avatar Only
                     </button>
@@ -568,9 +561,10 @@ export default function EditProfilePage() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-colors"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-colors"
                   placeholder="Enter your full name"
                   required
+                  disabled={saving}
                 />
                 {errors.name && (
                   <p className="text-sm text-red-600">{errors.name[0]}</p>
@@ -590,9 +584,10 @@ export default function EditProfilePage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-colors"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-colors"
                     placeholder="Enter your email"
                     required
+                    disabled={saving}
                   />
                   {profile?.email_verified ? (
                     <div className="absolute right-3 top-3 flex items-center gap-1 text-green-600">
@@ -633,16 +628,12 @@ export default function EditProfilePage() {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-colors"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-colors"
                   placeholder="Enter your phone number"
+                  disabled={saving}
                 />
                 {errors.phone && (
                   <p className="text-sm text-red-600">{errors.phone[0]}</p>
-                )}
-                {profile?.phone_verified && (
-                  <p className="text-sm text-green-600 flex items-center gap-1">
-                    <CheckCircle className="w-4 h-4" /> Verified
-                  </p>
                 )}
               </div>
 
@@ -655,8 +646,9 @@ export default function EditProfilePage() {
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-colors"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-colors"
                   placeholder="Tell us a little about yourself"
+                  disabled={saving}
                 />
                 {errors.bio && (
                   <p className="text-sm text-red-600">{errors.bio[0]}</p>
@@ -676,7 +668,8 @@ export default function EditProfilePage() {
                   value={formatDateForInput(dateOfBirth)}
                   onChange={(e) => setDateOfBirth(e.target.value)}
                   max={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-colors"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-colors"
+                  disabled={saving}
                 />
                 {errors.date_of_birth && (
                   <p className="text-sm text-red-600">{errors.date_of_birth[0]}</p>
@@ -697,9 +690,10 @@ export default function EditProfilePage() {
                         value={option}
                         checked={gender === option}
                         onChange={(e) => setGender(e.target.value)}
-                        className="text-primary-600 focus:ring-primary-500"
+                        className="text-emerald-600 focus:ring-emerald-500"
+                        disabled={saving}
                       />
-                      <span className="capitalize">{option}</span>
+                      <span className="capitalize text-gray-700">{option}</span>
                     </label>
                   ))}
                 </div>
@@ -713,7 +707,7 @@ export default function EditProfilePage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-md"
                 >
                   {saving ? (
                     <>
@@ -729,7 +723,7 @@ export default function EditProfilePage() {
                 </button>
                 <Link
                   href="/profile"
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-center"
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-center font-medium"
                 >
                   Cancel
                 </Link>
@@ -753,7 +747,7 @@ export default function EditProfilePage() {
                   </div>
                   <button
                     onClick={() => setShowPasswordChange(true)}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
                   >
                     Change Password
                   </button>
@@ -770,14 +764,16 @@ export default function EditProfilePage() {
                       type={showCurrentPassword ? "text" : "password"}
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-colors pr-10"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-colors pr-10"
                       placeholder="Enter current password"
                       required
+                      disabled={saving}
                     />
                     <button
                       type="button"
                       onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                       className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                      disabled={saving}
                     >
                       {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -793,15 +789,17 @@ export default function EditProfilePage() {
                       type={showNewPassword ? "text" : "password"}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-colors pr-10"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-colors pr-10"
                       placeholder="Enter new password"
                       required
                       minLength={8}
+                      disabled={saving}
                     />
                     <button
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
                       className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                      disabled={saving}
                     >
                       {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -820,14 +818,16 @@ export default function EditProfilePage() {
                       type={showConfirmPassword ? "text" : "password"}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-colors pr-10"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-colors pr-10"
                       placeholder="Confirm new password"
                       required
+                      disabled={saving}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                      disabled={saving}
                     >
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -841,14 +841,15 @@ export default function EditProfilePage() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                    className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 font-medium"
                   >
                     {saving ? 'Updating...' : 'Update Password'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowPasswordChange(false)}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                    disabled={saving}
                   >
                     Cancel
                   </button>

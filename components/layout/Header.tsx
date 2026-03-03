@@ -622,7 +622,7 @@ const Header: React.FC = () => {
                     <a 
                       key={category.id} 
                       href={`https://hypermarket.co.ke/categories/${category.slug}`}
-                      className="text-gray-700 hover:text-[#E67E22] whitespace-nowrap text-sm font-medium transition-colors py-2 flex-shrink-0"
+                      className="text-gray-700 hover:text-[#E67E22] whitespace-nowrap text-md font-medium transition-colors py-2 flex-shrink-0"
                     >
                       {category.name}
                     </a>
