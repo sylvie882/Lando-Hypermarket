@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     default: 'Hypermarket Kenya | Fresh Vegetables, Pasture Raised Meat, Kienyeji Eggs, Baby Products & More',
     template: '%s | Hypermarket Kenya'
   },
-  description: 'Shop Hypermarket Kenya for fresh farm produce: pasture raised meat (goat, sheep, rabbit), kienyeji eggs, fresh vegetables, tropical fruits, dairy products, baby essentials, stationery, cleaning supplies, wooden utensils, samosas, and traditional handicrafts. Free delivery Nairobi over KES 2000. Order now!',
+  description: 'Shop Hypermarket Kenya for fresh farm produce: pasture raised meat (goat, sheep, rabbit), kienyeji eggs, fresh vegetables, tropical fruits, dairy products, baby essentials, stationery, cleaning supplies, wooden utensils, samosas, and traditional handicrafts. Everything you need and love. Amazing products, quickly delivered in 99 minutes at every day prices. Free delivery Nairobi. Order now!',
   keywords: [
     // ============================================
     // FRESH PRODUCE CATEGORIES
