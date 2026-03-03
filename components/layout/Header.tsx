@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
-  Search, ShoppingCart, ChevronDown, X, Home, User, LayoutGrid, ShoppingBag, MapPin, LogOut, Heart, Package, User as UserIcon,
+  Search, ShoppingCart, ChevronDown, X, Home, User, LayoutGrid, Tag, ShoppingBag, MapPin, LogOut, Heart, Package, User as UserIcon,
   MenuIcon, ChevronLeft, ChevronRight, LogIn, UserPlus
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
@@ -732,6 +732,12 @@ const Header: React.FC = () => {
             <ShoppingBag size={20} className={pathname === '/products' ? 'text-[#E67E22]' : 'text-gray-600'} />
             <span className={`text-[10px] mt-0.5 ${pathname === '/products' ? 'text-[#E67E22] font-medium' : 'text-gray-600'}`}>Shop</span>
           </Link>
+
+            <Link href="/deals" className="flex flex-col items-center p-1 w-16">
+            <Tag size={20} className={pathname === '/deals' ? 'text-[#E67E22]' : 'text-gray-600'} />
+            <span className={`text-[10px] mt-0.5 ${pathname === '/deals' ? 'text-[#E67E22] font-medium' : 'text-gray-600'}`}>HotDeals</span>
+          </Link>
+          
           
           <button 
             onClick={() => setMobileMenuOpen(true)}
