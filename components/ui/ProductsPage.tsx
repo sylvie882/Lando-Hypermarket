@@ -23,11 +23,12 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
   const [activeTab, setActiveTab] = useState('offers');
   const [categories, setCategories] = useState<Category[]>([]);
 
-  const tabs = [
-    { id: 'offers', label: 'Offers' },
+  // Define tabs with default category IDs
+  const [tabs, setTabs] = useState([
+    { id: 'offers', label: 'Offers', categoryId: null },
     { id: 'fruits', label: 'Fruits', categoryId: 45 },
     { id: 'vegetables', label: 'Vegetables', categoryId: 46 },
-  ];
+  ]);
 
   useEffect(() => {
     fetchCategories();
@@ -37,7 +38,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     if (activeTab) {
       fetchProducts();
     }
-  }, [activeTab]);
+  }, [activeTab, categories]);
 
   const fetchCategories = async () => {
     try {
@@ -45,25 +46,52 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
       const categoriesData = response.data || [];
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       
-      // Update tab category IDs if needed
+      // Find fruit and vegetable categories dynamically
       const fruitsCat = categoriesData.find((c: Category) => 
-        c.name.toLowerCase().includes('fruit') || c.slug?.includes('fruit')
+        c.name?.toLowerCase().includes('fruit') || c.slug?.toLowerCase().includes('fruit')
       );
       const vegCat = categoriesData.find((c: Category) => 
-        c.name.toLowerCase().includes('vegetable') || c.slug?.includes('vegetable')
+        c.name?.toLowerCase().includes('vegetable') || c.slug?.toLowerCase().includes('vegetable')
       );
       
-      if (fruitsCat) {
-        tabs[1].categoryId = fruitsCat.id;
-      }
-      if (vegCat) {
-        tabs[2].categoryId = vegCat.id;
-      }
+      // Update tabs with found category IDs
+      setTabs(prev => [
+        prev[0], // Keep offers tab as is
+        { ...prev[1], categoryId: fruitsCat?.id || 45 },
+        { ...prev[2], categoryId: vegCat?.id || 46 },
+      ]);
       
       console.log('Categories loaded:', categoriesData);
+      console.log('Fruits category:', fruitsCat);
+      console.log('Vegetables category:', vegCat);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
+  };
+
+  // Helper function to check if a product is discounted
+  const isProductDiscounted = (product: Product): boolean => {
+    // Check if discount_percentage exists and is greater than 0
+    const hasDiscountPercentage = product.discount_percentage !== undefined && 
+                                  product.discount_percentage !== null && 
+                                  product.discount_percentage > 0;
+    
+    // Check if sale_price exists and is greater than 0
+    const hasSalePrice = product.sale_price !== undefined && 
+                         product.sale_price !== null && 
+                         product.sale_price > 0;
+    
+    // Check if there's a price difference between regular and sale price
+    const hasPriceDifference = product.regular_price !== undefined && 
+                               product.sale_price !== undefined &&
+                               product.regular_price !== null && 
+                               product.sale_price !== null &&
+                               product.regular_price > product.sale_price;
+    
+    // Check if is_on_sale flag is true
+    const isOnSale = product.is_on_sale === true;
+    
+    return hasDiscountPercentage || hasSalePrice || hasPriceDifference || isOnSale;
   };
 
   const fetchProducts = async () => {
@@ -77,34 +105,42 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
       const currentTab = tabs.find(tab => tab.id === activeTab);
       
       if (activeTab === 'offers') {
-        // Try multiple endpoints for offers
-        try {
-          // First try getDiscounted
-          response = await api.products.getDiscounted({ per_page: 20 });
-          console.log('Discounted products response:', response);
-        } catch (err) {
-          console.log('getDiscounted failed, trying getAll with params');
-          // Fallback: try to get all products with discount filter
-          response = await api.products.getAll({ 
-            per_page: 20 
-          });
-          // Filter products with discount on frontend if needed
-          if (response?.data) {
-            const productsData = response.data.data || response.data;
-            const discountedProducts = Array.isArray(productsData) 
-              ? productsData.filter((p: Product) => p.discount_percentage > 0 || p.sale_price)
-              : [];
-            setProducts(discountedProducts);
-            setLoading(false);
-            return;
+        // For offers, use getAll and filter on frontend
+        console.log('Fetching all products and filtering for offers');
+        response = await api.products.getAll({ per_page: 50 });
+        
+        if (response?.data) {
+          const productsData = response.data.data || response.data;
+          const allProducts = Array.isArray(productsData) ? productsData : [];
+          
+          // Filter products that have discounts using our helper function
+          const discountedProducts = allProducts.filter(isProductDiscounted);
+          
+          console.log(`Found ${discountedProducts.length} discounted products out of ${allProducts.length}`);
+          if (allProducts.length > 0) {
+            console.log('Sample product structure:', allProducts[0]);
           }
+          setProducts(discountedProducts);
+          setLoading(false);
+          return;
         }
       } else if (currentTab?.categoryId) {
         console.log(`Fetching products for category ID: ${currentTab.categoryId}`);
-        response = await api.products.getByCategory(currentTab.categoryId, { 
-          per_page: 20
-        });
-        console.log('Category products response:', response);
+        
+        // Try to get products by category
+        try {
+          response = await api.products.getByCategory(currentTab.categoryId, { 
+            per_page: 20
+          });
+          console.log('Category products response:', response);
+        } catch (err) {
+          console.log('getByCategory failed, trying getAll with category filter');
+          // Fallback: try to get all products with category filter
+          response = await api.products.getAll({ 
+            category_id: currentTab.categoryId,
+            per_page: 20 
+          });
+        }
       }
 
       if (response?.data) {
