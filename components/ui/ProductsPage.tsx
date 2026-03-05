@@ -25,11 +25,10 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
 
   const tabs = [
     { id: 'offers', label: 'Offers' },
-    { id: 'fruits', label: 'Fruits', categoryId: 45 }, // Fresh Fruits
-    { id: 'vegetables', label: 'Vegetables', categoryId: 46 }, // Fresh Vegetables
+    { id: 'fruits', label: 'Fruits', categoryId: 45 },
+    { id: 'vegetables', label: 'Vegetables', categoryId: 46 },
   ];
 
-  // Fetch categories first to get correct category IDs
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -38,7 +37,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     if (activeTab) {
       fetchProducts();
     }
-  }, [activeTab, categories]);
+  }, [activeTab]);
 
   const fetchCategories = async () => {
     try {
@@ -46,7 +45,21 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
       const categoriesData = response.data || [];
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       
-      // Log categories to verify IDs
+      // Update tab category IDs if needed
+      const fruitsCat = categoriesData.find((c: Category) => 
+        c.name.toLowerCase().includes('fruit') || c.slug?.includes('fruit')
+      );
+      const vegCat = categoriesData.find((c: Category) => 
+        c.name.toLowerCase().includes('vegetable') || c.slug?.includes('vegetable')
+      );
+      
+      if (fruitsCat) {
+        tabs[1].categoryId = fruitsCat.id;
+      }
+      if (vegCat) {
+        tabs[2].categoryId = vegCat.id;
+      }
+      
       console.log('Categories loaded:', categoriesData);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -66,28 +79,35 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
       if (activeTab === 'offers') {
         // Try multiple endpoints for offers
         try {
+          // First try getDiscounted
           response = await api.products.getDiscounted({ per_page: 20 });
           console.log('Discounted products response:', response);
         } catch (err) {
           console.log('getDiscounted failed, trying getAll with params');
           // Fallback: try to get all products with discount filter
           response = await api.products.getAll({ 
-            discounted: true, 
             per_page: 20 
           });
+          // Filter products with discount on frontend if needed
+          if (response?.data) {
+            const productsData = response.data.data || response.data;
+            const discountedProducts = Array.isArray(productsData) 
+              ? productsData.filter((p: Product) => p.discount_percentage > 0 || p.sale_price)
+              : [];
+            setProducts(discountedProducts);
+            setLoading(false);
+            return;
+          }
         }
       } else if (currentTab?.categoryId) {
-        // Use the category ID from our tabs
         console.log(`Fetching products for category ID: ${currentTab.categoryId}`);
         response = await api.products.getByCategory(currentTab.categoryId, { 
-          per_page: 20,
-          include: 'category' // Include category details if needed
+          per_page: 20
         });
         console.log('Category products response:', response);
       }
 
       if (response?.data) {
-        // Handle both paginated and non-paginated responses
         const productsData = response.data.data || response.data;
         setProducts(Array.isArray(productsData) ? productsData : []);
       } else {
@@ -102,7 +122,6 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     }
   };
 
-  // Function to fix image URLs (same as in CategoryPage)
   const getFixedImageUrl = (url: string) => {
     if (!url) return '/images/placeholder.jpg';
     
