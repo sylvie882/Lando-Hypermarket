@@ -69,29 +69,45 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     }
   };
 
-  // Helper function to check if a product is discounted
+  // Helper function to check if a product is discounted based on your Product type
   const isProductDiscounted = (product: Product): boolean => {
+    // Check if discounted_price exists and is less than price
+    const hasDiscountedPrice = product.discounted_price !== undefined && 
+                               product.discounted_price !== null && 
+                               product.discounted_price > 0 && 
+                               product.discounted_price < product.price;
+    
     // Check if discount_percentage exists and is greater than 0
     const hasDiscountPercentage = product.discount_percentage !== undefined && 
                                   product.discount_percentage !== null && 
                                   product.discount_percentage > 0;
     
-    // Check if sale_price exists and is greater than 0
+    // Check if sale_price exists and is less than price
     const hasSalePrice = product.sale_price !== undefined && 
                          product.sale_price !== null && 
-                         product.sale_price > 0;
+                         product.sale_price > 0 && 
+                         product.sale_price < product.price;
     
-    // Check if there's a price difference between regular and sale price
-    const hasPriceDifference = product.regular_price !== undefined && 
-                               product.sale_price !== undefined &&
-                               product.regular_price !== null && 
-                               product.sale_price !== null &&
-                               product.regular_price > product.sale_price;
+    // Check if there's a final_price that's different from price
+    const hasFinalPrice = product.final_price !== undefined && 
+                          product.final_price !== null && 
+                          Number(product.final_price) < product.price;
     
-    // Check if is_on_sale flag is true
-    const isOnSale = product.is_on_sale === true;
-    
-    return hasDiscountPercentage || hasSalePrice || hasPriceDifference || isOnSale;
+    return hasDiscountedPrice || hasDiscountPercentage || hasSalePrice || hasFinalPrice;
+  };
+
+  // Helper function to get the best available price
+  const getProductPrice = (product: Product): number => {
+    if (product.sale_price && product.sale_price < product.price) {
+      return product.sale_price;
+    }
+    if (product.discounted_price && product.discounted_price < product.price) {
+      return product.discounted_price;
+    }
+    if (product.final_price && Number(product.final_price) < product.price) {
+      return Number(product.final_price);
+    }
+    return product.price;
   };
 
   const fetchProducts = async () => {
@@ -161,23 +177,18 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
   const getFixedImageUrl = (url: string) => {
     if (!url) return '/images/placeholder.jpg';
     
-    if (url.includes('localhost:8000')) {
+    // If it's already a full URL, return it
+    if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
     
-    if (url.includes('localhost/storage/')) {
-      return url.replace('localhost/storage/', 'api.hypermarket.co.ke/storage/');
-    }
-    
+    // Handle storage paths
     if (url.startsWith('/storage/')) {
       return `https://api.hypermarket.co.ke${url}`;
     }
     
-    if (!url.startsWith('http')) {
-      return `https://api.hypermarket.co.ke/storage/${url.replace('storage/', '')}`;
-    }
-    
-    return url;
+    // Handle relative paths
+    return `https://api.hypermarket.co.ke/storage/${url}`;
   };
 
   const handleRetry = () => {
@@ -295,9 +306,11 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
                   <ProductCard
                     product={{
                       ...product,
-                      image: product.image ? getFixedImageUrl(product.image) : 
+                      image: product.thumbnail ? getFixedImageUrl(product.thumbnail) : 
                              product.images?.[0] ? getFixedImageUrl(product.images[0]) : 
-                             '/images/placeholder.jpg'
+                             '/images/placeholder.jpg',
+                      // Ensure ProductCard gets the correct price
+                      price: getProductPrice(product)
                     }}
                     onViewTrack={(id) => console.log('Viewing:', id)}
                   />
