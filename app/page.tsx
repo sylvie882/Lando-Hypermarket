@@ -7,6 +7,8 @@ import FeaturedProducts from '@/components/ui/FeaturedProducts';
 import WoodenUtensils from '@/components/ui/WoodenUtensils';
 import CleaningSuppliesPage from '@/components/ui/CleaningSupplies';
 
+import ProductsPage from '@/components/ui/ProductsPage';
+
 import HandicraftsPage from '@/components/ui/Handicrafts';
 import NewArrivals from '@/components/ui/NewArrivals';
 import PersonalizedRecommendations from '@/components/ui/PersonalizedRecommendations';
@@ -196,6 +198,13 @@ const HomePage: React.FC = () => {
         <TopCategories 
           limit={15}
           showHeader={true}
+        />
+      </div>
+
+
+      {/* Featured Products Section - Using new component */}
+      <div>
+        <ProductsPage 
         />
       </div>
 

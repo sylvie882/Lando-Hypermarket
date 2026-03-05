@@ -8,7 +8,8 @@ import { Category, Product } from '@/types';
 import ProductCard from '@/components/ui/ProductCard';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { ArrowLeft, ShoppingBag, ChevronRight, Home, RefreshCw, AlertCircle } from 'lucide-react';
-import Link from 'next/link';
+import Link from 'next/link'; 
+
 
 const CategoryPage = () => {
   const params = useParams();
