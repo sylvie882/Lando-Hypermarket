@@ -327,9 +327,9 @@ const HomePage: React.FC = () => {
     
 
 
-      <div ref={newArrivalsSectionRef}>
+      {/* <div ref={newArrivalsSectionRef}>
         <CleaningSupplies />
-      </div>
+      </div> */}
 
       {/* Floating Action Buttons */}
      {/* Floating Action Buttons - Adjusted for mobile to avoid cart overlap */}

@@ -40,7 +40,7 @@ const Header: React.FC = () => {
   const [avatarError, setAvatarError] = useState(false);
   const [mobileAccountMenuOpen, setMobileAccountMenuOpen] = useState(false);
   
-  // Scroll state for categories
+  // Scroll state for the entire navigation bar
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftScroll, setShowLeftScroll] = useState(false);
   const [showRightScroll, setShowRightScroll] = useState(true);
@@ -153,55 +153,26 @@ const Header: React.FC = () => {
     getLocation();
   }, []);
 
-  // Fetch categories
+  // Fetch categories from API only
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const response = await api.categories.getAll();
         const data = response.data || [];
-        const parentCategories = data.filter((category: Category) => category.is_active);
-        
-        const sampleCategories = [
-          { id: 101, name: 'Electronics', slug: 'electronics', is_active: true },
-          { id: 102, name: 'Fashion', slug: 'fashion', is_active: true },
-          { id: 103, name: 'Home & Living', slug: 'home-living', is_active: true },
-          { id: 104, name: 'Beauty', slug: 'beauty', is_active: true },
-          { id: 105, name: 'Sports', slug: 'sports', is_active: true },
-          { id: 106, name: 'Toys', slug: 'toys', is_active: true },
-          { id: 107, name: 'Books', slug: 'books', is_active: true },
-          { id: 108, name: 'Automotive', slug: 'automotive', is_active: true },
-          { id: 109, name: 'Pet Supplies', slug: 'pet-supplies', is_active: true },
-          { id: 110, name: 'Baby Products', slug: 'baby-products', is_active: true },
-          { id: 111, name: 'Garden', slug: 'garden', is_active: true },
-        ];
-        
-        const combined = [...parentCategories, ...sampleCategories];
-        const uniqueCategories = combined.filter((cat, index, self) => 
-          index === self.findIndex((c) => c.slug === cat.slug)
-        );
-        setCategories(uniqueCategories);
+        // Filter only active categories
+        const activeCategories = data.filter((category: Category) => category.is_active !== false);
+        setCategories(activeCategories);
+        console.log('Categories loaded from API:', activeCategories);
       } catch (error) {
         console.error('Error fetching categories:', error);
-        const sampleCategories = [
-          { id: 1, name: 'Electronics', slug: 'electronics', is_active: true },
-          { id: 2, name: 'Fashion', slug: 'fashion', is_active: true },
-          { id: 3, name: 'Home & Living', slug: 'home-living', is_active: true },
-          { id: 4, name: 'Beauty', slug: 'beauty', is_active: true },
-          { id: 5, name: 'Sports', slug: 'sports', is_active: true },
-          { id: 6, name: 'Toys', slug: 'toys', is_active: true },
-          { id: 7, name: 'Books', slug: 'books', is_active: true },
-          { id: 8, name: 'Automotive', slug: 'automotive', is_active: true },
-          { id: 9, name: 'Pet Supplies', slug: 'pet-supplies', is_active: true },
-          { id: 10, name: 'Baby Products', slug: 'baby-products', is_active: true },
-          { id: 11, name: 'Garden', slug: 'garden', is_active: true },
-        ];
-        setCategories(sampleCategories);
+        // Set empty array if API fails
+        setCategories([]);
       }
     };
     fetchCategories();
   }, []);
 
-  // Check scroll position to show/hide buttons
+  // Check scroll position to show/hide buttons for the entire navigation bar
   const checkScroll = useCallback(() => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
@@ -220,7 +191,7 @@ const Header: React.FC = () => {
     }
   }, [categories, checkScroll]);
 
-  // Scroll functions
+  // Scroll functions for the entire navigation bar
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
@@ -319,16 +290,16 @@ const Header: React.FC = () => {
           <div className="px-4 sm:px-6 md:px-8 lg:px-12">
             <div className="flex items-center justify-between py-3">
               {/* Logo */}
-            <Link href="/" className="flex items-center space-x-3 ml-[-30px]">
-              <Image 
-                src="/logo10.png" 
-                alt="Lando Logo" 
-                width={200} 
-                height={60} 
-                className="object-cover w-[190px] h-[70px]"
-                priority
-              />
-            </Link>
+              <Link href="/" className="flex items-center space-x-3 ml-[-30px]">
+                <Image 
+                  src="/logo10.png" 
+                  alt="Lando Logo" 
+                  width={200} 
+                  height={60} 
+                  className="object-cover w-[190px] h-[70px]"
+                  priority
+                />
+              </Link>
               
               {/* Location */}
               <button 
@@ -477,12 +448,11 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Header - IMPROVED VERSION */}
+        {/* Mobile Header */}
         <div className="md:hidden bg-white">
           <div className="px-3">
             {/* First Row: Logo + Location + Cart */}
             <div className="flex items-center justify-between py-2">
-              {/* Logo with negative margin to maintain alignment */}
               <Link href="/" className="inline-block -ml-3">
                 <Image 
                   src="/logo10.png" 
@@ -579,67 +549,70 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Desktop Categories with Scroll Buttons */}
+        {/* Desktop Categories - Scrollable with always visible < > buttons and proper spacing */}
         <nav className="bg-white hidden md:block border-t border-gray-100">
           <div className="px-4 sm:px-6 md:px-8 lg:px-12">
-            <div className="flex items-center py-2 relative">
+            <div className="flex items-center py-3 relative">
+              {/* Left Scroll Button - Extra large, no background, with spacing */}
               <button
-                className="flex items-center px-3 py-2 text-[#E67E22] hover:bg-gray-50 rounded-md transition-colors border border-[#E67E22]/30 flex-shrink-0"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                onClick={scrollLeft}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-20 hover:text-[#E67E22] transition-colors"
+                aria-label="Scroll left"
+                style={{ left: '-20px' }}
               >
-                <MenuIcon size={18} />
-                <span className="ml-2 text-sm font-medium">Categories</span>
-                <ChevronDown size={16} className="ml-1" />
+                <ChevronLeft size={48} className="text-gray-600" />
               </button>
               
-              <div className="h-6 w-px bg-gray-300 mx-3 flex-shrink-0"></div>
+              {/* Spacer to prevent content from going under left button */}
+              <div className="w-12 flex-shrink-0"></div>
               
-              {/* Categories Scroll Container */}
-              <div className="relative flex-1 overflow-hidden">
-                {/* Left Scroll Button */}
-                {showLeftScroll && (
-                  <button
-                    onClick={scrollLeft}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-emerald-600 shadow-md rounded-full p-1.5 hover:bg-gray-100 transition-colors border border-gray-200"
-                    aria-label="Scroll left"
-                  >
-                    <ChevronLeft size={18} className="text-white" />
-                  </button>
-                )}
-                
-                {/* Scrollable Categories */}
-                <div
-                  ref={scrollContainerRef}
-                  className="flex items-center space-x-4 overflow-x-auto hide-scrollbar scroll-smooth"
-                  style={{
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none',
-                    paddingLeft: showLeftScroll ? '32px' : '0',
-                    paddingRight: showRightScroll ? '32px' : '0',
-                  }}
+              {/* Scrollable Navigation Items */}
+              <div
+                ref={scrollContainerRef}
+                className="flex items-center space-x-8 overflow-x-auto hide-scrollbar scroll-smooth w-full"
+                style={{
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                }}
+              >
+                {/* Home Link */}
+                <Link 
+                  href="/" 
+                  className="flex items-center text-gray-700 hover:text-[#E67E22] font-medium whitespace-nowrap flex-shrink-0"
                 >
-                  {categories.map((category) => (
-                    <a 
+                  <Home size={20} className="mr-2" />
+                  <span>Home</span>
+                </Link>
+                
+                {/* Categories from API with increased spacing */}
+                {categories.length > 0 ? (
+                  categories.map((category) => (
+                    <Link 
                       key={category.id} 
-                      href={`https://hypermarket.co.ke/categories/${category.slug}`}
+                      href={`/categories/${category.slug}`}
                       className="text-gray-700 hover:text-[#E67E22] whitespace-nowrap text-md font-medium transition-colors py-2 flex-shrink-0"
                     >
                       {category.name}
-                    </a>
-                  ))}
-                </div>
-
-                {/* Right Scroll Button */}
-                {showRightScroll && (
-                  <button
-                    onClick={scrollRight}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-emerald-600 shadow-md rounded-full p-1.5 hover:bg-gray-100 transition-colors border border-gray-200"
-                    aria-label="Scroll right"
-                  >
-                    <ChevronRight size={18} className="text-white" />
-                  </button>
+                    </Link>
+                  ))
+                ) : (
+                  // Show loading skeleton or empty state
+                  <div className="text-gray-500 py-2 whitespace-nowrap flex-shrink-0">Loading categories...</div>
                 )}
               </div>
+
+              {/* Spacer to prevent content from going under right button */}
+              <div className="w-12 flex-shrink-0"></div>
+
+              {/* Right Scroll Button - Extra large, no background, with spacing */}
+              <button
+                onClick={scrollRight}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-20 hover:text-[#E67E22] transition-colors"
+                aria-label="Scroll right"
+                style={{ right: '-20px' }}
+              >
+                <ChevronRight size={48} className="text-gray-600" />
+              </button>
             </div>
           </div>
         </nav>
@@ -720,7 +693,7 @@ const Header: React.FC = () => {
         </div>
       )}
 
-      {/* Mobile Bottom Navigation - Removed Cart from here */}
+      {/* Mobile Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50 shadow-lg">
         <div className="flex justify-around items-center py-1 px-4">
           <Link href="/" className="flex flex-col items-center p-1 w-16">
@@ -733,11 +706,10 @@ const Header: React.FC = () => {
             <span className={`text-[10px] mt-0.5 ${pathname === '/products' ? 'text-[#E67E22] font-medium' : 'text-gray-600'}`}>Shop</span>
           </Link>
 
-            <Link href="/deals" className="flex flex-col items-center p-1 w-16">
+          <Link href="/deals" className="flex flex-col items-center p-1 w-16">
             <Tag size={20} className={pathname === '/deals' ? 'text-[#E67E22]' : 'text-gray-600'} />
-            <span className={`text-[10px] mt-0.5 ${pathname === '/deals' ? 'text-[#E67E22] font-medium' : 'text-gray-600'}`}>HotDeals</span>
+            <span className={`text-[10px] mt-0.5 ${pathname === '/deals' ? 'text-[#E67E22] font-medium' : 'text-gray-600'}`}>Hot Deals</span>
           </Link>
-          
           
           <button 
             onClick={() => setMobileMenuOpen(true)}
@@ -788,39 +760,22 @@ const Header: React.FC = () => {
                 </button>
               </div>
               <div className="flex flex-col space-y-1">
-                {categories.map((category) => (
-                  <a 
-                    key={category.id} 
-                    href={`https://hypermarket.co.ke/categories/${category.slug}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-gray-700 hover:text-[#E67E22] hover:bg-[#E6F3E6] px-4 py-3 rounded-md text-base font-medium transition-colors border-b border-gray-100 last:border-0"
-                  >
-                    {category.name}
-                  </a>
-                ))}
+                {categories.length > 0 ? (
+                  categories.map((category) => (
+                    <Link 
+                      key={category.id} 
+                      href={`/categories/${category.slug}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-gray-700 hover:text-[#E67E22] hover:bg-[#E6F3E6] px-4 py-3 rounded-md text-base font-medium transition-colors border-b border-gray-100 last:border-0"
+                    >
+                      {category.name}
+                    </Link>
+                  ))
+                ) : (
+                  <div className="text-gray-500 px-4 py-3">Loading categories...</div>
+                )}
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Desktop Categories Dropdown */}
-      {mobileMenuOpen && (
-        <div className="hidden md:block absolute z-[60] mt-1 bg-white border border-gray-200 rounded-md shadow-lg min-w-[240px]" style={{ left: 'calc(1rem + 16px)' }}>
-          <div className="py-2">
-            <div className="px-4 py-2 text-xs font-semibold text-[#E67E22] uppercase tracking-wider border-b border-gray-100">
-              Categories
-            </div>
-            {categories.map((category) => (
-              <a
-                key={category.id}
-                href={`https://hypermarket.co.ke/categories/${category.slug}`}
-                className="block px-4 py-2 text-sm text-gray-700 hover:bg-[#E6F3E6] hover:text-[#E67E22] transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {category.name}
-              </a>
-            ))}
           </div>
         </div>
       )}
