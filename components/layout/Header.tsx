@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   Search, ShoppingCart, ChevronDown, X, Home, User, LayoutGrid, Tag, ShoppingBag, MapPin, LogOut, Heart, Package, User as UserIcon,
-  MenuIcon, ChevronLeft, ChevronRight, LogIn, UserPlus
+  MenuIcon, ChevronLeft, ChevronRight, LogIn, UserPlus, Truck
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -277,6 +277,12 @@ const Header: React.FC = () => {
                   <img src="/images/express.png" alt="Express" className="w-4 h-4 sm:w-5 sm:h-5 object-contain mr-1.5" />
                   <span className="text-xs sm:text-sm text-emerald-500 font-medium">Express</span>
                 </span>
+                
+                {/* Free Delivery Banner */}
+                <span className="hidden md:flex items-center px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full">
+                  <Truck size={16} className="mr-1.5 text-emerald-600" />
+                  <span className="text-xs sm:text-sm font-medium">Free delivery for all orders</span>
+                </span>
               </div>
               <div className="hidden md:flex items-center">
                 <span className="text-sm text-gray-700">+254 716 354 589</span>
@@ -545,6 +551,14 @@ const Header: React.FC = () => {
                   </div>
                 </button>
               )}
+            </div>
+            
+            {/* Mobile Free Delivery Banner */}
+            <div className="flex items-center justify-center py-2 border-t border-gray-100 mt-1">
+              <span className="flex items-center px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full">
+                <Truck size={14} className="mr-1.5 text-emerald-600" />
+                <span className="text-xs font-medium">Free delivery for all orders</span>
+              </span>
             </div>
           </div>
         </div>
