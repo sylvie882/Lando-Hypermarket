@@ -558,9 +558,9 @@ const Header: React.FC = () => {
                 onClick={scrollLeft}
                 className="absolute left-0 top-1/2 -translate-y-1/2 z-20 hover:text-[#E67E22] transition-colors"
                 aria-label="Scroll left"
-                style={{ left: '-20px' }}
+                style={{ left: '-5px' }}
               >
-                <ChevronLeft size={48} className="text-gray-600" />
+                <ChevronLeft size={36} className="text-gray-600" />
               </button>
               
               {/* Spacer to prevent content from going under left button */}
@@ -609,9 +609,9 @@ const Header: React.FC = () => {
                 onClick={scrollRight}
                 className="absolute right-0 top-1/2 -translate-y-1/2 z-20 hover:text-[#E67E22] transition-colors"
                 aria-label="Scroll right"
-                style={{ right: '-20px' }}
+                style={{ right: '-5px' }}
               >
-                <ChevronRight size={48} className="text-gray-600" />
+                <ChevronRight size={36} className="text-gray-600" />
               </button>
             </div>
           </div>
