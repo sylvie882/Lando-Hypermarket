@@ -642,6 +642,8 @@ class ApiService {
     search: (query: string) => this.api.get('/products/search', { params: { query } }),
     getRelated: (id: string | number) => this.api.get(`/products/${id}/related`),
     getByCategory: (slug: string) => this.api.get(`/products/category/${slug}`),
+
+    getDiscounted: (params?: any) => this.api.get('/products/discounted', { params }),
     
     // Reviews
     getReviews: (id: string | number) => this.api.get(`/products/${id}/reviews`),
