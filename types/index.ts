@@ -43,6 +43,8 @@ export interface Product {
   created_at: string;
   updated_at: string;  
   final_price?: number | string;
+  sale_price?: number;
+  discount_percentage?: number; // Add this
 
   images?: string[]; // Array of image URLs
   attributes?: Record<string, any>; // For specifications tab
