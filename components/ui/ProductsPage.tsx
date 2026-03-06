@@ -1,151 +1,177 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import ProductCard from '@/components/ui/ProductCard';
 import { Product, Category } from '@/types';
 import { api } from '@/lib/api';
-import { ChevronRight, Home, ShoppingBag, AlertCircle, RefreshCw } from 'lucide-react';
+import { ShoppingBag, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 interface ProductsPageProps {
-  categoryId?: number;
   title?: string;
 }
 
+interface PaginatedResponse {
+  data: Product[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+  next_page_url: string | null;
+  prev_page_url: string | null;
+}
+
 const ProductsPage: React.FC<ProductsPageProps> = ({
-  categoryId,
   title = 'Shop your Favourites'
 }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('offers');
-  const [categories, setCategories] = useState<Category[]>([]);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [perPage, setPerPage] = useState(20);
+  
+  // Store discounted products for offers tab
+  const [allDiscountedProducts, setAllDiscountedProducts] = useState<Product[]>([]);
+  const [discountedProductsLoaded, setDiscountedProductsLoaded] = useState(false);
+  
+  // Define tabs with their category IDs (from your data)
+  const tabs = [
+    { id: 'offers', label: 'Offers', categoryId: null },
+    { id: 'fruits', label: 'Fruits', categoryId: 45 }, // ID 45 = Fresh Fruits
+    { id: 'vegetables', label: 'Vegetables', categoryId: 46 }, // ID 46 = Fresh Vegetables
+  ];
 
-  // Define tabs with default slugs
-  const [tabs, setTabs] = useState([
-    { id: 'offers', label: 'Offers', slug: null },
-    { id: 'fruits', label: 'Fruits', slug: 'fruits' },
-    { id: 'vegetables', label: 'Vegetables', slug: 'vegetables' },
-  ]);
-
+  // Fetch products based on active tab
   useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
-    if (activeTab) {
-      fetchProducts();
+    if (activeTab === 'offers') {
+      // For offers, we need to load all discounted products first if not loaded
+      if (!discountedProductsLoaded) {
+        fetchAllDiscountedProducts();
+      } else {
+        // If already loaded, just update the current page
+        updateCurrentPageProducts();
+      }
+    } else {
+      // For category tabs, fetch paginated products
+      fetchCategoryProducts(currentPage);
     }
+  }, [activeTab, currentPage, discountedProductsLoaded]);
+
+  // Reset pagination when tab changes
+  useEffect(() => {
+    setCurrentPage(1);
   }, [activeTab]);
 
-  const fetchCategories = async () => {
-    try {
-      const response = await api.categories.getAll();
-      const categoriesData = response.data || [];
-      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
-      
-      // Find fruit and vegetable categories dynamically by slug
-      const fruitsCat = categoriesData.find((c: Category) => 
-        c.slug?.toLowerCase().includes('fruit') || 
-        c.name?.toLowerCase().includes('fruit')
-      );
-      
-      const vegCat = categoriesData.find((c: Category) => 
-        c.slug?.toLowerCase().includes('vegetable') || 
-        c.name?.toLowerCase().includes('vegetable')
-      );
-      
-      // Update tabs with found category slugs
-      setTabs(prev => [
-        prev[0], // Keep offers tab as is
-        { ...prev[1], slug: fruitsCat?.slug || 'fruits' },
-        { ...prev[2], slug: vegCat?.slug || 'vegetables' },
-      ]);
-      
-      console.log('Categories loaded:', categoriesData);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
-
-  // Helper function to check if a product is discounted
-  const isProductDiscounted = (product: Product): boolean => {
-    const hasDiscountedPrice = product.discounted_price !== undefined && 
-                               product.discounted_price !== null && 
-                               product.discounted_price > 0 && 
-                               product.discounted_price < product.price;
-    
-    const hasDiscountPercentage = product.discount_percentage !== undefined && 
-                                  product.discount_percentage !== null && 
-                                  product.discount_percentage > 0;
-    
-    const hasSalePrice = product.sale_price !== undefined && 
-                         product.sale_price !== null && 
-                         product.sale_price > 0 && 
-                         product.sale_price < product.price;
-    
-    const hasFinalPrice = product.final_price !== undefined && 
-                          product.final_price !== null && 
-                          Number(product.final_price) < product.price;
-    
-    return hasDiscountedPrice || hasDiscountPercentage || hasSalePrice || hasFinalPrice;
-  };
-
-  // Helper function to get the best available price
-  const getProductPrice = (product: Product): number => {
-    if (product.sale_price && product.sale_price < product.price) {
-      return product.sale_price;
-    }
-    if (product.discounted_price && product.discounted_price < product.price) {
-      return product.discounted_price;
-    }
-    if (product.final_price && Number(product.final_price) < product.price) {
-      return Number(product.final_price);
-    }
-    return product.price;
-  };
-
-  const fetchProducts = async () => {
+  const fetchAllDiscountedProducts = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      let response;
-      console.log(`Fetching products for tab: ${activeTab}`);
+      console.log('Fetching all discounted products across all pages');
+      
+      // First, fetch the first page to get total pages
+      const firstPageResponse = await api.products.getAll({ per_page: 100 });
+      let allDiscounted: Product[] = [];
+      
+      if (firstPageResponse?.data) {
+        // Handle pagination wrapper
+        const paginatedData = firstPageResponse.data as any;
+        const firstPageProducts = paginatedData.data || firstPageResponse.data;
+        const totalPages = paginatedData.last_page || 1;
+        
+        console.log(`Total pages available: ${totalPages}`);
+        
+        // Process first page
+        const firstPageArray = Array.isArray(firstPageProducts) ? firstPageProducts : [];
+        const firstPageDiscounted = firstPageArray.filter(isProductDiscounted);
+        allDiscounted = [...firstPageDiscounted];
+        
+        // Fetch remaining pages
+        if (totalPages > 1) {
+          const pagePromises = [];
+          
+          // Limit to 20 pages max for performance (or adjust as needed)
+          const pagesToFetch = Math.min(totalPages, 20);
+          
+          for (let page = 2; page <= pagesToFetch; page++) {
+            pagePromises.push(api.products.getAll({ per_page: 100, page }));
+          }
+          
+          const remainingResponses = await Promise.all(pagePromises);
+          
+          remainingResponses.forEach(response => {
+            if (response?.data) {
+              const pageData = (response.data as any).data || response.data;
+              if (Array.isArray(pageData)) {
+                const pageDiscounted = pageData.filter(isProductDiscounted);
+                allDiscounted = [...allDiscounted, ...pageDiscounted];
+              }
+            }
+          });
+        }
+        
+        console.log(`Total discounted products found: ${allDiscounted.length}`);
+        
+        // Store all discounted products
+        setAllDiscountedProducts(allDiscounted);
+        setDiscountedProductsLoaded(true);
+        
+        // Calculate pagination for offers
+        const offersPerPage = 20;
+        const offersLastPage = Math.ceil(allDiscounted.length / offersPerPage);
+        setLastPage(offersLastPage);
+        setTotalProducts(allDiscounted.length);
+        setPerPage(offersPerPage);
+        
+        // Update current page products
+        updateCurrentPageProducts(allDiscounted);
+      }
+    } catch (error: any) {
+      console.error('Error fetching discounted products:', error);
+      setError(error?.message || 'Failed to load offers');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const fetchCategoryProducts = async (page: number) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
       const currentTab = tabs.find(tab => tab.id === activeTab);
       
-      if (activeTab === 'offers') {
-        // For offers, use getAll and filter on frontend
-        console.log('Fetching all products and filtering for offers');
-        response = await api.products.getAll({ per_page: 50 });
-        
-        if (response?.data) {
-          const productsData = response.data.data || response.data;
-          const allProducts = Array.isArray(productsData) ? productsData : [];
-          
-          // Filter products that have discounts
-          const discountedProducts = allProducts.filter(isProductDiscounted);
-          
-          console.log(`Found ${discountedProducts.length} discounted products out of ${allProducts.length}`);
-          setProducts(discountedProducts);
-          setLoading(false);
-          return;
-        }
-      } else if (currentTab?.slug) {
-        console.log(`Fetching products for category slug: ${currentTab.slug}`);
-        
-        // Use getByCategory with the slug (string) - this matches your API signature
-        response = await api.products.getByCategory(currentTab.slug);
-        
-        console.log('Category products response:', response);
+      if (!currentTab?.categoryId) {
+        setProducts([]);
+        setLoading(false);
+        return;
       }
 
+      console.log(`Fetching products for category ID: ${currentTab.categoryId}, page: ${page}`);
+      const response = await api.products.getAll({ 
+        category_id: currentTab.categoryId,
+        per_page: 20,
+        page: page
+      });
+      
       if (response?.data) {
-        const productsData = response.data.data || response.data;
-        setProducts(Array.isArray(productsData) ? productsData : []);
+        // Handle paginated response
+        const paginatedData = response.data as any;
+        const categoryProducts = paginatedData.data || paginatedData;
+        
+        setProducts(Array.isArray(categoryProducts) ? categoryProducts : []);
+        
+        // Set pagination info
+        setCurrentPage(paginatedData.current_page || page);
+        setLastPage(paginatedData.last_page || 1);
+        setTotalProducts(paginatedData.total || 0);
+        setPerPage(paginatedData.per_page || 20);
       } else {
         setProducts([]);
       }
@@ -158,22 +184,139 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     }
   };
 
-  const getFixedImageUrl = (url: string) => {
-    if (!url) return '/images/placeholder.jpg';
+  const updateCurrentPageProducts = (discountedList = allDiscountedProducts) => {
+    const startIndex = (currentPage - 1) * perPage;
+    const endIndex = startIndex + perPage;
+    const pageProducts = discountedList.slice(startIndex, endIndex);
+    setProducts(pageProducts);
+    setLoading(false);
+  };
+
+  const isProductDiscounted = (product: Product): boolean => {
+    const hasDiscountedPrice = product.discounted_price && 
+                              Number(product.discounted_price) > 0 && 
+                              Number(product.discounted_price) < Number(product.price);
     
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
+    const hasSalePrice = product.sale_price && 
+                        Number(product.sale_price) > 0 && 
+                        Number(product.sale_price) < Number(product.price);
     
-    if (url.startsWith('/storage/')) {
-      return `https://api.hypermarket.co.ke${url}`;
-    }
+    const hasFinalPrice = product.final_price && 
+                         Number(product.final_price) > 0 && 
+                         Number(product.final_price) < Number(product.price);
     
-    return `https://api.hypermarket.co.ke/storage/${url}`;
+    return hasDiscountedPrice || hasSalePrice || hasFinalPrice;
   };
 
   const handleRetry = () => {
-    fetchProducts();
+    if (activeTab === 'offers') {
+      setDiscountedProductsLoaded(false);
+      fetchAllDiscountedProducts();
+    } else {
+      fetchCategoryProducts(currentPage);
+    }
+  };
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    setError(null);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= lastPage) {
+      setCurrentPage(newPage);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Render pagination component
+  const renderPagination = () => {
+    if (lastPage <= 1) return null;
+
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(lastPage, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i);
+    }
+
+    return (
+      <div className="flex items-center justify-center gap-2 mt-8 mb-4">
+        {/* Previous button */}
+        <button
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1 || loading}
+          className={`p-2 rounded-lg border ${
+            currentPage === 1 
+              ? 'border-gray-200 text-gray-400 cursor-not-allowed' 
+              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <ChevronLeft size={20} />
+        </button>
+
+        {/* First page if not visible */}
+        {startPage > 1 && (
+          <>
+            <button
+              onClick={() => handlePageChange(1)}
+              className="w-10 h-10 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              1
+            </button>
+            {startPage > 2 && <span className="text-gray-500">...</span>}
+          </>
+        )}
+
+        {/* Page numbers */}
+        {pageNumbers.map((page) => (
+          <button
+            key={page}
+            onClick={() => handlePageChange(page)}
+            disabled={loading}
+            className={`w-10 h-10 rounded-lg border ${
+              currentPage === page
+                ? 'bg-emerald-600 text-white border-emerald-600'
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {page}
+          </button>
+        ))}
+
+        {/* Last page if not visible */}
+        {endPage < lastPage && (
+          <>
+            {endPage < lastPage - 1 && <span className="text-gray-500">...</span>}
+            <button
+              onClick={() => handlePageChange(lastPage)}
+              className="w-10 h-10 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              {lastPage}
+            </button>
+          </>
+        )}
+
+        {/* Next button */}
+        <button
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === lastPage || loading}
+          className={`p-2 rounded-lg border ${
+            currentPage === lastPage 
+              ? 'border-gray-200 text-gray-400 cursor-not-allowed' 
+              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <ChevronRight size={20} />
+        </button>
+      </div>
+    );
   };
 
   if (loading && products.length === 0) {
@@ -186,8 +329,8 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
       <div className="container mx-auto px-4 py-6">
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-emerald-600">
             {title}
@@ -205,16 +348,23 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
+              disabled={loading}
               className={`
                 px-5 py-2 rounded-full text-sm font-medium border transition-all whitespace-nowrap
                 ${activeTab === tab.id
                   ? 'bg-emerald-600 text-white border-emerald-600'
                   : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'
                 }
+                ${loading ? 'opacity-50 cursor-not-allowed' : ''}
               `}
             >
               {tab.label}
+              {activeTab === tab.id && totalProducts > 0 && (
+                <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full">
+                  {totalProducts}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -254,32 +404,46 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
                 No products found
               </h3>
               <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                No products available in this category at the moment.
+                {activeTab === 'offers' 
+                  ? 'No discounted products available at the moment. Check back later!' 
+                  : `No products available in the ${activeTab} category at the moment.`}
               </p>
-              <button
-                onClick={() => setActiveTab('offers')}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors"
-              >
-                View offers instead
-              </button>
+              {activeTab !== 'offers' && (
+                <button
+                  onClick={() => handleTabChange('offers')}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+                >
+                  View offers instead
+                </button>
+              )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {products.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-sm transition-shadow duration-200"
-                >
-                  <ProductCard
-                    product={{
-                      ...product,
-                      price: getProductPrice(product)
-                    }}
-                    onViewTrack={(id) => console.log('Viewing:', id)}
-                  />
-                </div>
-              ))}
-            </div>
+            <>
+              {/* Product count info */}
+              <div className="flex justify-between items-center mb-4 text-sm text-gray-600">
+                <span>
+                  Showing {((currentPage - 1) * perPage) + 1} - {Math.min(currentPage * perPage, totalProducts)} of {totalProducts} products
+                </span>
+              </div>
+
+              {/* Products grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {products.map((product) => (
+                  <div
+                    key={product.id}
+                    className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-sm transition-shadow duration-200"
+                  >
+                    <ProductCard
+                      product={product}
+                      onViewTrack={(id) => console.log('Viewing:', id)}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {renderPagination()}
+            </>
           )}
         </div>
       </div>
