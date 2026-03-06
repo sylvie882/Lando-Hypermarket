@@ -192,20 +192,25 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     setLoading(false);
   };
 
+  // FIXED: Ensure we always return a boolean
   const isProductDiscounted = (product: Product): boolean => {
-    const hasDiscountedPrice = product.discounted_price && 
+    const hasDiscountedPrice = !!(product.discounted_price && 
                               Number(product.discounted_price) > 0 && 
-                              Number(product.discounted_price) < Number(product.price);
+                              Number(product.discounted_price) < Number(product.price));
     
-    const hasSalePrice = product.sale_price && 
+    const hasSalePrice = !!(product.sale_price && 
                         Number(product.sale_price) > 0 && 
-                        Number(product.sale_price) < Number(product.price);
+                        Number(product.sale_price) < Number(product.price));
     
-    const hasFinalPrice = product.final_price && 
+    const hasFinalPrice = !!(product.final_price && 
                          Number(product.final_price) > 0 && 
-                         Number(product.final_price) < Number(product.price);
+                         Number(product.final_price) < Number(product.price));
     
-    return hasDiscountedPrice || hasSalePrice || hasFinalPrice;
+    // Also check if there's a discount percentage
+    const hasDiscountPercentage = !!(product.discount_percentage && 
+                                   Number(product.discount_percentage) > 0);
+    
+    return hasDiscountedPrice || hasSalePrice || hasFinalPrice || hasDiscountPercentage;
   };
 
   const handleRetry = () => {
