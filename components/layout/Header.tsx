@@ -32,7 +32,6 @@ interface UserProfile {
 interface SearchSuggestion {
   id: number;
   name: string;
-  sku: string;
   price: string | number;
   thumbnail: string | null;
 }
@@ -48,6 +47,7 @@ const Header: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [avatarError, setAvatarError] = useState(false);
   const [mobileAccountMenuOpen, setMobileAccountMenuOpen] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   
   // Search autocomplete state
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
@@ -234,27 +234,34 @@ const Header: React.FC = () => {
     
     try {
       console.log('Fetching suggestions for query:', query);
-      const response = await api.products.searchAutocomplete(query);
-      console.log('Search autocomplete response:', response);
       
-      // Handle different response structures
+      const response = await fetch(`https://api.hypermarket.co.ke/api/products/search?query=${encodeURIComponent(query)}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Search response (raw):', data);
+      
+      // Handle the response
       let suggestionsData = [];
       
-      if (response.data) {
-        if (Array.isArray(response.data)) {
-          suggestionsData = response.data;
-        } else if (response.data.data && Array.isArray(response.data.data)) {
-          suggestionsData = response.data.data;
-        } else if (typeof response.data === 'object') {
-          // If it's an object but not an array, check if it has a data property
-          suggestionsData = response.data.data || [];
-        }
+      if (Array.isArray(data)) {
+        suggestionsData = data;
+      } else if (data.data && Array.isArray(data.data)) {
+        suggestionsData = data.data;
       }
       
       console.log('Processed suggestions:', suggestionsData);
-      setSuggestions(suggestionsData);
+      console.log('First product ID:', suggestionsData[0]?.id);
       
-      // Show suggestions only if we have results
+      setSuggestions(suggestionsData);
       setShowSuggestions(suggestionsData.length > 0);
       
     } catch (error: any) {
@@ -298,11 +305,27 @@ const Header: React.FC = () => {
     }
   };
 
+  // FIXED: Navigate to product detail page with proper event handling
   const handleSuggestionClick = (product: SearchSuggestion) => {
-    router.push(`/products/${product.id}`);
-    setSearchQuery('');
+    if (isNavigating) return; // Prevent multiple clicks
+    
+    setIsNavigating(true);
+    console.log('Suggestion clicked:', product);
+    console.log('Product ID:', product.id);
+    console.log('Navigating to:', `/products/${product.id}`);
+    
+    // Close dropdown immediately
     setShowSuggestions(false);
-    setSuggestions([]);
+    setSearchQuery('');
+    
+    // Navigate
+    router.push(`/products/${product.id}`);
+    
+    // Clear suggestions after navigation
+    setTimeout(() => {
+      setSuggestions([]);
+      setIsNavigating(false);
+    }, 500);
   };
 
   // Close suggestions when clicking outside
@@ -471,7 +494,7 @@ const Header: React.FC = () => {
 
                 {/* Search Suggestions Dropdown */}
                 {showSuggestions && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-[9999] max-h-96 overflow-y-auto">
                     {searchLoading ? (
                       <div className="px-4 py-6 text-gray-500 flex flex-col items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E67E22] mb-2"></div>
@@ -503,6 +526,7 @@ const Header: React.FC = () => {
                           <button
                             key={product.id}
                             onClick={() => handleSuggestionClick(product)}
+                            disabled={isNavigating}
                             className="w-full px-4 py-3 flex items-center space-x-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 text-left"
                           >
                             {/* Product Image */}
@@ -517,13 +541,10 @@ const Header: React.FC = () => {
                               />
                             </div>
                             
-                            {/* Product Info */}
+                            {/* Product Info - SKU REMOVED */}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-900 truncate">
                                 {product.name}
-                              </p>
-                              <p className="text-xs text-gray-500 truncate">
-                                SKU: {product.sku}
                               </p>
                               <p className="text-sm font-semibold text-[#E67E22]">
                                 {formatPrice(product.price)}
@@ -736,7 +757,7 @@ const Header: React.FC = () => {
 
                 {/* Mobile Search Suggestions */}
                 {showSuggestions && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-[9999] max-h-80 overflow-y-auto">
                     {searchLoading ? (
                       <div className="px-4 py-4 text-gray-500 flex flex-col items-center justify-center">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#E67E22] mb-2"></div>
@@ -762,6 +783,7 @@ const Header: React.FC = () => {
                           <button
                             key={product.id}
                             onClick={() => handleSuggestionClick(product)}
+                            disabled={isNavigating}
                             className="w-full px-3 py-2 flex items-center space-x-2 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 text-left"
                           >
                             {/* Product Image */}
@@ -776,7 +798,7 @@ const Header: React.FC = () => {
                               />
                             </div>
                             
-                            {/* Product Info */}
+                            {/* Product Info - SKU REMOVED */}
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium text-gray-900 truncate">
                                 {product.name}
