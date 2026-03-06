@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
+import debounce from 'lodash/debounce';
 
 interface Category {
   id: number;
@@ -28,6 +29,14 @@ interface UserProfile {
   role: string;
 }
 
+interface SearchSuggestion {
+  id: number;
+  name: string;
+  sku: string;
+  price: string | number;
+  thumbnail: string | null;
+}
+
 const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
@@ -39,6 +48,14 @@ const Header: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [avatarError, setAvatarError] = useState(false);
   const [mobileAccountMenuOpen, setMobileAccountMenuOpen] = useState(false);
+  
+  // Search autocomplete state
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   // Scroll state for the entire navigation bar
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -204,12 +221,119 @@ const Header: React.FC = () => {
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  // Search autocomplete function with better error handling
+  const fetchSuggestions = async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setSuggestions([]);
+      setSearchError(null);
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError(null);
+    
+    try {
+      console.log('Fetching suggestions for query:', query);
+      const response = await api.products.searchAutocomplete(query);
+      console.log('Search autocomplete response:', response);
+      
+      // Handle different response structures
+      let suggestionsData = [];
+      
+      if (response.data) {
+        if (Array.isArray(response.data)) {
+          suggestionsData = response.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          suggestionsData = response.data.data;
+        } else if (typeof response.data === 'object') {
+          // If it's an object but not an array, check if it has a data property
+          suggestionsData = response.data.data || [];
+        }
+      }
+      
+      console.log('Processed suggestions:', suggestionsData);
+      setSuggestions(suggestionsData);
+      
+      // Show suggestions only if we have results
+      setShowSuggestions(suggestionsData.length > 0);
+      
+    } catch (error: any) {
+      console.error('Error fetching search suggestions:', error);
+      setSearchError(error?.message || 'Failed to load suggestions');
+      setSuggestions([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      fetchSuggestions(query);
+    }, 300),
+    []
+  );
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    
+    if (query.length >= 2) {
+      setShowSuggestions(true);
+      debouncedSearch(query);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setSearchError(null);
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/products?search=${encodeURIComponent(searchQuery)}`);
       setSearchQuery('');
+      setShowSuggestions(false);
+      setSuggestions([]);
     }
+  };
+
+  const handleSuggestionClick = (product: SearchSuggestion) => {
+    router.push(`/products/${product.id}`);
+    setSearchQuery('');
+    setShowSuggestions(false);
+    setSuggestions([]);
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const getProductImageUrl = (thumbnail: string | null) => {
+    if (!thumbnail) return '/images/placeholder.jpg';
+    
+    // Use the api's getImageUrl method
+    return api.getImageUrl(thumbnail, '/images/placeholder.jpg');
+  };
+
+  const formatPrice = (price: string | number) => {
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(numPrice);
   };
 
   const handleLogout = async () => {
@@ -319,19 +443,107 @@ const Header: React.FC = () => {
                 <ChevronDown size={14} className="text-gray-500 group-hover:text-[#E67E22]" />
               </button>
 
-              {/* Search */}
-              <form onSubmit={handleSearch} className="flex flex-1 mx-4 max-w-xl">
-                <input
-                  type="search"
-                  placeholder="50,000+ items"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#E67E22] bg-white"
-                />
-                <button type="submit" className="bg-emerald-500 text-white px-4 rounded-r-lg hover:bg-[#D35400] transition-colors">
-                  <Search size={20} />
-                </button>
-              </form>
+              {/* Search with Autocomplete */}
+              <div className="flex flex-1 mx-4 max-w-xl relative" ref={searchRef}>
+                <form onSubmit={handleSearchSubmit} className="w-full">
+                  <div className="relative">
+                    <input
+                      ref={searchInputRef}
+                      type="search"
+                      placeholder="50,000+ items"
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      onFocus={() => {
+                        if (suggestions.length > 0) {
+                          setShowSuggestions(true);
+                        }
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E67E22] bg-white pr-12"
+                    />
+                    <button 
+                      type="submit" 
+                      className="absolute right-0 top-0 bottom-0 bg-emerald-500 text-white px-4 rounded-r-lg hover:bg-[#D35400] transition-colors"
+                    >
+                      <Search size={20} />
+                    </button>
+                  </div>
+                </form>
+
+                {/* Search Suggestions Dropdown */}
+                {showSuggestions && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                    {searchLoading ? (
+                      <div className="px-4 py-6 text-gray-500 flex flex-col items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E67E22] mb-2"></div>
+                        <p className="text-sm">Searching products...</p>
+                      </div>
+                    ) : searchError ? (
+                      <div className="px-4 py-6 text-center">
+                        <p className="text-red-500 text-sm mb-2">{searchError}</p>
+                        <button
+                          onClick={() => fetchSuggestions(searchQuery)}
+                          className="text-sm text-[#E67E22] hover:underline"
+                        >
+                          Try again
+                        </button>
+                      </div>
+                    ) : suggestions.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-gray-500">
+                        <p className="text-sm">No products found for "{searchQuery}"</p>
+                        <button
+                          onClick={handleSearchSubmit}
+                          className="mt-2 text-sm text-[#E67E22] hover:underline"
+                        >
+                          Search all products
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {suggestions.map((product) => (
+                          <button
+                            key={product.id}
+                            onClick={() => handleSuggestionClick(product)}
+                            className="w-full px-4 py-3 flex items-center space-x-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 text-left"
+                          >
+                            {/* Product Image */}
+                            <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                              <img
+                                src={getProductImageUrl(product.thumbnail)}
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = '/images/placeholder.jpg';
+                                }}
+                              />
+                            </div>
+                            
+                            {/* Product Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {product.name}
+                              </p>
+                              <p className="text-xs text-gray-500 truncate">
+                                SKU: {product.sku}
+                              </p>
+                              <p className="text-sm font-semibold text-[#E67E22]">
+                                {formatPrice(product.price)}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                        
+                        {/* View all results link */}
+                        <button
+                          onClick={handleSearchSubmit}
+                          className="w-full px-4 py-3 text-sm text-center text-[#E67E22] hover:bg-orange-50 font-medium border-t border-gray-200"
+                        >
+                          View all {suggestions.length}+ results for "{searchQuery}"
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Account */}
               {isAuthenticated && (user || profile) ? (
@@ -497,19 +709,97 @@ const Header: React.FC = () => {
             
             {/* Second Row: Search + Auth Buttons */}
             <div className="flex items-center space-x-2 pb-3">
-              {/* Search Bar - Compact */}
-              <form onSubmit={handleSearch} className="flex flex-1">
-                <input
-                  type="search"
-                  placeholder="Search 50k+ items..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-[#E67E22] text-sm bg-white"
-                />
-                <button type="submit" className="bg-emerald-500 text-white px-3 rounded-r-lg hover:bg-[#D35400] transition-colors">
-                  <Search size={16} />
-                </button>
-              </form>
+              {/* Search Bar - Compact with autocomplete */}
+              <div className="flex flex-1 relative" ref={searchRef}>
+                <form onSubmit={handleSearchSubmit} className="w-full">
+                  <div className="relative">
+                    <input
+                      type="search"
+                      placeholder="Search 50k+ items..."
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      onFocus={() => {
+                        if (suggestions.length > 0) {
+                          setShowSuggestions(true);
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#E67E22] text-sm bg-white pr-10"
+                    />
+                    <button 
+                      type="submit" 
+                      className="absolute right-0 top-0 bottom-0 bg-emerald-500 text-white px-2 rounded-r-lg hover:bg-[#D35400] transition-colors"
+                    >
+                      <Search size={16} />
+                    </button>
+                  </div>
+                </form>
+
+                {/* Mobile Search Suggestions */}
+                {showSuggestions && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+                    {searchLoading ? (
+                      <div className="px-4 py-4 text-gray-500 flex flex-col items-center justify-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#E67E22] mb-2"></div>
+                        <p className="text-xs">Searching...</p>
+                      </div>
+                    ) : searchError ? (
+                      <div className="px-4 py-4 text-center">
+                        <p className="text-red-500 text-xs mb-2">{searchError}</p>
+                        <button
+                          onClick={() => fetchSuggestions(searchQuery)}
+                          className="text-xs text-[#E67E22]"
+                        >
+                          Try again
+                        </button>
+                      </div>
+                    ) : suggestions.length === 0 ? (
+                      <div className="px-4 py-4 text-center text-gray-500">
+                        <p className="text-xs">No products found</p>
+                      </div>
+                    ) : (
+                      <>
+                        {suggestions.slice(0, 5).map((product) => (
+                          <button
+                            key={product.id}
+                            onClick={() => handleSuggestionClick(product)}
+                            className="w-full px-3 py-2 flex items-center space-x-2 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 text-left"
+                          >
+                            {/* Product Image */}
+                            <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                              <img
+                                src={getProductImageUrl(product.thumbnail)}
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = '/images/placeholder.jpg';
+                                }}
+                              />
+                            </div>
+                            
+                            {/* Product Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-gray-900 truncate">
+                                {product.name}
+                              </p>
+                              <p className="text-xs font-semibold text-[#E67E22]">
+                                {formatPrice(product.price)}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                        
+                        {/* View all results link */}
+                        <button
+                          onClick={handleSearchSubmit}
+                          className="w-full px-3 py-2 text-xs text-center text-[#E67E22] hover:bg-orange-50 font-medium border-t border-gray-200"
+                        >
+                          View all results
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
               
               {/* Auth Buttons for Non-Authenticated Users */}
               {!isAuthenticated ? (
