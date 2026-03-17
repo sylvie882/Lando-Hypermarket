@@ -909,6 +909,24 @@ const Header: React.FC = () => {
                   <Home size={20} className="mr-2" />
                   <span>Home</span>
                 </Link>
+
+                {/* Home Link */}
+                <Link 
+                  href="/products" 
+                  className="flex items-center text-gray-700 hover:text-[#E67E22] font-medium whitespace-nowrap flex-shrink-0"
+                >
+                  <ShoppingBag size={20} className="mr-2" />
+                  <span>Shop</span>
+                </Link>
+
+                  {/* Home Link */}
+                <Link 
+                  href="/deals" 
+                  className="flex items-center text-gray-700 hover:text-[#E67E22] font-medium whitespace-nowrap flex-shrink-0"
+                >
+                  <ShoppingBag size={20} className="mr-2" />
+                  <span>Hot Deals</span>
+                </Link>
                 
                 {/* Categories from API with increased spacing */}
                 {categories.length > 0 ? (
