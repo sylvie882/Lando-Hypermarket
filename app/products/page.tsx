@@ -211,7 +211,7 @@ const ProductsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12  px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Filters Sidebar - Mobile/Desktop */}
           <div className={`lg:w-1/4 ${showFilters ? 'block' : 'hidden lg:block'}`}>

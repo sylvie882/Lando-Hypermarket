@@ -201,7 +201,7 @@ const CategoryPage = () => {
     <div className="min-h-screen bg-white">
       {/* Breadcrumb */}
       <div className="border-b border-gray-100">
-        <div className="container mx-auto px-4 py-3">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full px-4 py-3">
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <Link href="/" className="flex items-center gap-1 hover:text-orange-600">
               <Home size={14} />
@@ -219,7 +219,7 @@ const CategoryPage = () => {
 
       {/* Category Header */}
       <div className="bg-white border-b border-gray-100">
-        <div className="container mx-auto px-4 py-6">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full px-4 py-6">
           <div className="flex flex-col md:flex-row items-start gap-6">
             <div className="md:w-1/4">
               <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl overflow-hidden border border-orange-200 shadow-sm">
@@ -282,7 +282,7 @@ const CategoryPage = () => {
 
       {/* Products Section */}
       <div className="py-8">
-        <div className="container mx-auto px-4">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full px-4">
           {products.length > 0 ? (
             <>
               <div className="flex items-center justify-between mb-8">
@@ -342,7 +342,7 @@ const CategoryPage = () => {
       {/* Related Categories */}
       {products.length > 0 && (
         <div className="py-8 bg-gradient-to-b from-white to-orange-50/30 border-t border-gray-100">
-          <div className="container mx-auto px-4">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full px-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Related Categories
             </h3>

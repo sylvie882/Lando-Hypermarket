@@ -186,8 +186,8 @@ const CleaningSupplies: React.FC = () => {
   if (isLoading && !category) {
     return (
       <div className="bg-white">
-        <div className="px-4 sm:px-6 md:px-8 lg:px-12 py-8">
-          <div className="w-full">
+        <div className="px-4 sm:px-6 lg:px-12 py-8">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
             <div className="animate-pulse">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-2">
@@ -223,8 +223,8 @@ const CleaningSupplies: React.FC = () => {
 
   return (
     <div className="bg-white">
-      <div className="px-4 sm:px-6 md:px-8 lg:px-12 py-8">
-        <div className="w-full">
+      <div className="px-4 sm:px-6 lg:px-12 py-8">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
           {/* Header with Title and Navigation Icons */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">

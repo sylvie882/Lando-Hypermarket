@@ -1,6 +1,5 @@
-// app/layout.tsx - COMPREHENSIVE SEO OPTIMIZATION
+// app/layout.tsx - ENHANCED SEO & PERFORMANCE
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import ClientLayout from './ClientLayout';
 import { AuthProvider } from '@/lib/auth';
@@ -10,15 +9,13 @@ import AuthSync from '@/components/auth/AuthSync';
 import OpeningSoonSuspense from '@/components/suspense/OpeningSoonSuspense';
 import Script from 'next/script';
 
-const inter = Inter({ subsets: ['latin'] });
-
-const SITE_URL = 'https://hypermarket.co.ke';
-const SITE_NAME = 'Hypermarket Kenya';
-const BUSINESS_PHONE = '+254 711 223344';
-const BUSINESS_EMAIL = 'info@hypermarket.co.ke';
-const BUSINESS_WHATSAPP = '+254711223344';
-const BUSINESS_INSTAGRAM = 'hypermarket_ke';
-const BUSINESS_FACEBOOK = 'hypermarketkenya';
+const SITE_URL = 'https://lando.co.ke';
+const SITE_NAME = 'Lando Ranch Hypermarket';
+const BUSINESS_PHONE = '+254 716 354 589';
+const BUSINESS_EMAIL = 'landoranchh@gmail.com';
+const BUSINESS_WHATSAPP = '+254716354589';
+const BUSINESS_INSTAGRAM = 'landoranch_ke';
+const BUSINESS_FACEBOOK = 'landoranch';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -30,10 +27,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Hypermarket Kenya | Fresh Vegetables, Pasture Raised Meat, Kienyeji Eggs, Baby Products & More',
-    template: '%s | Hypermarket Kenya'
+    default: 'Lando Ranch Hypermarket | Fresh Vegetables, Pasture Raised Meat, Kienyeji Eggs, Baby Products & More',
+    template: '%s | Lando Ranch Hypermarket'
   },
-  description: 'Shop Hypermarket Kenya for fresh farm produce: pasture raised meat (goat, sheep, rabbit), kienyeji eggs, fresh vegetables, tropical fruits, dairy products, baby essentials, stationery, cleaning supplies, wooden utensils, samosas, and traditional handicrafts. Everything you need and love. Amazing products, quickly delivered in 99 minutes at every day prices. Free delivery Nairobi. Order now!',
+  description: 'Shop Lando Ranch Hypermarket for fresh farm produce: pasture raised meat (goat, sheep, rabbit), kienyeji eggs, fresh vegetables, tropical fruits, dairy products, baby essentials, stationery, cleaning supplies, wooden utensils, samosas, and traditional handicrafts. Everything you need and love. Amazing products, quickly delivered in 99 minutes at every day prices. Free delivery Nairobi. Order now!',
   keywords: [
     // ============================================
     // FRESH PRODUCE CATEGORIES
@@ -428,9 +425,9 @@ export const metadata: Metadata = {
     'samli',
     'bidii products'
   ],
-  authors: [{ name: 'Hypermarket Kenya', url: 'https://hypermarket.co.ke/about' }],
-  creator: 'Hypermarket Kenya',
-  publisher: 'Hypermarket Kenya',
+  authors: [{ name: 'Lando Ranch Hypermarket', url: 'https://lando.co.ke/about' }],
+  creator: 'Lando Ranch Hypermarket',
+  publisher: 'Lando Ranch Hypermarket',
   formatDetection: {
     email: true,
     address: true,
@@ -452,22 +449,22 @@ export const metadata: Metadata = {
     locale: 'en_KE',
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: 'Hypermarket Kenya | Fresh Vegetables, Pasture Raised Meat, Kienyeji Eggs & Baby Products',
+    title: 'Lando Ranch Hypermarket | Fresh Vegetables, Pasture Raised Meat, Kienyeji Eggs & Baby Products',
     description: '🛒 Shop online: Fresh vegetables • Pasture raised meat (goat, sheep, rabbit) • Kienyeji eggs • Dairy • Baby products • Stationery • Cleaning supplies • Wooden utensils • Samosas • Handicrafts. Free delivery Nairobi over KES 2000!',
     images: [
       {
         url: `${SITE_URL}/og-image.jpg`,
         width: 1200,
         height: 630,
-        alt: 'Hypermarket Kenya - Online Supermarket for Fresh Produce, Meat, Eggs & Household Essentials',
+        alt: 'Lando Ranch Hypermarket - Online Supermarket for Fresh Produce, Meat, Eggs & Household Essentials',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    site: '@hypermarket_ke',
-    creator: '@hypermarket_ke',
-    title: 'Hypermarket Kenya | Fresh Farm Produce & Groceries Delivered',
+    site: '@landoranch_ke',
+    creator: '@landoranch_ke',
+    title: 'Lando Ranch Hypermarket | Fresh Farm Produce & Groceries Delivered',
     description: 'Farm fresh vegetables, pasture raised meat, kienyeji eggs, baby products & more. Free delivery Nairobi over KES 2000.',
     images: [`${SITE_URL}/twitter-image.jpg`],
   },
@@ -544,7 +541,7 @@ export default function RootLayout({
         {/* Preconnect for Performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://api.hypermarket.co.ke" />
+        <link rel="preconnect" href="https://api.lando.co.ke" />
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
         
         {/* Favicon & Icons */}
@@ -638,7 +635,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "GroceryStore",
               "@id": `${SITE_URL}/#store`,
-              "name": "Hypermarket Kenya",
+              "name": "Lando Ranch Hypermarket",
               "image": `${SITE_URL}/store-image.jpg`,
               "url": SITE_URL,
               "telephone": BUSINESS_PHONE,
@@ -887,7 +884,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "LocalBusiness",
               "@id": `${SITE_URL}/#localbusiness`,
-              "name": "Hypermarket Kenya",
+              "name": "Lando Ranch Hypermarket",
               "image": `${SITE_URL}/store-front.jpg`,
               "url": SITE_URL,
               "telephone": BUSINESS_PHONE,
@@ -1195,7 +1192,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={inter.className}>
+      <body className="font-sans antialiased">
         <QueryProvider>
           <AuthProvider>
             <ClientLayout>

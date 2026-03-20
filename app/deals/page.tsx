@@ -154,10 +154,10 @@ const DealsPage = () => {
     : null;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white">
-        <div className="container mx-auto px-4 py-8 md:py-12">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full px-4 py-8 md:py-12">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div>
               <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full mb-4">
@@ -215,7 +215,7 @@ const DealsPage = () => {
 
       {/* Stats Bar */}
       <div className="bg-white border-b border-gray-100">
-        <div className="container mx-auto px-4 py-4">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full px-4 py-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-lg bg-red-50 flex items-center justify-center">
@@ -260,7 +260,7 @@ const DealsPage = () => {
 
       {/* Main Content */}
       <div className="py-8">
-        <div className="container mx-auto px-4">
+        <div className=" px-4">
           {/* Header */}
           <div className="mb-8">
             <h2 className="text-xl font-bold text-gray-900">

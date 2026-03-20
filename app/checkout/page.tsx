@@ -571,7 +571,7 @@ const handlePlaceOrder = async () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
         {/* Checkout Steps */}
         <div className="mb-8">
           <div className="flex items-center justify-center max-w-2xl mx-auto">

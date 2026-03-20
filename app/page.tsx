@@ -184,8 +184,8 @@ const HomePage: React.FC = () => {
       `}</style>
 
 {/* Banner Section - Negative margin for mobile only */}
-<section className="-mt-2 pt-0 sm:pt-2 md:pt-4 lg:pt-6 pb-0 px-4 sm:px-6 md:px-8 lg:px-12 overflow-hidden">
-  <div className="w-full">
+<section className="-mt-2 pt-0 sm:pt-2 md:pt-4 lg:pt-6 pb-0 overflow-hidden">
+  <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
     <BannerCarousel
       height={{ mobile: '280px', desktop: '380px' }}
       rounded={false}
@@ -220,60 +220,14 @@ const HomePage: React.FC = () => {
         <HandicraftsPage />
       </div>
 
-     {/* PERSONALIZED RECOMMENDATIONS SECTION */}
-{isAuthenticated ? (
-  <PersonalizedRecommendations 
+      <div>
+      <PersonalizedRecommendations 
     title="Recommended For You"
     limit={12}
     showHeader={true}
     showStrategy={true}
   />
-) : (
-  <section className="bg-white px-4 sm:px-6 md:px-8 lg:px-12">
-    <div className="w-full">
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 md:p-6 lg:p-8">
-        <div className="flex flex-col md:flex-row items-center justify-between">
-          <div className="mb-4 md:mb-0 md:mr-6 lg:mr-8">
-            <div className="flex items-center space-x-2 mb-3">
-              <div className="p-2 bg-white rounded-lg shadow-sm">
-                <MessageSquare size={20} className="text-blue-600" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">
-                Personalize Your Experience
-              </h3>
-            </div>
-            <p className="text-gray-700 mb-4 text-sm md:text-base">
-              Sign in to unlock personalized recommendations based on your preferences and shopping history.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/auth/login"
-                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 md:px-5 py-2.5 rounded-lg font-medium transition-all duration-300 inline-flex items-center justify-center shadow-sm hover:shadow text-sm md:text-base"
-              >
-                Sign In
-                <ArrowUp size={16} className="ml-2" />
-              </Link>
-              <Link
-                href="/auth/register"
-                className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 px-4 md:px-5 py-2.5 rounded-lg font-medium transition-colors inline-flex items-center justify-center text-sm md:text-base"
-              >
-                Create Account
-              </Link>
-            </div>
-          </div>
-          <div className="hidden md:block">
-            <div className="w-40 h-40 lg:w-48 lg:h-48 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-3xl lg:text-4xl font-bold text-blue-600 mb-2">✨</div>
-                <div className="text-xs lg:text-sm text-blue-800 font-medium">Tailored Just For You</div>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
-    </div>
-  </section>
-)}
 
 
             {/* New Arrivals Section - Using new component */}
@@ -290,8 +244,8 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* Promotional Banner - Compact */}
-      <section className="compact-section px-4 sm:px-6 md:px-8 lg:px-12 mt-6 sm:mt-8 md:mt-10">
-        <div className="w-full">
+      <section className="compact-section mt-6 sm:mt-8 md:mt-10">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
           <div className="relative rounded-xl md:rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
             <div className="bg-gradient-to-r from-green-500 via-emerald-600 to-green-700 p-4 md:p-6 lg:p-8">
               <div className="flex flex-col md:flex-row items-center justify-between">

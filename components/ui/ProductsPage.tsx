@@ -334,15 +334,15 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-6">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-emerald-600">
+          <h1 className="text-xl md:text-2xl font-bold text-emerald-600">
             {title}
           </h1>
           <Link
             href="/products"
-            className="text-sm text-emerald-600 underline underline-offset-2 hover:text-gray-900 transition-colors"
+            className="text-md text-emerald-600 underline underline-offset-2 hover:text-gray-900 transition-colors"
           >
             View all products
           </Link>
@@ -365,17 +365,13 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
               `}
             >
               {tab.label}
-              {activeTab === tab.id && totalProducts > 0 && (
-                <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full">
-                  {totalProducts}
-                </span>
-              )}
+           
             </button>
           ))}
         </div>
 
         {/* Products Grid */}
-        <div className="w-full">
+        <div>
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {[...Array(8)].map((_, i) => (

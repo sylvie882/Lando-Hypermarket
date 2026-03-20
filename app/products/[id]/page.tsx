@@ -224,7 +224,7 @@ const ProductDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full px-4 py-8">
         {/* Breadcrumb */}
         <nav className="flex items-center text-sm text-gray-600 mb-8">
           <a href="/" className="hover:text-orange-600">Home</a>
@@ -469,45 +469,6 @@ const ProductDetailPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Features */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
-                <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                  <Truck size={18} className="text-orange-600 mr-3" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">Free Delivery</p>
-                    <p className="text-xs text-gray-500">On orders over KSh 5,000</p>
-                  </div>
-                </div>
-                <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                  <Shield size={18} className="text-orange-600 mr-3" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">Quality Guarantee</p>
-                    <p className="text-xs text-gray-500">100% fresh products</p>
-                  </div>
-                </div>
-                <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                  <RefreshCw size={18} className="text-orange-600 mr-3" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">Easy Returns</p>
-                    <p className="text-xs text-gray-500">30-day return policy</p>
-                  </div>
-                </div>
-                <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                  <Truck size={18} className="text-orange-600 mr-3" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">Fast Shipping</p>
-                    <p className="text-xs text-gray-500">Same-day delivery</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* SKU */}
-              <div className="text-sm text-gray-600 border-t border-gray-100 pt-4 flex items-center">
-                <span className="font-bold mr-2">SKU:</span>
-                <code className="bg-gray-50 px-3 py-1 rounded font-mono text-gray-800">
-                  {product.sku}
-                </code>
-              </div>
             </div>
           </div>
         </div>
@@ -516,7 +477,7 @@ const ProductDetailPage: React.FC = () => {
         <div className="mt-8 sm:mt-12">
           <div className="border-b border-gray-200">
             <nav className="flex overflow-x-auto -mb-px">
-              {['description', 'reviews', 'specifications'].map((tab) => (
+              {['description', 'reviews'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -623,7 +584,7 @@ const ProductDetailPage: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'specifications' && (
+            {/* {activeTab === 'specifications' && (
               <div className="bg-white rounded-xl p-6 sm:p-8">
                 <h3 className="text-xl font-bold mb-4 text-gray-900">Product Specifications</h3>
                 {product.attributes && Object.keys(product.attributes).length > 0 ? (
@@ -639,7 +600,7 @@ const ProductDetailPage: React.FC = () => {
                   <p className="text-gray-500">No specifications available for this product.</p>
                 )}
               </div>
-            )}
+            )} */}
           </div>
         </div>
 

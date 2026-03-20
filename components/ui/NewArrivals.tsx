@@ -164,36 +164,34 @@ const NewArrivals: React.FC<NewArrivalsProps> = ({
   if (isLoading) {
     return (
       <div className={`bg-white ${className}`}>
-        <div className="px-4 sm:px-6 md:px-8 lg:px-12">
-          <div className="w-full">
-            <div className="animate-pulse">
-              {showHeader && (
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
-                    <div className="h-8 w-40 bg-gray-200 rounded"></div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-                    <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
+          <div className="animate-pulse">
+            {showHeader && (
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-2">
+                  <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                  <div className="h-8 w-40 bg-gray-200 rounded"></div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                  <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                </div>
+              </div>
+            )}
+            <div className="flex overflow-x-hidden space-x-4 pb-4">
+              {[...Array(4)].map((_, i) => (
+                <div 
+                  key={i} 
+                  className="flex-none w-64 animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                >
+                  <div className="bg-gray-200 h-48"></div>
+                  <div className="p-4">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+                    <div className="h-8 bg-gray-200 rounded"></div>
                   </div>
                 </div>
-              )}
-              <div className="flex overflow-x-hidden space-x-4 pb-4">
-                {[...Array(4)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="flex-none w-64 animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
-                  >
-                    <div className="bg-gray-200 h-48"></div>
-                    <div className="p-4">
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
-                      <div className="h-8 bg-gray-200 rounded"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -207,8 +205,7 @@ const NewArrivals: React.FC<NewArrivalsProps> = ({
 
   return (
     <div className={`bg-white ${className}`}>
-      <div className="px-4 sm:px-6 md:px-8 lg:px-12">
-        <div className="w-full">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
           {showHeader && (
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-2">
@@ -280,8 +277,9 @@ const NewArrivals: React.FC<NewArrivalsProps> = ({
           </div>
         </div>
       </div>
-
-      <style jsx global>{`
+    );
+    
+    <style jsx global>{`
         .hide-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
@@ -303,8 +301,6 @@ const NewArrivals: React.FC<NewArrivalsProps> = ({
           scroll-snap-align: start;
         }
       `}</style>
-    </div>
-  );
-};
+  };
 
 export default NewArrivals;
