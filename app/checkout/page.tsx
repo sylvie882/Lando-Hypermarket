@@ -1142,7 +1142,7 @@ const handlePlaceOrder = async () => {
                     <Lock size={20} className="mr-2" />
                     {processingPayment ? (
                       <span className="flex items-center">
-                        <LoadingSpinner size="sm" className="mr-2" />
+                        <LoadingSpinner size="sm" />
                         Processing Payment...
                       </span>
                     ) : isSubmitting ? 'Placing Order...' : 'Place Order'}
