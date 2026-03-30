@@ -3,60 +3,36 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
-export default function DeliveryAuthWrapper({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
+export default function DeliveryLayout({ children }: { children: React.ReactNode }) {
+  const router   = useRouter();
   const pathname = usePathname();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const checkAuth = () => {
-      // Skip auth check for login page
-      if (pathname === '/delivery/login') {
-        setIsAuthenticated(true); // Allow access to login page
-        setLoading(false);
-        return;
-      }
+    // Allow login page without auth
+    if (pathname === '/delivery/login') { setReady(true); return; }
 
-      const token = localStorage.getItem('delivery_token');
-      const user = localStorage.getItem('delivery_user');
-      
-      if (!token || !user) {
-        router.push('/delivery/login');
-        return false;
-      }
-      
-      try {
-        JSON.parse(user);
-        setIsAuthenticated(true);
-      } catch (error) {
-        router.push('/delivery/login');
-        return false;
-      }
-      
-      return true;
-    };
-    
-    setLoading(false);
-    if (!checkAuth()) {
-      setTimeout(() => {
-        if (!checkAuth()) {
-          router.push('/delivery/login');
-        }
-      }, 100);
+    const token = localStorage.getItem('delivery_token');
+    const user  = localStorage.getItem('delivery_user');
+
+    if (!token || !user) { router.push('/delivery/login'); return; }
+
+    try {
+      JSON.parse(user);
+      setReady(true);
+    } catch {
+      router.push('/delivery/login');
     }
-  }, [router, pathname]);
+  }, [pathname, router]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Checking authentication...</p>
-        </div>
+  if (!ready) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#080808' }}>
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl animate-pulse"
+        style={{ background: 'linear-gradient(135deg,#10b981,#059669)' }}>
+        🚚
       </div>
-    );
-  }
+    </div>
+  );
 
-  return isAuthenticated ? <>{children}</> : null;
+  return <>{children}</>;
 }

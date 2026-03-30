@@ -1,20 +1,39 @@
 import React from 'react';
 
 interface LoadingSpinnerProps {
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  message?: string;
+  fullPage?: boolean;
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ size = 'md', className = '' }) => {
-  const sizeClasses = {
-    sm: 'h-4 w-4 border-2',
-    md: 'h-8 w-8 border-3',
-    lg: 'h-12 w-12 border-4',
-  };
+const sizes = {
+  sm: 'w-5 h-5 border-2',
+  md: 'w-8 h-8 border-2',
+  lg: 'w-12 h-12 border-3',
+  xl: 'w-16 h-16 border-4',
+};
 
-  return (
-    <div className={`animate-spin rounded-full ${sizeClasses[size]} border-primary-500 border-t-transparent ${className}`}></div>
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
+  size = 'md',
+  message,
+  fullPage = false,
+}) => {
+  const spinner = (
+    <div className="flex flex-col items-center gap-3">
+      <div className={`${sizes[size]} rounded-full border-gray-200 border-t-emerald-500 animate-spin`} />
+      {message && <p className="text-sm text-gray-500 font-medium">{message}</p>}
+    </div>
   );
+
+  if (fullPage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        {spinner}
+      </div>
+    );
+  }
+
+  return spinner;
 };
 
 export default LoadingSpinner;

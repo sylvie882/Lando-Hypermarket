@@ -231,7 +231,7 @@ const WoodenUtensils: React.FC = () => {
               {/* <div className="p-2 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg">
                 <Sparkles size={20} className="text-white" />
               </div> */}
-              <h2 className="text-xl md:text-2xl font-bold text-emerald-600">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900">
                 {category?.name || 'Wooden Utensils'}
               </h2>
             </div>

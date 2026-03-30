@@ -99,6 +99,8 @@ export default function AdminDeliveriesPage() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
   const [availableStaff, setAvailableStaff] = useState<DeliveryStaff[]>([]);
+  const [formErrors, setFormErrors] = useState<Record<string, string[]>>({});
+  const [submitting, setSubmitting] = useState(false);
   const [stats, setStats] = useState<Stats>({
     total_deliveries: 0,
     active_deliveries: 0,
@@ -112,6 +114,37 @@ export default function AdminDeliveriesPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Helper function to safely extract array from API response
+  const safeExtractArray = (data: any, defaultValue: any[] = []): any[] => {
+    if (Array.isArray(data)) {
+      return data;
+    }
+    if (data && typeof data === 'object') {
+      // Check for paginated response structure (Laravel pagination)
+      if (data.data && Array.isArray(data.data)) {
+        return data.data;
+      }
+      if (Array.isArray(data.items)) {
+        return data.items;
+      }
+      if (Array.isArray(data.results)) {
+        return data.results;
+      }
+      if (Array.isArray(data.deliveries)) {
+        return data.deliveries;
+      }
+      if (Array.isArray(data.staff)) {
+        return data.staff;
+      }
+      // If it's an object with numeric keys, convert to array
+      if (Object.keys(data).every(key => !isNaN(Number(key)))) {
+        return Object.values(data);
+      }
+    }
+    console.warn('Expected array but got:', data);
+    return defaultValue;
+  };
 
   const fetchData = async () => {
     try {
@@ -134,7 +167,8 @@ export default function AdminDeliveriesPage() {
       if (deliveriesResponse.ok) {
         const deliveriesData = await deliveriesResponse.json();
         console.log('Deliveries response:', deliveriesData);
-        setDeliveries(deliveriesData.data || deliveriesData || []);
+        const deliveriesArray = safeExtractArray(deliveriesData, []);
+        setDeliveries(deliveriesArray);
       } else if (deliveriesResponse.status === 401) {
         localStorage.removeItem('admin_token');
         localStorage.removeItem('token');
@@ -142,7 +176,7 @@ export default function AdminDeliveriesPage() {
         return;
       }
 
-      // Fetch delivery staff (users with role=delivery_staff)
+      // Fetch delivery staff
       const staffResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/delivery-staff`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -153,7 +187,43 @@ export default function AdminDeliveriesPage() {
       if (staffResponse.ok) {
         const staffData = await staffResponse.json();
         console.log('Staff response:', staffData);
-        setDeliveryStaff(staffData.data || staffData || []);
+        
+        // Extract staff array from the response
+        let staffArray: DeliveryStaff[] = [];
+        
+        // Handle different response structures
+        if (staffData.data && staffData.data.data) {
+          // Paginated response with data.data structure
+          staffArray = staffData.data.data;
+        } else if (staffData.data && Array.isArray(staffData.data)) {
+          // Direct array in data
+          staffArray = staffData.data;
+        } else if (Array.isArray(staffData)) {
+          // Direct array
+          staffArray = staffData;
+        } else if (staffData.data && staffData.data.items) {
+          // Another pagination structure
+          staffArray = staffData.data.items;
+        } else {
+          staffArray = safeExtractArray(staffData, []);
+        }
+        
+        setDeliveryStaff(staffArray);
+        
+        // Update stats from the response if available
+        if (staffData.stats) {
+          setStats(prev => ({
+            ...prev,
+            total_staff: staffData.stats.total_staff || staffArray.length,
+            online_staff: staffData.stats.online_staff || staffArray.filter(s => s.is_online).length
+          }));
+        } else {
+          setStats(prev => ({
+            ...prev,
+            total_staff: staffArray.length,
+            online_staff: staffArray.filter(s => s.is_online).length
+          }));
+        }
       }
 
       // Fetch stats
@@ -167,15 +237,16 @@ export default function AdminDeliveriesPage() {
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
         console.log('Stats response:', statsData);
-        setStats(statsData.data || statsData || {
-          total_deliveries: 0,
-          active_deliveries: 0,
-          completed_today: 0,
-          total_staff: 0,
-          online_staff: 0,
-          pending_assignments: 0,
-          success_rate: 0
-        });
+        const extractedStats = statsData.data || statsData;
+        setStats(prev => ({
+          total_deliveries: extractedStats.total_deliveries || 0,
+          active_deliveries: extractedStats.active_deliveries || 0,
+          completed_today: extractedStats.completed_today || 0,
+          total_staff: extractedStats.total_staff || prev.total_staff,
+          online_staff: extractedStats.online_staff || prev.online_staff,
+          pending_assignments: extractedStats.pending_assignments || 0,
+          success_rate: extractedStats.success_rate || 0
+        }));
       }
 
       // Fetch available staff for assignment
@@ -188,7 +259,20 @@ export default function AdminDeliveriesPage() {
       
       if (availableResponse.ok) {
         const availableData = await availableResponse.json();
-        setAvailableStaff(availableData.data || availableData || []);
+        let availableArray: DeliveryStaff[] = [];
+        
+        // Extract available staff array
+        if (availableData.data && availableData.data.data) {
+          availableArray = availableData.data.data;
+        } else if (availableData.data && Array.isArray(availableData.data)) {
+          availableArray = availableData.data;
+        } else if (Array.isArray(availableData)) {
+          availableArray = availableData;
+        } else {
+          availableArray = safeExtractArray(availableData, []);
+        }
+        
+        setAvailableStaff(availableArray);
       }
 
     } catch (error) {
@@ -230,7 +314,21 @@ export default function AdminDeliveriesPage() {
       
       if (response.ok) {
         const data = await response.json();
-        setAvailableStaff(data.data || data || []);
+        let availableArray: DeliveryStaff[] = [];
+        
+        if (data.data && data.data.data) {
+          availableArray = data.data.data;
+        } else if (data.data && Array.isArray(data.data)) {
+          availableArray = data.data;
+        } else if (Array.isArray(data)) {
+          availableArray = data;
+        } else {
+          availableArray = safeExtractArray(data, []);
+        }
+        
+        setAvailableStaff(availableArray);
+        setShowAssignModal(true);
+      } else {
         setShowAssignModal(true);
       }
     } catch (error) {
@@ -273,8 +371,25 @@ export default function AdminDeliveriesPage() {
   };
 
   const handleAddStaff = async (staffData: any) => {
+    setFormErrors({});
+    setSubmitting(true);
+    
     try {
       const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+      
+      // Only send fields that exist in your database
+      const formattedData = {
+        name: staffData.name,
+        email: staffData.email,
+        phone: staffData.phone,
+        password: staffData.password,
+        address: staffData.address,
+        vehicle_type: staffData.vehicle_type,
+        vehicle_number: staffData.vehicle_number,
+      };
+      
+      console.log('Sending data:', formattedData);
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/delivery-staff`, {
         method: 'POST',
         headers: {
@@ -282,21 +397,32 @@ export default function AdminDeliveriesPage() {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify(staffData),
+        body: JSON.stringify(formattedData),
       });
 
       const data = await response.json();
+      console.log('Add staff response:', data);
       
       if (response.ok && data.success) {
-        fetchData();
+        await fetchData();
         setShowAddStaffModal(false);
         alert('Delivery staff added successfully!');
       } else {
-        alert(data.message || 'Failed to add staff');
+        let errorMessage = data.message || 'Failed to add staff';
+        
+        if (data.errors) {
+          const errorList = Object.values(data.errors).flat().join('\n');
+          errorMessage = `Validation errors:\n${errorList}`;
+          setFormErrors(data.errors);
+        }
+        
+        alert(errorMessage);
       }
     } catch (error) {
       console.error('Failed to add staff:', error);
-      alert('Failed to add staff');
+      alert('Failed to add staff. Please check the console for details.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -332,7 +458,6 @@ export default function AdminDeliveriesPage() {
   };
 
   const handleBulkAssign = async () => {
-    // Get unassigned deliveries
     const unassignedDeliveries = deliveries.filter(d => !d.delivery_staff_id && d.status === 'pending');
     
     if (unassignedDeliveries.length === 0) {
@@ -347,10 +472,8 @@ export default function AdminDeliveriesPage() {
 
     try {
       const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
-      
-      // Assign to first available staff (you can implement smarter assignment logic)
       const staff = availableStaff[0];
-      const deliveryIds = unassignedDeliveries.slice(0, 3).map(d => d.id); // Limit to 3 for demo
+      const deliveryIds = unassignedDeliveries.slice(0, 3).map(d => d.id);
       
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/deliveries/bulk-assign`, {
         method: 'POST',
@@ -380,22 +503,27 @@ export default function AdminDeliveriesPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid date';
+    }
   };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
       currency: 'KES'
-    }).format(amount);
+    }).format(amount || 0);
   };
 
-  const filteredDeliveries = deliveries.filter(delivery => {
+  const filteredDeliveries = Array.isArray(deliveries) ? deliveries.filter(delivery => {
     const matchesSearch = 
       delivery.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       delivery.delivery_address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -404,23 +532,21 @@ export default function AdminDeliveriesPage() {
     const matchesStatus = statusFilter === 'all' || delivery.status === statusFilter;
     
     return matchesSearch && matchesStatus;
-  });
+  }) : [];
 
-  const filteredStaff = deliveryStaff.filter(staff => {
+  const filteredStaff = Array.isArray(deliveryStaff) ? deliveryStaff.filter(staff => {
     return staff.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
            staff.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
            staff.vehicle_number?.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  }) : [];
 
-  // Calculate available staff count
-  const availableStaffCount = deliveryStaff.filter(staff => 
+  const availableStaffCount = Array.isArray(deliveryStaff) ? deliveryStaff.filter(staff => 
     staff.is_online && staff.status === 'active'
-  ).length;
+  ).length : 0;
 
-  // Calculate pending assignments
-  const pendingDeliveriesCount = deliveries.filter(d => 
+  const pendingDeliveriesCount = Array.isArray(deliveries) ? deliveries.filter(d => 
     !d.delivery_staff_id && d.status === 'pending'
-  ).length;
+  ).length : 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -543,7 +669,7 @@ export default function AdminDeliveriesPage() {
                 >
                   <div className="flex items-center">
                     <Truck className="w-4 h-4 mr-2" />
-                    Deliveries ({deliveries.length})
+                    Deliveries ({Array.isArray(deliveries) ? deliveries.length : 0})
                     {pendingDeliveriesCount > 0 && (
                       <span className="ml-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
                         {pendingDeliveriesCount} pending
@@ -561,7 +687,7 @@ export default function AdminDeliveriesPage() {
                 >
                   <div className="flex items-center">
                     <Users className="w-4 h-4 mr-2" />
-                    Delivery Staff ({deliveryStaff.length})
+                    Delivery Staff ({Array.isArray(deliveryStaff) ? deliveryStaff.length : 0})
                     {availableStaffCount > 0 && (
                       <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
                         {availableStaffCount} available
@@ -669,7 +795,6 @@ export default function AdminDeliveriesPage() {
               {filteredDeliveries.map((delivery) => (
                 <div key={delivery.id} className="bg-white rounded-lg shadow overflow-hidden hover:shadow-md transition-shadow">
                   <div className="p-6">
-                    {/* Delivery Header */}
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center">
                         <div className={`p-2 rounded-full ${getStatusColor(delivery.status)}`}>
@@ -700,7 +825,6 @@ export default function AdminDeliveriesPage() {
                       </div>
                     </div>
 
-                    {/* Delivery Information */}
                     <div className="space-y-4">
                       <div>
                         <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center">
@@ -750,7 +874,6 @@ export default function AdminDeliveriesPage() {
                       )}
                     </div>
 
-                    {/* Actions */}
                     <div className="mt-6 pt-6 border-t border-gray-200">
                       <div className="flex space-x-3">
                         <button
@@ -780,7 +903,7 @@ export default function AdminDeliveriesPage() {
 
           {/* Staff Tab Content */}
           {activeTab === 'staff' && (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -895,7 +1018,6 @@ export default function AdminDeliveriesPage() {
           {activeTab === 'assignments' && (
             <div className="bg-white rounded-lg shadow p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Available Staff */}
                 <div className="bg-gray-50 rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Available Delivery Staff</h3>
                   <div className="space-y-4">
@@ -935,7 +1057,6 @@ export default function AdminDeliveriesPage() {
                   </div>
                 </div>
 
-                {/* Pending Assignments */}
                 <div className="bg-gray-50 rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Pending Assignments</h3>
                   <div className="space-y-4">
@@ -989,7 +1110,6 @@ export default function AdminDeliveriesPage() {
                 </div>
               </div>
 
-              {/* Quick Actions */}
               <div className="mt-8 pt-8 border-t border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1087,6 +1207,9 @@ export default function AdminDeliveriesPage() {
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
+                    {formErrors.name && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.name[0]}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -1099,6 +1222,9 @@ export default function AdminDeliveriesPage() {
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
+                    {formErrors.email && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.email[0]}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -1111,6 +1237,9 @@ export default function AdminDeliveriesPage() {
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
+                    {formErrors.phone && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.phone[0]}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -1121,8 +1250,12 @@ export default function AdminDeliveriesPage() {
                       type="password"
                       name="password"
                       required
+                      minLength={6}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
+                    {formErrors.password && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.password[0]}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -1142,6 +1275,9 @@ export default function AdminDeliveriesPage() {
                       <option value="van">Van</option>
                       <option value="truck">Truck</option>
                     </select>
+                    {formErrors.vehicle_type && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.vehicle_type[0]}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -1155,6 +1291,9 @@ export default function AdminDeliveriesPage() {
                       placeholder="e.g., KBC 123A"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
+                    {formErrors.vehicle_number && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.vehicle_number[0]}</p>
+                    )}
                   </div>
                   
                   <div className="md:col-span-2">
@@ -1168,6 +1307,9 @@ export default function AdminDeliveriesPage() {
                       placeholder="Full physical address"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
+                    {formErrors.address && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.address[0]}</p>
+                    )}
                   </div>
                 </div>
                 
@@ -1176,14 +1318,23 @@ export default function AdminDeliveriesPage() {
                     type="button"
                     onClick={() => setShowAddStaffModal(false)}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    disabled={submitting}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                    disabled={submitting}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
-                    Add Delivery Staff
+                    {submitting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      'Add Delivery Staff'
+                    )}
                   </button>
                 </div>
               </form>
@@ -1305,7 +1456,6 @@ export default function AdminDeliveriesPage() {
                 {availableStaff.length > 0 && (
                   <button
                     onClick={() => {
-                      // Auto-assign to highest rated staff
                       const bestStaff = availableStaff.reduce((prev, current) => 
                         (prev.rating > current.rating) ? prev : current
                       );

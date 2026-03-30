@@ -337,7 +337,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl md:text-2xl font-bold text-emerald-600">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">
             {title}
           </h1>
           <Link

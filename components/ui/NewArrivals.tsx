@@ -212,7 +212,7 @@ const NewArrivals: React.FC<NewArrivalsProps> = ({
                 {/* <div className="p-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-lg">
                   <Clock4 size={20} className="text-white" />
                 </div> */}
-                <h2 className="text-xl md:text-2xl font-bold text-emerald-600">{title}</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h2>
               </div>
               
               {/* Navigation Icons */}

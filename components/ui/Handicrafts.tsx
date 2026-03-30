@@ -227,7 +227,7 @@ const HandicraftsPage: React.FC = () => {
         {/* Header with Title and Scroll Controls */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2">
-            <h2 className="text-xl md:text-2xl font-bold text-emerald-600">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
               {category?.name || 'Handicrafts & Artisan'}
             </h2>
           </div>

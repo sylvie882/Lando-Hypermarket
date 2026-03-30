@@ -1,981 +1,641 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Truck,
-  Package,
-  Clock,
-  DollarSign,
-  MapPin,
-  Navigation,
-  Battery,
-  Wifi,
-  Bell,
-  User,
-  LogOut,
-  Menu,
-  X,
-  CheckCircle,
-  AlertCircle,
-  TrendingUp,
-  BarChart3,
-  Settings,
-  Calendar,
-  Star,
-  Shield,
-  RefreshCw,
-  Phone,
-  Mail,
-  Map,
-  CheckSquare,
-  AlertTriangle
-} from 'lucide-react';
 
+interface Driver {
+  id: number; name: string; email: string; phone: string;
+  role: string; rating: number; is_online: boolean;
+  vehicle_type?: string; vehicle_number?: string;
+}
+interface Stats {
+  total_deliveries: number; completed_deliveries: number;
+  pending_deliveries: number; active_deliveries: number;
+  total_earnings: number; today_earnings: number; week_earnings: number;
+  average_rating: number; on_time_deliveries: number;
+}
 interface Delivery {
-  id: number;
-  order_id: number;
-  order_number: string;
-  status: 'pending' | 'assigned' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'failed' | 'cancelled' | 'returned';
-  delivery_address: string;
-  customer_name?: string;
-  customer_phone?: string;
-  estimated_delivery_time: string;
-  actual_delivery_time: string | null;
-  delivery_fee: number;
-  delivery_notes?: string;
-  created_at: string;
-  current_latitude?: number;
-  current_longitude?: number;
-  latitude?: number;
-  longitude?: number;
+  id: number; order_id: number; order_number: string;
+  status: string; delivery_address: string;
+  customer_name?: string; customer_phone?: string;
+  estimated_delivery_time: string; actual_delivery_time?: string;
+  delivery_fee: number; delivery_notes?: string; created_at: string;
+  current_latitude?: number; current_longitude?: number;
+  latitude?: number; longitude?: number;
 }
 
-interface DeliveryStats {
-  total_deliveries: number;
-  completed_deliveries: number;
-  pending_deliveries: number;
-  cancelled_deliveries: number;
-  total_earnings: number;
-  average_rating: number;
-  on_time_deliveries: number;
-}
+const STATUS: Record<string, {label:string;dot:string;bg:string;text:string}> = {
+  pending:          {label:'Pending',         dot:'#f59e0b',bg:'rgba(245,158,11,.1)', text:'#f59e0b'},
+  assigned:         {label:'Assigned',        dot:'#3b82f6',bg:'rgba(59,130,246,.1)', text:'#3b82f6'},
+  in_transit:       {label:'In Transit',      dot:'#8b5cf6',bg:'rgba(139,92,246,.1)', text:'#8b5cf6'},
+  out_for_delivery: {label:'Out for Delivery',dot:'#f97316',bg:'rgba(249,115,22,.1)', text:'#f97316'},
+  delivered:        {label:'Delivered',       dot:'#10b981',bg:'rgba(16,185,129,.1)', text:'#10b981'},
+  failed:           {label:'Failed',          dot:'#ef4444',bg:'rgba(239,68,68,.1)',  text:'#ef4444'},
+  cancelled:        {label:'Cancelled',       dot:'#6b7280',bg:'rgba(107,114,128,.1)',text:'#6b7280'},
+  returned:         {label:'Returned',        dot:'#ef4444',bg:'rgba(239,68,68,.1)',  text:'#ef4444'},
+};
 
-interface DeliveryStaff {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  role: string;
-  rating: number;
-  is_online: boolean;
-  vehicle_type: string;
-  vehicle_number: string;
-}
+const ICON: Record<string,string> = {
+  pending:'⏳', assigned:'📋', in_transit:'🚗', out_for_delivery:'📦',
+  delivered:'✅', failed:'❌', cancelled:'🚫', returned:'↩️'
+};
 
-export default function DeliveryStaffDashboard() {
-  const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [deliveryStaff, setDeliveryStaff] = useState<DeliveryStaff | null>(null);
-  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
-  const [stats, setStats] = useState<DeliveryStats>({
-    total_deliveries: 0,
-    completed_deliveries: 0,
-    pending_deliveries: 0,
-    cancelled_deliveries: 0,
-    total_earnings: 0,
-    average_rating: 0,
-    on_time_deliveries: 0
+const API = process.env.NEXT_PUBLIC_API_URL || '';
+
+async function api(path: string, opts: RequestInit = {}) {
+  const token = localStorage.getItem('delivery_token');
+  const res = await fetch(`${API}${path}`, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json', Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(opts.headers || {}),
+    },
   });
-  const [loading, setLoading] = useState(true);
+  if (res.status === 401) throw new Error('UNAUTH');
+  return res.json();
+}
+
+const KES = (n: number) =>
+  new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 0 }).format(n || 0);
+
+export default function DeliveryDashboard() {
+  const router = useRouter();
+  const [driver,     setDriver]     = useState<Driver | null>(null);
+  const [stats,      setStats]      = useState<Stats | null>(null);
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [onlineStatus, setOnlineStatus] = useState(true);
-  const [activeTab, setActiveTab] = useState<'active' | 'pending' | 'completed'>('active');
-  const [showUpdateStatusModal, setShowUpdateStatusModal] = useState<number | null>(null);
-  const [showOTPModal, setShowOTPModal] = useState<number | null>(null);
-  const [otp, setOtp] = useState('');
-  const [statusUpdateNotes, setStatusUpdateNotes] = useState('');
+  const [tab,        setTab]        = useState<'active'|'pending'|'history'>('active');
+  const [view,       setView]       = useState<'home'|'earnings'|'profile'>('home');
+  const [menuOpen,   setMenuOpen]   = useState(false);
+  const [statusModal,setStatusModal]= useState<Delivery|null>(null);
+  const [otpModal,   setOtpModal]   = useState<Delivery|null>(null);
+  const [otp,        setOtp]        = useState('');
+  const [busy,       setBusy]       = useState<number|null>(null);
+  const [toast,      setToast]      = useState('');
 
-  useEffect(() => {
-    checkAuth();
-    fetchData();
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''), 3200); };
 
-  const checkAuth = () => {
-    const userStr = localStorage.getItem('delivery_user');
-    const token = localStorage.getItem('delivery_token');
-    
-    if (!userStr || !token) {
-      router.push('/delivery/login');
-      return;
-    }
-    
-    try {
-      const user = JSON.parse(userStr);
-      setDeliveryStaff(user);
-      setOnlineStatus(user.is_online ?? true);
-    } catch (error) {
-      router.push('/delivery/login');
-    }
-  };
-
-  const fetchData = async () => {
-    try {
-      setRefreshing(true);
-      const token = localStorage.getItem('delivery_token');
-      
-      if (!token) {
-        router.push('/delivery/login');
-        return;
-      }
-
-      // Fetch stats
-      const statsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-staff/stats`, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        },
-      });
-      
-      if (statsResponse.status === 401) {
-        // Token expired or invalid
-        localStorage.removeItem('delivery_token');
-        localStorage.removeItem('delivery_user');
-        router.push('/delivery/login');
-        return;
-      }
-      
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        if (statsData.success && statsData.data) {
-          setStats(statsData.data.stats);
-          setDeliveryStaff(statsData.data.user);
-        }
-      }
-
-      // Fetch deliveries
-      const deliveriesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-staff/deliveries`, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        },
-      });
-      
-      if (deliveriesResponse.ok) {
-        const deliveriesData = await deliveriesResponse.json();
-        if (deliveriesData.success) {
-          setDeliveries(deliveriesData.data || deliveriesData);
-        }
-      }
-
-    } catch (err) {
-      console.error('Failed to fetch data:', err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const handleLogout = () => {
+  const logout = () => {
     localStorage.removeItem('delivery_token');
     localStorage.removeItem('delivery_user');
     router.push('/delivery/login');
   };
 
-  const updateOnlineStatus = async (status: boolean) => {
+  const load = useCallback(async (quiet = false) => {
+    quiet ? setRefreshing(true) : setLoading(true);
     try {
-      const token = localStorage.getItem('delivery_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-staff/online-status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ is_online: status }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setOnlineStatus(status);
-          // Update local storage user data
-          const userStr = localStorage.getItem('delivery_user');
-          if (userStr) {
-            const user = JSON.parse(userStr);
-            user.is_online = status;
-            localStorage.setItem('delivery_user', JSON.stringify(user));
-            setDeliveryStaff(user);
-          }
-        }
+      const [s, d] = await Promise.all([
+        api('/delivery-staff/stats'),
+        api('/delivery-staff/deliveries?per_page=50'),
+      ]);
+      if (s.success) { setStats(s.data.stats); setDriver(s.data.user); }
+      if (d.success) {
+        const list = d.data?.data || d.data || [];
+        setDeliveries(Array.isArray(list) ? list : []);
       }
-    } catch (error) {
-      console.error('Failed to update online status:', error);
+    } catch (e: unknown) {
+      if ((e as Error).message === 'UNAUTH') logout();
+    } finally {
+      setLoading(false); setRefreshing(false);
     }
+  }, []); // eslint-disable-line
+
+  useEffect(() => {
+    if (!localStorage.getItem('delivery_token')) { router.push('/delivery/login'); return; }
+    try { const u = localStorage.getItem('delivery_user'); if (u) setDriver(JSON.parse(u)); } catch {}
+    load();
+    const iv = setInterval(() => load(true), 30000);
+    return () => clearInterval(iv);
+  }, [load, router]);
+
+  const toggleOnline = async () => {
+    if (!driver) return;
+    const next = !driver.is_online;
+    setDriver(d => d ? { ...d, is_online: next } : d);
+    try { await api('/delivery-staff/online-status', { method: 'PUT', body: JSON.stringify({ is_online: next }) }); }
+    catch { setDriver(d => d ? { ...d, is_online: !next } : d); }
+    showToast(next ? '🟢 You are now Online' : '⚫ You are now Offline');
   };
 
-  const updateDeliveryStatus = async (deliveryId: number, status: string) => {
+  const doStatus = async (delivery: Delivery, status: string) => {
+    setBusy(delivery.id);
     try {
-      const token = localStorage.getItem('delivery_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-staff/deliveries/${deliveryId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          status,
-          notes: statusUpdateNotes 
-        }),
+      const r = await api(`/delivery-staff/deliveries/${delivery.id}/status`, {
+        method: 'PUT', body: JSON.stringify({ status }),
       });
-
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        // Refresh data
-        fetchData();
-        setShowUpdateStatusModal(null);
-        setStatusUpdateNotes('');
-        
-        // If marking as delivered, show OTP modal
-        if (status === 'delivered') {
-          setShowOTPModal(deliveryId);
-        }
-      } else {
-        alert(data.message || 'Failed to update status');
-      }
-    } catch (error) {
-      console.error('Failed to update delivery status:', error);
-      alert('Failed to update delivery status');
-    }
+      if (r.success) { showToast(`✅ ${STATUS[status]?.label || status}`); setStatusModal(null); load(true); }
+      else showToast('❌ ' + (r.message || 'Error'));
+    } catch { showToast('❌ Network error'); }
+    finally { setBusy(null); }
   };
 
-  const verifyDeliveryOTP = async (deliveryId: number) => {
+  const doOTP = async () => {
+    if (!otpModal || otp.length < 4) return;
+    setBusy(otpModal.id);
     try {
-      const token = localStorage.getItem('delivery_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-staff/deliveries/${deliveryId}/verify`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ otp }),
+      const r = await api(`/delivery-staff/deliveries/${otpModal.id}/verify`, {
+        method: 'POST', body: JSON.stringify({ otp }),
       });
-
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        alert('Delivery verified successfully!');
-        setShowOTPModal(null);
-        setOtp('');
-        fetchData();
-      } else {
-        alert(data.message || 'Invalid OTP');
-      }
-    } catch (error) {
-      console.error('Failed to verify delivery:', error);
-      alert('Failed to verify delivery');
-    }
+      if (r.success) { showToast('🎉 Delivery completed!'); setOtpModal(null); setOtp(''); load(true); }
+      else showToast('❌ ' + (r.message || 'Invalid OTP'));
+    } catch { showToast('❌ Network error'); }
+    finally { setBusy(null); }
   };
 
-  const updateDeliveryLocation = async (deliveryId: number) => {
-    // Get current location using browser geolocation
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const token = localStorage.getItem('delivery_token');
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-staff/deliveries/${deliveryId}/location`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude
-            }),
-          });
-
-          const data = await response.json();
-          
-          if (response.ok && data.success) {
-            alert('Location updated successfully!');
-            fetchData();
-          } else {
-            alert(data.message || 'Failed to update location');
-          }
-        } catch (error) {
-          console.error('Failed to update location:', error);
-          alert('Failed to update location');
-        }
-      },
-      (error) => {
-        alert('Unable to get your location: ' + error.message);
-      }
-    );
+  const sendLocation = (delivery: Delivery) => {
+    if (!navigator.geolocation) { showToast('❌ Geolocation not supported'); return; }
+    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+      try {
+        await api(`/delivery-staff/deliveries/${delivery.id}/location`, {
+          method: 'POST',
+          body: JSON.stringify({ latitude: coords.latitude, longitude: coords.longitude }),
+        });
+        showToast('📍 Location updated');
+      } catch { showToast('❌ Location update failed'); }
+    }, () => showToast('❌ Location access denied'));
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      assigned: 'bg-blue-100 text-blue-800',
-      in_transit: 'bg-purple-100 text-purple-800',
-      out_for_delivery: 'bg-orange-100 text-orange-800',
-      delivered: 'bg-green-100 text-green-800',
-      failed: 'bg-red-100 text-red-800',
-      cancelled: 'bg-gray-100 text-gray-800',
-      returned: 'bg-red-100 text-red-800'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'delivered':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'failed':
-        return <AlertCircle className="w-4 h-4" />;
-      case 'in_transit':
-        return <Navigation className="w-4 h-4" />;
-      case 'out_for_delivery':
-        return <Truck className="w-4 h-4" />;
-      default:
-        return <Package className="w-4 h-4" />;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const filteredDeliveries = deliveries.filter(delivery => {
-    switch (activeTab) {
-      case 'active':
-        return ['assigned', 'in_transit', 'out_for_delivery'].includes(delivery.status);
-      case 'pending':
-        return delivery.status === 'pending';
-      case 'completed':
-        return ['delivered', 'failed', 'cancelled'].includes(delivery.status);
-      default:
-        return true;
-    }
+  const filtered = deliveries.filter(d => {
+    if (tab==='active')  return ['assigned','in_transit','out_for_delivery'].includes(d.status);
+    if (tab==='pending') return d.status==='pending';
+    return ['delivered','failed','cancelled','returned'].includes(d.status);
   });
+  const counts = {
+    active:  deliveries.filter(d=>['assigned','in_transit','out_for_delivery'].includes(d.status)).length,
+    pending: deliveries.filter(d=>d.status==='pending').length,
+    history: deliveries.filter(d=>['delivered','failed','cancelled','returned'].includes(d.status)).length,
+  };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{background:'#080808'}}>
+      <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl animate-pulse"
+        style={{background:'linear-gradient(135deg,#10b981,#059669)'}}>🚚</div>
+      <p className="text-sm text-gray-500">Loading dashboard...</p>
+    </div>
+  );
+
+  /* ── helpers ── */
+  const online = driver?.is_online;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
-              >
-                <Menu className="h-6 w-6" />
-              </button>
-              <div className="flex items-center">
-                <Truck className="h-8 w-8 text-blue-600" />
-                <div className="ml-3">
-                  <h1 className="text-lg font-semibold text-gray-900">Delivery Dashboard</h1>
-                  <p className="text-sm text-gray-500">
-                    Welcome back, {deliveryStaff?.name || 'Driver'}
-                  </p>
-                </div>
-              </div>
-            </div>
+    <div className="min-h-screen" style={{background:'#080808',color:'#fff',fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif",paddingBottom:'72px'}}>
 
-            <div className="flex items-center space-x-4">
-              {/* Online Status Toggle */}
-              <div className="hidden md:flex items-center space-x-2">
-                <div className={`h-3 w-3 rounded-full ${onlineStatus ? 'bg-green-400' : 'bg-gray-400'}`}></div>
-                <span className="text-sm text-gray-600">
-                  {onlineStatus ? 'Online' : 'Offline'}
-                </span>
-                <button
-                  onClick={() => updateOnlineStatus(!onlineStatus)}
-                  className={`px-3 py-1 text-sm rounded-full ${onlineStatus ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}
-                >
-                  {onlineStatus ? 'Go Offline' : 'Go Online'}
-                </button>
-              </div>
+      {/* TOAST */}
+      {toast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl text-sm shadow-2xl"
+          style={{background:'#1a1a1a',border:'1px solid #2a2a2a',whiteSpace:'nowrap'}}>
+          {toast}
+        </div>
+      )}
 
-              {/* Refresh Button */}
-              <button
-                onClick={fetchData}
-                disabled={refreshing}
-                className="p-2 text-gray-400 hover:text-gray-500"
-                title="Refresh"
-              >
-                <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
-              </button>
-
-              {/* Notifications */}
-              <button className="p-2 text-gray-400 hover:text-gray-500 relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-              </button>
-
-              {/* User Menu */}
-              <div className="relative">
-                <button className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100">
-                  <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <User className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <span className="hidden md:inline text-sm font-medium text-gray-700">
-                    {deliveryStaff?.name}
-                  </span>
-                </button>
-              </div>
-            </div>
+      {/* HEADER */}
+      <header className="sticky top-0 z-40 flex items-center justify-between px-4 h-16"
+        style={{background:'rgba(8,8,8,.9)',backdropFilter:'blur(12px)',borderBottom:'1px solid #1a1a1a'}}>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+            style={{background:'linear-gradient(135deg,#10b981,#059669)'}}>🚚</div>
+          <div>
+            <p className="font-bold text-sm leading-none">{driver?.name?.split(' ')[0] || 'Driver'}</p>
+            <p className="text-xs leading-none mt-0.5" style={{color:'#4b5563'}}>
+              {driver?.vehicle_type ? `${driver.vehicle_type} · ${driver.vehicle_number}` : 'Delivery Driver'}
+            </p>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          {/* Online pill */}
+          <button onClick={toggleOnline}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+            style={{
+              background: online ? 'rgba(16,185,129,.12)' : 'rgba(107,114,128,.12)',
+              border: `1px solid ${online ? 'rgba(16,185,129,.3)' : '#2a2a2a'}`,
+              color: online ? '#10b981' : '#6b7280',
+            }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{
+              background: online ? '#10b981' : '#6b7280',
+              boxShadow: online ? '0 0 6px #10b981' : 'none',
+            }}/>
+            {online ? 'Online' : 'Offline'}
+          </button>
+          {/* Refresh */}
+          <button onClick={()=>load(true)} disabled={refreshing}
+            className="p-2 rounded-xl transition-colors" style={{color:'#4b5563'}}>
+            <svg className={`w-4 h-4 ${refreshing?'animate-spin':''}`} fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+            </svg>
+          </button>
+          {/* Menu */}
+          <button onClick={()=>setMenuOpen(true)} className="p-2" style={{color:'#4b5563'}}>
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      {/* SLIDE MENU */}
+      {menuOpen && (
+        <>
+          <div onClick={()=>setMenuOpen(false)} className="fixed inset-0 z-50" style={{background:'rgba(0,0,0,.6)'}}/>
+          <div className="fixed right-0 top-0 bottom-0 w-72 z-50 flex flex-col p-6 gap-2"
+            style={{background:'#111',borderLeft:'1px solid #1f1f1f'}}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold text-black"
+                style={{background:'linear-gradient(135deg,#10b981,#059669)'}}>
+                {driver?.name?.[0]||'?'}
+              </div>
+              <div>
+                <p className="font-bold">{driver?.name}</p>
+                <p className="text-xs text-gray-500">⭐ {(driver?.rating||4.8).toFixed(1)} rating</p>
+              </div>
+            </div>
+            {[
+              {icon:'📊',label:'Dashboard',action:()=>{setView('home');setMenuOpen(false);}},
+              {icon:'💰',label:'Earnings',action:()=>{setView('earnings');setMenuOpen(false);}},
+              {icon:'👤',label:'Profile',action:()=>{setView('profile');setMenuOpen(false);}},
+              {icon:'🗺️',label:'Current Route',action:()=>{
+                const a=deliveries.find(d=>['in_transit','out_for_delivery'].includes(d.status));
+                if(a) router.push(`/delivery/route/${a.id}`);
+                else showToast('No active delivery');
+                setMenuOpen(false);
+              }},
+            ].map(item=>(
+              <button key={item.label} onClick={item.action}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors text-left"
+                style={{color:'#e5e7eb'}}
+                onMouseEnter={e=>(e.currentTarget.style.background='#1a1a1a')}
+                onMouseLeave={e=>(e.currentTarget.style.background='transparent')}>
+                <span className="text-xl">{item.icon}</span>{item.label}
+              </button>
+            ))}
+            <div className="flex-1"/>
+            <button onClick={logout}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold"
+              style={{background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.2)',color:'#f87171'}}>
+              <span className="text-xl">🚪</span>Sign Out
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ── HOME VIEW ── */}
+      {view==='home' && (
+        <div className="px-4 py-5 max-w-xl mx-auto">
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            {[
+              {label:"Today's Earnings",val:KES(stats?.today_earnings||0),icon:'💰',color:'#10b981'},
+              {label:'Active Now',      val:`${stats?.active_deliveries||0}`,icon:'📦',color:'#3b82f6'},
+              {label:'Completed',       val:`${stats?.completed_deliveries||0}`,icon:'✅',color:'#10b981'},
+              {label:'Your Rating',     val:`${(stats?.average_rating||driver?.rating||4.8).toFixed(1)} ⭐`,icon:'⭐',color:'#f59e0b'},
+            ].map(c=>(
+              <div key={c.label} className="rounded-2xl p-4" style={{background:'#111',border:'1px solid #1f1f1f'}}>
+                <span className="text-2xl mb-2 block">{c.icon}</span>
+                <p className="text-xl font-bold" style={{color:c.color}}>{c.val}</p>
+                <p className="text-xs text-gray-600 mt-0.5">{c.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Week banner */}
+          <div className="rounded-2xl p-5 flex items-center justify-between mb-5"
+            style={{background:'linear-gradient(135deg,rgba(16,185,129,.1),rgba(5,150,105,.05))',border:'1px solid rgba(16,185,129,.2)'}}>
+            <div>
+              <p className="text-xs font-bold mb-1" style={{color:'#10b981',letterSpacing:'.05em'}}>WEEK TOTAL</p>
+              <p className="text-3xl font-bold">{KES(stats?.week_earnings||0)}</p>
+            </div>
+            <button onClick={()=>setView('earnings')}
+              className="px-4 py-2 rounded-xl text-xs font-bold transition-all"
+              style={{background:'rgba(16,185,129,.15)',border:'1px solid rgba(16,185,129,.3)',color:'#10b981'}}>
+              Details →
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-1 p-1 rounded-xl mb-4" style={{background:'#111'}}>
+            {(['active','pending','history'] as const).map(t=>(
+              <button key={t} onClick={()=>setTab(t)}
+                className="flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all capitalize"
+                style={{
+                  background: tab===t ? '#fff' : 'transparent',
+                  color: tab===t ? '#000' : '#6b7280',
+                }}>
+                {t} ({counts[t]})
+              </button>
+            ))}
+          </div>
+
+          {/* Delivery cards */}
+          <div className="flex flex-col gap-3">
+            {filtered.length===0 ? (
+              <div className="rounded-2xl p-10 text-center" style={{background:'#111',border:'1px solid #1f1f1f'}}>
+                <p className="text-4xl mb-3">{tab==='active'?'🛵':tab==='pending'?'📋':'📂'}</p>
+                <p className="text-sm text-gray-500">No {tab} deliveries</p>
+              </div>
+            ) : filtered.map(d=>(
+              <Card key={d.id} d={d} busy={busy===d.id}
+                onStatus={()=>setStatusModal(d)}
+                onVerify={()=>{setOtpModal(d);setOtp('');}}
+                onLocation={()=>sendLocation(d)}
+                onRoute={()=>router.push(`/delivery/route/${d.id}`)}
+                onStart={()=>doStatus(d,'in_transit')}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── EARNINGS VIEW ── */}
+      {view==='earnings' && <EarningsView stats={stats} deliveries={deliveries} onBack={()=>setView('home')}/>}
+
+      {/* ── PROFILE VIEW ── */}
+      {view==='profile' && <ProfileView driver={driver} stats={stats} onBack={()=>setView('home')} onLogout={logout}/>}
+
+      {/* BOTTOM NAV */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex"
+        style={{background:'rgba(8,8,8,.95)',backdropFilter:'blur(12px)',borderTop:'1px solid #1a1a1a',paddingBottom:'env(safe-area-inset-bottom,8px)'}}>
+        {[
+          {icon:'🏠',label:'Home',    v:'home'},
+          {icon:'💰',label:'Earnings',v:'earnings'},
+          {icon:'👤',label:'Profile', v:'profile'},
+        ].map(n=>(
+          <button key={n.v} onClick={()=>setView(n.v as typeof view)}
+            className="flex-1 flex flex-col items-center gap-1 py-3"
+            style={{color:view===n.v?'#10b981':'#4b5563'}}>
+            <span className="text-2xl" style={{filter:view===n.v?'none':'grayscale(1)'}}>{n.icon}</span>
+            <span className="text-xs font-semibold">{n.label}</span>
+          </button>
+        ))}
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Deliveries</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total_deliveries}</p>
-              </div>
-              <Package className="w-8 h-8 text-blue-500" />
-            </div>
-            <div className="mt-2">
-              <span className="text-sm text-green-600">
-                +{stats.completed_deliveries} completed
-              </span>
-            </div>
+      {/* STATUS MODAL */}
+      {statusModal && (
+        <Sheet onClose={()=>setStatusModal(null)} title="Update Status">
+          <p className="text-xs text-gray-500 mb-4">Order #{statusModal.order_number}</p>
+          <div className="flex flex-col gap-2.5">
+            {[
+              {s:'in_transit',       label:'🚗 Start Delivery',    show:statusModal.status==='assigned'},
+              {s:'out_for_delivery', label:'📦 Out for Delivery',   show:['assigned','in_transit'].includes(statusModal.status)},
+              {s:'delivered',        label:'✅ Mark as Delivered',  show:statusModal.status==='out_for_delivery'},
+              {s:'failed',           label:'❌ Delivery Failed',    show:!['delivered','cancelled'].includes(statusModal.status)},
+              {s:'returned',         label:'↩️ Return to Sender',   show:!['delivered','cancelled'].includes(statusModal.status)},
+            ].filter(o=>o.show).map(o=>(
+              <button key={o.s} onClick={()=>doStatus(statusModal,o.s)} disabled={!!busy}
+                className="w-full p-4 rounded-xl text-sm font-semibold text-left transition-all disabled:opacity-50"
+                style={{background:'#1a1a1a',border:'1px solid #2a2a2a',color:'#e5e7eb'}}
+                onMouseEnter={e=>(e.currentTarget.style.background='#222')}
+                onMouseLeave={e=>(e.currentTarget.style.background='#1a1a1a')}>
+                {o.label}
+              </button>
+            ))}
           </div>
+        </Sheet>
+      )}
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Pending Deliveries</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.pending_deliveries}</p>
+      {/* OTP MODAL */}
+      {otpModal && (
+        <Sheet onClose={()=>{setOtpModal(null);setOtp('');}} title="Verify Delivery">
+          <p className="text-xs text-gray-500 mb-1">Ask the customer for their OTP.</p>
+          <p className="text-xs mb-6" style={{color:'#374151'}}>Order #{otpModal.order_number}</p>
+          {/* OTP display */}
+          <div className="flex gap-2 justify-center mb-5">
+            {Array.from({length:6}).map((_,i)=>(
+              <div key={i} className="w-10 h-12 rounded-xl flex items-center justify-center text-lg font-bold transition-all"
+                style={{background:'#1a1a1a',border:`2px solid ${i<otp.length?'#10b981':'#2a2a2a'}`}}>
+                {otp[i]||''}
               </div>
-              <Clock className="w-8 h-8 text-orange-500" />
-            </div>
-            <div className="mt-2">
-              <span className="text-sm text-blue-600">
-                {filteredDeliveries.length} active now
-              </span>
-            </div>
+            ))}
           </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Earnings</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  ${stats.total_earnings.toFixed(2)}
-                </p>
-              </div>
-              <DollarSign className="w-8 h-8 text-green-500" />
-            </div>
-            <div className="mt-2">
-              <span className="text-sm text-gray-500">
-                Avg. ${stats.total_deliveries > 0 ? (stats.total_earnings / stats.total_deliveries).toFixed(2) : '0.00'}/delivery
-              </span>
-            </div>
+          {/* Keypad */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {['1','2','3','4','5','6','7','8','9','A','0','⌫'].map(k=>(
+              <button key={k} onClick={()=>{
+                if(k==='⌫') setOtp(p=>p.slice(0,-1));
+                else if(otp.length<6) setOtp(p=>p+k);
+              }} className="py-3.5 rounded-xl text-base font-bold transition-all"
+                style={{background:'#1a1a1a',border:'1px solid #2a2a2a',color:'#e5e7eb'}}
+                onMouseEnter={e=>(e.currentTarget.style.background='#222')}
+                onMouseLeave={e=>(e.currentTarget.style.background='#1a1a1a')}>
+                {k}
+              </button>
+            ))}
           </div>
+          <button onClick={doOTP} disabled={otp.length<4||!!busy}
+            className="w-full py-4 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
+            style={{background:otp.length>=4?'linear-gradient(135deg,#10b981,#059669)':'#1a1a1a',color:otp.length>=4?'#000':'#6b7280'}}>
+            {busy?'⏳ Verifying...':'✅ Confirm Delivery'}
+          </button>
+        </Sheet>
+      )}
+    </div>
+  );
+}
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Your Rating</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.average_rating.toFixed(1)}/5.0
-                </p>
-              </div>
-              <Star className="w-8 h-8 text-yellow-500" />
-            </div>
-            <div className="mt-2">
-              <span className="text-sm text-gray-500">
-                Based on {stats.completed_deliveries} deliveries
-              </span>
-            </div>
+/* ── Delivery Card ── */
+function Card({d,busy,onStatus,onVerify,onLocation,onRoute,onStart}:{
+  d:Delivery; busy:boolean;
+  onStatus:()=>void; onVerify:()=>void; onLocation:()=>void; onRoute:()=>void; onStart:()=>void;
+}) {
+  const sc = STATUS[d.status] || {label:d.status,dot:'#888',bg:'rgba(136,136,136,.1)',text:'#888'};
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{background:'#111',border:'1px solid #1f1f1f',borderLeft:`3px solid ${sc.dot}`}}>
+      <div className="p-4 flex gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <span className="font-bold text-sm">{ICON[d.status]} #{d.order_number}</span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
+              style={{background:sc.bg,color:sc.text}}>
+              {sc.label}
+            </span>
           </div>
-        </div>
-
-        {/* Vehicle Info */}
-        {deliveryStaff?.vehicle_type && (
-          <div className="bg-white rounded-lg shadow p-6 mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Vehicle Information</h3>
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center">
-                    <Truck className="w-5 h-5 text-gray-400 mr-2" />
-                    <span className="text-gray-700">
-                      {deliveryStaff.vehicle_type.charAt(0).toUpperCase() + deliveryStaff.vehicle_type.slice(1)}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <Shield className="w-5 h-5 text-gray-400 mr-2" />
-                    <span className="text-gray-700">{deliveryStaff.vehicle_number}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center">
-                  <Battery className="w-5 h-5 text-green-500 mr-2" />
-                  <span className="text-sm text-gray-600">Good</span>
-                </div>
-                <div className="flex items-center">
-                  <Wifi className="w-5 h-5 text-blue-500 mr-2" />
-                  <span className="text-sm text-gray-600">Connected</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Deliveries Section */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="border-b border-gray-200">
-            <div className="px-6 py-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Your Deliveries</h2>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => updateOnlineStatus(!onlineStatus)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium ${onlineStatus ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}
-                  >
-                    {onlineStatus ? 'Go Offline' : 'Go Online'}
-                  </button>
-                  <button
-                    onClick={fetchData}
-                    disabled={refreshing}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
-                  >
-                    <RefreshCw className={`w-4 h-4 inline mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                    Refresh
-                  </button>
-                </div>
-              </div>
-
-              {/* Tabs */}
-              <div className="mt-4 flex space-x-4">
-                <button
-                  onClick={() => setActiveTab('active')}
-                  className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'active' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                  Active ({deliveries.filter(d => ['assigned', 'in_transit', 'out_for_delivery'].includes(d.status)).length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('pending')}
-                  className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'pending' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                  Pending ({deliveries.filter(d => d.status === 'pending').length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('completed')}
-                  className={`px-4 py-2 rounded-lg font-medium ${activeTab === 'completed' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                  Completed ({deliveries.filter(d => ['delivered', 'failed', 'cancelled'].includes(d.status)).length})
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Deliveries List */}
-          <div className="divide-y divide-gray-200">
-            {filteredDeliveries.length === 0 ? (
-              <div className="text-center py-12">
-                <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No {activeTab} deliveries
-                </h3>
-                <p className="text-gray-600">
-                  {activeTab === 'active' 
-                    ? 'You have no active deliveries at the moment.' 
-                    : activeTab === 'pending'
-                    ? 'You have no pending deliveries.'
-                    : 'You have no completed deliveries yet.'}
-                </p>
-              </div>
-            ) : (
-              filteredDeliveries.map((delivery) => (
-                <div key={delivery.id} className="px-6 py-4 hover:bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-full ${getStatusColor(delivery.status)}`}>
-                          {getStatusIcon(delivery.status)}
-                        </div>
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <h3 className="font-medium text-gray-900">
-                              Order #{delivery.order_number}
-                            </h3>
-                            <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(delivery.status)}`}>
-                              {delivery.status.replace('_', ' ').toUpperCase()}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            <MapPin className="w-4 h-4 inline mr-1" />
-                            {delivery.delivery_address}
-                          </p>
-                          {delivery.customer_name && (
-                            <p className="text-sm text-gray-500 mt-1">
-                              <User className="w-4 h-4 inline mr-1" />
-                              {delivery.customer_name}
-                              {delivery.customer_phone && ` • ${delivery.customer_phone}`}
-                            </p>
-                          )}
-                          <p className="text-sm text-gray-500 mt-1">
-                            <Clock className="w-4 h-4 inline mr-1" />
-                            Estimated: {formatDate(delivery.estimated_delivery_time)}
-                          </p>
-                          {delivery.delivery_fee > 0 && (
-                            <p className="text-sm text-green-600 mt-1">
-                              <DollarSign className="w-4 h-4 inline mr-1" />
-                              Fee: ${delivery.delivery_fee.toFixed(2)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center space-x-2">
-                      {delivery.status === 'assigned' && (
-                        <>
-                          <button
-                            onClick={() => updateDeliveryStatus(delivery.id, 'in_transit')}
-                            className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-                          >
-                            Start Delivery
-                          </button>
-                          <button
-                            onClick={() => setShowUpdateStatusModal(delivery.id)}
-                            className="px-3 py-1 border border-gray-300 text-sm rounded-lg hover:bg-gray-50"
-                          >
-                            Update
-                          </button>
-                        </>
-                      )}
-                      
-                      {delivery.status === 'in_transit' && (
-                        <>
-                          <button
-                            onClick={() => updateDeliveryStatus(delivery.id, 'out_for_delivery')}
-                            className="px-3 py-1 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700"
-                          >
-                            Out for Delivery
-                          </button>
-                          <button
-                            onClick={() => updateDeliveryLocation(delivery.id)}
-                            className="px-3 py-1 border border-gray-300 text-sm rounded-lg hover:bg-gray-50"
-                          >
-                            Update Location
-                          </button>
-                        </>
-                      )}
-                      
-                      {delivery.status === 'out_for_delivery' && (
-                        <>
-                          <button
-                            onClick={() => setShowUpdateStatusModal(delivery.id)}
-                            className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
-                          >
-                            Mark Delivered
-                          </button>
-                          <button
-                            onClick={() => updateDeliveryLocation(delivery.id)}
-                            className="px-3 py-1 border border-gray-300 text-sm rounded-lg hover:bg-gray-50"
-                          >
-                            Update Location
-                          </button>
-                        </>
-                      )}
-                      
-                      {['delivered', 'failed', 'cancelled'].includes(delivery.status) && (
-                        <span className="text-sm text-gray-500">
-                          {delivery.actual_delivery_time && `Delivered: ${formatDate(delivery.actual_delivery_time)}`}
-                        </span>
-                      )}
-                      
-                      <button
-                        onClick={() => router.push(`/delivery/route/${delivery.id}`)}
-                        className="p-2 text-gray-400 hover:text-gray-600"
-                        title="View Route"
-                      >
-                        <Navigation className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {delivery.delivery_notes && (
-                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-600">
-                        <AlertTriangle className="w-4 h-4 inline mr-1" />
-                        Notes: {delivery.delivery_notes}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
+          <p className="text-xs text-gray-400 mb-1 leading-snug line-clamp-2">📍 {d.delivery_address}</p>
+          {d.customer_name && <p className="text-xs text-gray-600 mb-1">👤 {d.customer_name}{d.customer_phone?` · ${d.customer_phone}`:''}</p>}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-xs text-gray-600">🕐 {new Date(d.estimated_delivery_time).toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit'})}</span>
+            {d.delivery_fee>0&&<span className="text-xs font-semibold" style={{color:'#10b981'}}>+KES {d.delivery_fee}</span>}
           </div>
         </div>
-
-        {/* Profile Info */}
-        <div className="mt-8 bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Profile Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 mb-2">Personal Details</h4>
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <User className="w-4 h-4 text-gray-400 mr-2" />
-                  <span className="text-gray-900">{deliveryStaff?.name}</span>
-                </div>
-                <div className="flex items-center">
-                  <Mail className="w-4 h-4 text-gray-400 mr-2" />
-                  <span className="text-gray-900">{deliveryStaff?.email}</span>
-                </div>
-                <div className="flex items-center">
-                  <Phone className="w-4 h-4 text-gray-400 mr-2" />
-                  <span className="text-gray-900">{deliveryStaff?.phone}</span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 mb-2">Performance</h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">On-time Delivery Rate</span>
-                  <span className="font-medium text-green-600">
-                    {stats.total_deliveries > 0 
-                      ? Math.round((stats.on_time_deliveries / stats.total_deliveries) * 100)
-                      : 0}%
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Success Rate</span>
-                  <span className="font-medium text-green-600">
-                    {stats.total_deliveries > 0 
-                      ? Math.round((stats.completed_deliveries / stats.total_deliveries) * 100)
-                      : 0}%
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Customer Rating</span>
-                  <span className="font-medium text-yellow-600">
-                    {stats.average_rating.toFixed(1)} ⭐
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <button onClick={onRoute}
+          className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center self-start"
+          style={{background:'rgba(59,130,246,.1)',border:'1px solid rgba(59,130,246,.2)'}}>
+          <svg className="w-4 h-4" style={{color:'#3b82f6'}} fill="currentColor" viewBox="0 0 24 24">
+            <path d="M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9 1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 7 1.4z"/>
+          </svg>
+        </button>
       </div>
 
-      {/* Update Status Modal */}
-      {showUpdateStatusModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Update Delivery Status</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Status
-                  </label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        updateDeliveryStatus(showUpdateStatusModal, e.target.value);
-                      }
-                    }}
-                  >
-                    <option value="">Select status</option>
-                    <option value="in_transit">In Transit</option>
-                    <option value="out_for_delivery">Out for Delivery</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="failed">Failed</option>
-                    <option value="returned">Returned</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notes (Optional)
-                  </label>
-                  <textarea
-                    value={statusUpdateNotes}
-                    onChange={(e) => setStatusUpdateNotes(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    rows={3}
-                    placeholder="Add any notes about the delivery..."
-                  />
-                </div>
-              </div>
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setShowUpdateStatusModal(null);
-                    setStatusUpdateNotes('');
-                  }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => setShowUpdateStatusModal(null)}
-                  className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
-                >
-                  Update Status
-                </button>
-              </div>
-            </div>
-          </div>
+      {d.delivery_notes && (
+        <div className="mx-4 mb-3 px-3 py-2 rounded-xl text-xs"
+          style={{background:'rgba(245,158,11,.06)',border:'1px solid rgba(245,158,11,.15)',color:'#f59e0b'}}>
+          ⚠️ {d.delivery_notes}
         </div>
       )}
 
-      {/* OTP Verification Modal */}
-      {showOTPModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Verify Delivery</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Enter the 6-digit OTP provided by the customer to complete delivery verification.
-              </p>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    OTP Code
-                  </label>
-                  <input
-                    type="text"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-center text-2xl tracking-widest focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="000000"
-                    maxLength={6}
-                  />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-500">
-                    Haven't received OTP?{' '}
-                    <button className="text-blue-600 hover:text-blue-800">
-                      Request new OTP
-                    </button>
-                  </p>
-                </div>
-              </div>
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setShowOTPModal(null);
-                    setOtp('');
-                  }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => verifyDeliveryOTP(showOTPModal)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                >
-                  Verify & Complete
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Actions */}
+      <div className="px-4 pb-4 flex gap-2 flex-wrap">
+        {d.status==='assigned' && (<>
+          <Btn color="#10b981" dark label={busy?'…':'🚗 Start Delivery'} onClick={onStart}/>
+          <Btn color="#3b82f6" label="📍 Location" onClick={onLocation}/>
+        </>)}
+        {d.status==='in_transit' && (<>
+          <Btn color="#f97316" dark label={busy?'…':'📦 Out for Delivery'} onClick={onStatus}/>
+          <Btn color="#3b82f6" label="📍 Location" onClick={onLocation}/>
+        </>)}
+        {d.status==='out_for_delivery' && (<>
+          <Btn color="#10b981" dark label="✅ Complete & Verify" onClick={onVerify}/>
+          <Btn color="#6b7280" label="⚠️ Report Issue" onClick={onStatus}/>
+          <Btn color="#3b82f6" label="📍 Location" onClick={onLocation}/>
+        </>)}
+        {d.status==='pending' && <Btn color="#3b82f6" dark label="📋 Update Status" onClick={onStatus}/>}
+        {['delivered','failed','cancelled','returned'].includes(d.status) && d.actual_delivery_time && (
+          <span className="text-xs text-gray-600 py-1">
+            Completed {new Date(d.actual_delivery_time).toLocaleDateString('en-KE',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
-      {/* Mobile Sidebar */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)}></div>
-          <div className="absolute inset-y-0 left-0 w-64 bg-white shadow-xl">
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center">
-                  <Truck className="h-8 w-8 text-blue-600" />
-                  <span className="ml-3 text-lg font-semibold text-gray-900">Delivery</span>
-                </div>
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              
-              <nav className="space-y-2">
-                <button className="w-full flex items-center p-3 rounded-lg bg-blue-50 text-blue-700">
-                  <Package className="h-5 w-5 mr-3" />
-                  Dashboard
-                </button>
-                <button className="w-full flex items-center p-3 rounded-lg text-gray-700 hover:bg-gray-100">
-                  <Calendar className="h-5 w-5 mr-3" />
-                  Schedule
-                </button>
-                <button className="w-full flex items-center p-3 rounded-lg text-gray-700 hover:bg-gray-100">
-                  <BarChart3 className="h-5 w-5 mr-3" />
-                  Analytics
-                </button>
-                <button className="w-full flex items-center p-3 rounded-lg text-gray-700 hover:bg-gray-100">
-                  <Settings className="h-5 w-5 mr-3" />
-                  Settings
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center p-3 rounded-lg text-red-600 hover:bg-red-50 mt-8"
-                >
-                  <LogOut className="h-5 w-5 mr-3" />
-                  Logout
-                </button>
-              </nav>
-              
-              <div className="mt-8 pt-8 border-t border-gray-200">
-                <div className="flex items-center">
-                  <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <User className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">{deliveryStaff?.name}</p>
-                    <p className="text-xs text-gray-500">{deliveryStaff?.role || 'Delivery Staff'}</p>
-                  </div>
-                </div>
-              </div>
+function Btn({color,label,onClick,dark=false}:{color:string;label:string;onClick:()=>void;dark?:boolean}) {
+  const isDark = color==='#10b981'||color==='#f97316';
+  return (
+    <button onClick={onClick}
+      className="px-3.5 py-2 rounded-xl text-xs font-bold transition-all"
+      style={{
+        background: dark ? color : `${color}18`,
+        border: `1px solid ${dark ? color : `${color}44`}`,
+        color: dark ? (isDark?'#000':'#fff') : color,
+      }}>
+      {label}
+    </button>
+  );
+}
+
+function Sheet({onClose,title,children}:{onClose:()=>void;title:string;children:React.ReactNode}) {
+  return (
+    <>
+      <div onClick={onClose} className="fixed inset-0 z-50" style={{background:'rgba(0,0,0,.7)'}}/>
+      <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl max-h-[85vh] overflow-y-auto"
+        style={{background:'#111',border:'1px solid #1f1f1f',padding:'24px',animation:'slideUp .25s ease'}}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-bold">{title}</h3>
+          <button onClick={onClose} className="text-gray-500 text-xl leading-none">✕</button>
+        </div>
+        {children}
+      </div>
+      <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
+    </>
+  );
+}
+
+function EarningsView({stats,deliveries,onBack}:{stats:Stats|null;deliveries:Delivery[];onBack:()=>void}) {
+  const done = deliveries.filter(d=>d.status==='delivered');
+  const KES = (n:number) => new Intl.NumberFormat('en-KE',{style:'currency',currency:'KES',minimumFractionDigits:0}).format(n||0);
+  return (
+    <div className="px-4 py-5 max-w-xl mx-auto">
+      <button onClick={onBack} className="text-sm font-semibold mb-5 block" style={{color:'#10b981'}}>← Back</button>
+      <h2 className="text-2xl font-bold mb-5">💰 Earnings</h2>
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        {[
+          {label:'Today',    val:KES(stats?.today_earnings||0),color:'#10b981'},
+          {label:'This Week',val:KES(stats?.week_earnings||0), color:'#3b82f6'},
+          {label:'All Time', val:KES(stats?.total_earnings||0),color:'#f59e0b'},
+        ].map(e=>(
+          <div key={e.label} className="rounded-2xl p-4 text-center" style={{background:'#111',border:'1px solid #1f1f1f'}}>
+            <p className="text-base font-bold mb-1" style={{color:e.color}}>{e.val}</p>
+            <p className="text-xs text-gray-600">{e.label}</p>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs font-semibold uppercase tracking-widest text-gray-600 mb-3">Recent Completed</p>
+      <div className="flex flex-col gap-2.5">
+        {done.slice(0,20).map(d=>(
+          <div key={d.id} className="rounded-2xl p-4 flex justify-between items-center"
+            style={{background:'#111',border:'1px solid #1f1f1f'}}>
+            <div>
+              <p className="font-bold text-sm">#{d.order_number}</p>
+              <p className="text-xs text-gray-600 truncate max-w-[200px] mt-0.5">{d.delivery_address}</p>
+              {d.actual_delivery_time && (
+                <p className="text-xs mt-0.5" style={{color:'#374151'}}>
+                  {new Date(d.actual_delivery_time).toLocaleDateString('en-KE',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+                </p>
+              )}
+            </div>
+            <p className="font-bold text-base" style={{color:'#10b981'}}>
+              {d.delivery_fee>0?`+KES ${d.delivery_fee}`:'—'}
+            </p>
+          </div>
+        ))}
+        {done.length===0 && (
+          <div className="rounded-2xl p-10 text-center" style={{background:'#111',border:'1px solid #1f1f1f'}}>
+            <p className="text-4xl mb-3">📭</p>
+            <p className="text-sm text-gray-500">No completed deliveries yet</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProfileView({driver,stats,onBack,onLogout}:{driver:Driver|null;stats:Stats|null;onBack:()=>void;onLogout:()=>void}) {
+  const KES=(n:number)=>new Intl.NumberFormat('en-KE',{style:'currency',currency:'KES',minimumFractionDigits:0}).format(n||0);
+  const rate = stats&&stats.total_deliveries>0
+    ? Math.round((stats.completed_deliveries/stats.total_deliveries)*100) : 0;
+  return (
+    <div className="px-4 py-5 max-w-xl mx-auto">
+      <button onClick={onBack} className="text-sm font-semibold mb-5 block" style={{color:'#10b981'}}>← Back</button>
+      <div className="text-center mb-8">
+        <div className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold text-black mx-auto mb-4"
+          style={{background:'linear-gradient(135deg,#10b981,#059669)'}}>
+          {driver?.name?.[0]||'?'}
+        </div>
+        <h2 className="text-2xl font-bold">{driver?.name}</h2>
+        <p className="text-sm text-gray-500 mt-1">{driver?.email}</p>
+        <div className="inline-flex items-center gap-2 mt-3 px-4 py-1.5 rounded-full"
+          style={{background:'rgba(16,185,129,.1)',border:'1px solid rgba(16,185,129,.2)'}}>
+          <span>⭐</span>
+          <span className="font-bold" style={{color:'#10b981'}}>{(driver?.rating||4.8).toFixed(1)}</span>
+          <span className="text-xs text-gray-500">rating</span>
+        </div>
+      </div>
+      <div className="flex flex-col gap-2.5 mb-6">
+        {[
+          {label:'Phone',  val:driver?.phone||'—',  icon:'📞'},
+          {label:'Vehicle',val:driver?.vehicle_type?`${driver.vehicle_type} · ${driver.vehicle_number}`:'—',icon:'🚗'},
+          {label:'Role',   val:(driver?.role||'delivery_staff').replace('_',' '),icon:'👔'},
+        ].map(item=>(
+          <div key={item.label} className="flex items-center gap-4 p-4 rounded-2xl"
+            style={{background:'#111',border:'1px solid #1f1f1f'}}>
+            <span className="text-2xl">{item.icon}</span>
+            <div>
+              <p className="text-xs text-gray-600">{item.label}</p>
+              <p className="text-sm font-semibold mt-0.5">{item.val}</p>
             </div>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
+      <p className="text-xs font-semibold uppercase tracking-widest text-gray-600 mb-3">Performance</p>
+      <div className="grid grid-cols-2 gap-2.5 mb-6">
+        {[
+          {label:'Total Deliveries',val:`${stats?.total_deliveries||0}`,icon:'📦'},
+          {label:'Success Rate',    val:`${rate}%`,                     icon:'🎯'},
+          {label:'Total Earned',    val:KES(stats?.total_earnings||0),  icon:'💰'},
+          {label:'This Week',       val:KES(stats?.week_earnings||0),   icon:'📅'},
+        ].map(p=>(
+          <div key={p.label} className="p-4 rounded-2xl" style={{background:'#111',border:'1px solid #1f1f1f'}}>
+            <span className="text-2xl block mb-2">{p.icon}</span>
+            <p className="font-bold text-lg">{p.val}</p>
+            <p className="text-xs text-gray-600 mt-0.5">{p.label}</p>
+          </div>
+        ))}
+      </div>
+      <button onClick={onLogout}
+        className="w-full py-4 rounded-2xl text-sm font-bold"
+        style={{background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.2)',color:'#f87171'}}>
+        🚪 Sign Out
+      </button>
     </div>
   );
 }

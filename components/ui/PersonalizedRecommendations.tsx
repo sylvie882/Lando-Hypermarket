@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import { Product } from '@/types';
 import ProductCard from '@/components/ui/ProductCard';
-import { Sparkles, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PersonalizedRecommendationsProps {
   title?: string;
@@ -14,7 +14,6 @@ interface PersonalizedRecommendationsProps {
   className?: string;
 }
 
-// Extend Product type to include metadata
 interface ProductWithMetadata extends Product {
   metadata?: {
     relevance_score?: number;
@@ -31,43 +30,32 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
 }) => {
   const [recommendations, setRecommendations] = useState<ProductWithMetadata[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visibleCards, setVisibleCards] = useState(4);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
-  
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const resizeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchRecommendations();
-    
+
     const handleResize = () => {
-      if (resizeTimerRef.current) {
-        clearTimeout(resizeTimerRef.current);
-      }
-      
+      if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
       resizeTimerRef.current = setTimeout(() => {
         const width = window.innerWidth;
         setIsMobile(width < 640);
         setIsTablet(width >= 640 && width < 1024);
-        
-        if (width < 640) {
-          setVisibleCards(2); // Changed from 1 to 2
-        } else if (width < 768) {
-          setVisibleCards(2);
-        } else if (width < 1024) {
-          setVisibleCards(3);
-        } else {
-          setVisibleCards(4);
-        }
+        if (width < 640) setVisibleCards(2);
+        else if (width < 768) setVisibleCards(2);
+        else if (width < 1024) setVisibleCards(3);
+        else setVisibleCards(4);
       }, 150);
     };
-    
+
     handleResize();
     window.addEventListener('resize', handleResize);
-    
     return () => {
       window.removeEventListener('resize', handleResize);
       if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
@@ -76,98 +64,72 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
 
   const scrollToIndex = (index: number) => {
     if (!scrollContainerRef.current || recommendations.length === 0) return;
-    
     const container = scrollContainerRef.current;
     const cardElements = container.children;
     if (cardElements.length === 0) return;
-    
     const cardWidth = cardElements[0].clientWidth || 256;
-    const gap = 16; // space-x-4 = 16px
-    const scrollPosition = (cardWidth + gap) * index;
-    
-    container.scrollTo({
-      left: scrollPosition,
-      behavior: 'smooth'
-    });
+    const gap = 16;
+    container.scrollTo({ left: (cardWidth + gap) * index, behavior: 'smooth' });
     setCurrentIndex(index);
   };
 
   const scrollNext = () => {
     if (recommendations.length <= visibleCards) return;
-    
-    let nextIndex = currentIndex + 1;
-    
-    if (nextIndex > recommendations.length - visibleCards) {
-      nextIndex = 0;
-    }
-    
-    scrollToIndex(nextIndex);
+    let next = currentIndex + 1;
+    if (next > recommendations.length - visibleCards) next = 0;
+    scrollToIndex(next);
   };
 
   const scrollPrev = () => {
     if (recommendations.length <= visibleCards) return;
-    
-    let prevIndex = currentIndex - 1;
-    
-    if (prevIndex < 0) {
-      prevIndex = Math.max(0, recommendations.length - visibleCards);
-    }
-    
-    scrollToIndex(prevIndex);
+    let prev = currentIndex - 1;
+    if (prev < 0) prev = Math.max(0, recommendations.length - visibleCards);
+    scrollToIndex(prev);
   };
 
   const handleScroll = () => {
     if (!scrollContainerRef.current) return;
-    
     const container = scrollContainerRef.current;
     const cardElements = container.children;
     if (cardElements.length === 0) return;
-    
     const cardWidth = cardElements[0].clientWidth || 256;
-    const gap = 16;
-    const scrollPosition = container.scrollLeft;
-    const newIndex = Math.round(scrollPosition / (cardWidth + gap));
-    
-    if (newIndex !== currentIndex) {
-      setCurrentIndex(Math.max(0, newIndex));
-    }
+    const newIndex = Math.round(container.scrollLeft / (cardWidth + 16));
+    if (newIndex !== currentIndex) setCurrentIndex(Math.max(0, newIndex));
   };
 
+  // Fetch WITHOUT requiring authentication — no token check, uses public/popular fallback
   const fetchRecommendations = useCallback(async () => {
     try {
       setIsLoading(true);
-      setError(null);
-      
-      console.log('Fetching recommendations with limit:', limit);
-      
-      const response = await api.products.getPersonalizedRecommendations({
-        limit,
-        strategy: 'hybrid'
-      });
-      
-      console.log('API response received:', response);
-      
+
+      let response: any = null;
+
+      // Try personalized endpoint first (works for logged-in users too)
+      try {
+        response = await api.products.getPersonalizedRecommendations({ limit, strategy: 'hybrid' });
+      } catch {
+        response = null;
+      }
+
+      // If personalized failed or returned nothing, fall back to popular products
+      if (!response?.success || !Array.isArray(response?.recommendations) || response.recommendations.length === 0) {
+        try {
+          const fallback = await api.products.getAll({ per_page: limit, sort: 'sold_count', order: 'desc' });
+          const items = fallback.data || [];
+          response = { success: true, recommendations: items };
+        } catch {
+          response = { success: true, recommendations: [] };
+        }
+      }
+
       if (response.success && Array.isArray(response.recommendations)) {
-        const transformedProducts: ProductWithMetadata[] = response.recommendations.map((rec: any) => {
+        const transformed: ProductWithMetadata[] = response.recommendations.map((rec: any) => {
           const finalPrice = rec.discounted_price || rec.price;
-          
-          let thumbnail = rec.thumbnail || '';
-          let main_image = rec.main_image || rec.thumbnail || '';
-          
-          if (thumbnail.includes('\\/')) {
-            thumbnail = thumbnail.replace(/\\\//g, '/');
-          }
-          if (main_image.includes('\\/')) {
-            main_image = main_image.replace(/\\\//g, '/');
-          }
-          
-          if (thumbnail.startsWith('/')) {
-            thumbnail = thumbnail.substring(1);
-          }
-          if (main_image.startsWith('/')) {
-            main_image = main_image.substring(1);
-          }
-          
+          let thumbnail = (rec.thumbnail || '').replace(/\\\//g, '/');
+          let main_image = (rec.main_image || rec.thumbnail || '').replace(/\\\//g, '/');
+          if (thumbnail.startsWith('/')) thumbnail = thumbnail.substring(1);
+          if (main_image.startsWith('/')) main_image = main_image.substring(1);
+
           return {
             id: rec.id,
             name: rec.name,
@@ -176,28 +138,10 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
             price: rec.price,
             discounted_price: rec.discounted_price,
             final_price: finalPrice,
-            thumbnail: thumbnail,
-            main_image: main_image,
-            category: rec.category ? {
-              id: rec.category.id,
-              name: rec.category.name,
-              slug: rec.category.slug,
-              description: rec.category.description || '',
-              image: rec.category.image || '',
-              is_active: true,
-              order: 0,
-              created_at: rec.category.created_at || new Date().toISOString(),
-              updated_at: rec.category.updated_at || new Date().toISOString()
-            } : null,
-            vendor: rec.vendor ? {
-              id: rec.vendor.id,
-              name: rec.vendor.name,
-              email: rec.vendor.email || '',
-              phone: rec.vendor.phone || '',
-              is_active: true,
-              created_at: rec.vendor.created_at || new Date().toISOString(),
-              updated_at: rec.vendor.updated_at || new Date().toISOString()
-            } : null,
+            thumbnail,
+            main_image,
+            category: rec.category ? { id: rec.category.id, name: rec.category.name, slug: rec.category.slug, description: rec.category.description || '', image: rec.category.image || '', is_active: true, order: 0, created_at: rec.category.created_at || new Date().toISOString(), updated_at: rec.category.updated_at || new Date().toISOString() } : null,
+            vendor: rec.vendor ? { id: rec.vendor.id, name: rec.vendor.name, email: rec.vendor.email || '', phone: rec.vendor.phone || '', is_active: true, created_at: rec.vendor.created_at || new Date().toISOString(), updated_at: rec.vendor.updated_at || new Date().toISOString() } : null,
             rating: rec.rating || 0,
             review_count: rec.review_count || 0,
             stock_quantity: rec.stock_quantity || 0,
@@ -209,71 +153,49 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
             created_at: rec.created_at,
             updated_at: rec.updated_at || rec.created_at,
             images: [],
-            metadata: {
-              relevance_score: rec.relevance_score || 0,
-              recommendation_type: rec.recommendation_type || 'popular'
-            }
+            metadata: { relevance_score: rec.relevance_score || 0, recommendation_type: rec.recommendation_type || 'popular' }
           };
         });
-        
-        console.log('Transformed products count:', transformedProducts.length);
-        console.log('Sample transformed product:', transformedProducts[0]);
-        
-        setRecommendations(transformedProducts);
-      } else {
-        console.error('Invalid response structure:', response);
-        setError(response.message || 'Failed to load recommendations');
+        setRecommendations(transformed);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching recommendations:', err);
-      console.error('Error details:', err.response?.data || err.message);
-      setError(`Failed to load personalized recommendations: ${err.message || 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
   }, [limit]);
 
   const trackProductView = async (productId: number) => {
-    try {
-      await api.products.trackView(productId);
-    } catch (error) {
-      console.error('Failed to track product view:', error);
-    }
+    try { await api.products.trackView(productId); } catch {}
   };
 
   const totalSlides = Math.ceil(recommendations.length / visibleCards);
   const currentSlide = Math.floor(currentIndex / visibleCards);
 
-  // Loading Skeleton
   if (isLoading) {
     return (
-      <div className={`bg-white ${className}`}>
+      <div className={`bg-white py-8 ${className}`}>
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
           {showHeader && (
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-2">
-                <div className="p-2 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg">
-                  <Sparkles size={20} className="text-white" />
-                </div>
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h2>
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-7 bg-gradient-to-b from-yellow-400 to-orange-500 rounded-full" />
+                <div className="h-7 bg-gray-200 rounded w-52 animate-shimmer" />
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
-                <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+              <div className="flex gap-2">
+                <div className="w-9 h-9 bg-gray-200 rounded-full animate-shimmer" />
+                <div className="w-9 h-9 bg-gray-200 rounded-full animate-shimmer" />
               </div>
             </div>
           )}
-          <div className="flex overflow-x-hidden space-x-4 pb-4">
-            {Array.from({ length: Math.min(limit, 4) }).map((_, index) => (
-              <div 
-                key={index} 
-                className="flex-none w-64 animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
-              >
-                <div className="bg-gray-200 h-48"></div>
-                <div className="p-4">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
-                  <div className="h-8 bg-gray-200 rounded"></div>
+          <div className="flex gap-4 overflow-hidden">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex-none w-[44vw] sm:w-[45vw] lg:w-[23vw] rounded-xl overflow-hidden border border-gray-100">
+                <div className="bg-gray-100 h-44 animate-shimmer" />
+                <div className="p-3 space-y-2">
+                  <div className="h-3 bg-gray-100 rounded animate-shimmer w-3/4" />
+                  <div className="h-3 bg-gray-100 rounded animate-shimmer w-1/2" />
+                  <div className="h-8 bg-gray-100 rounded animate-shimmer mt-3" />
                 </div>
               </div>
             ))}
@@ -283,144 +205,93 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
     );
   }
 
-  if (error && recommendations.length === 0) {
-    return (
-      <div className={`bg-white ${className}`}>
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
-          {showHeader && (
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-2">
-                <div className="p-2 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg">
-                  <Sparkles size={20} className="text-white" />
-                </div>
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h2>
-              </div>
-            </div>
-          )}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-            <AlertCircle className="mx-auto text-yellow-500 mb-3" size={48} />
-            <p className="text-yellow-800 mb-4">{error}</p>
-            <button
-              onClick={fetchRecommendations}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (recommendations.length === 0) return null;
 
   return (
-    <div className={`bg-white ${className}`}>
+    <div className={`bg-white py-8 ${className}`}>
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
         {showHeader && (
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-2">
-              {/* <div className="p-2 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg">
-                <Sparkles size={20} className="text-white" />
-              </div> */}
-              <h2 className="text-xl md:text-2xl font-bold text-emerald-600">{title}</h2>
+            <div className="flex items-center gap-3">
+              <div className="w-1 h-7 bg-gradient-to-b from-yellow-400 to-orange-500 rounded-full" />
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h2>
+              <span className="hidden sm:inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                <Sparkles size={11} />
+                Trending
+              </span>
             </div>
-            
-            {/* Navigation Icons */}
+
             {recommendations.length > visibleCards && (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={scrollPrev}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    currentSlide === 0
-                      ? 'bg-yellow-600 text-white hover:bg-yellow-700'
-                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                  }`}
-                  aria-label="Previous products"
+                  className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-gray-500 hover:text-emerald-600 transition-all duration-200 shadow-sm"
+                  aria-label="Previous"
                 >
-                  <ChevronLeft size={20} />
+                  <ChevronLeft size={18} />
                 </button>
                 <button
                   onClick={scrollNext}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    currentSlide === totalSlides - 1
-                      ? 'bg-yellow-600 text-white hover:bg-yellow-700'
-                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                  }`}
-                  aria-label="Next products"
+                  className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-gray-500 hover:text-emerald-600 transition-all duration-200 shadow-sm"
+                  aria-label="Next"
                 >
-                  <ChevronRight size={20} />
+                  <ChevronRight size={18} />
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {recommendations.length > 0 ? (
-          <>
-            {/* Horizontal Scrollable Products Row */}
+        <div
+          ref={scrollContainerRef}
+          className="flex overflow-x-auto gap-4 pb-2 hide-scrollbar snap-x snap-mandatory"
+          onScroll={handleScroll}
+          style={{ scrollBehavior: 'smooth' }}
+        >
+          {recommendations.map((product) => (
             <div
-              ref={scrollContainerRef}
-              className="flex overflow-x-auto space-x-4 pb-2 hide-scrollbar snap-x snap-mandatory"
-              onScroll={handleScroll}
-              style={{ scrollBehavior: 'smooth' }}
+              key={product.id}
+              className="snap-start flex-none"
+              style={{
+                width: isMobile ? '44vw' : isTablet ? '45vw' : '23vw',
+                minWidth: isMobile ? '44vw' : isTablet ? '45vw' : '23vw',
+              }}
             >
-              {recommendations.map((product, index) => (
-                <div 
-                  key={product.id} 
-                  className="snap-start flex-none"
-                  style={{
-                    width: isMobile ? '44vw' : // Changed from 85vw to 44vw for 2 items
-                           isTablet ? '45vw' : 
-                           '23vw',
-                    minWidth: isMobile ? '44vw' : // Changed from 85vw to 44vw
-                             isTablet ? '45vw' : 
-                             '23vw',
-                  }}
-                >
-                  <div className="h-full bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-yellow-300 overflow-hidden transition-all duration-300">
-                    <ProductCard 
-                      product={product} 
-                      onViewTrack={trackProductView}
-                      hideFeaturedBadge={true}
-                    />
-                  </div>
-                </div>
-              ))}
+              <div className="h-full bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 hover:border-emerald-200 overflow-hidden transition-all duration-300">
+                <ProductCard
+                  product={product}
+                  onViewTrack={trackProductView}
+                  hideFeaturedBadge={true}
+                />
+              </div>
             </div>
-          </>
-        ) : (
-          <div className="text-center py-12 bg-gray-50 rounded-lg">
-            <Sparkles size={48} className="mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No recommendations yet
-            </h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              Start browsing products and making purchases to get personalized recommendations.
-            </p>
+          ))}
+        </div>
+
+        {recommendations.length > visibleCards && (
+          <div className="flex justify-center gap-1.5 mt-4">
+            {Array.from({ length: totalSlides }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => scrollToIndex(i * visibleCards)}
+                className={`rounded-full transition-all duration-300 ${
+                  i === currentSlide
+                    ? 'w-5 h-1.5 bg-emerald-500'
+                    : 'w-1.5 h-1.5 bg-gray-300 hover:bg-gray-400'
+                }`}
+                aria-label={`Go to slide ${i + 1}`}
+              />
+            ))}
           </div>
         )}
       </div>
 
       <style jsx global>{`
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        
-        .snap-x {
-          -webkit-overflow-scrolling: touch;
-        }
-        
-        .snap-mandatory {
-          scroll-snap-type: x mandatory;
-        }
-        
-        .snap-start {
-          scroll-snap-align: start;
-        }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .snap-x { -webkit-overflow-scrolling: touch; }
+        .snap-mandatory { scroll-snap-type: x mandatory; }
+        .snap-start { scroll-snap-align: start; }
       `}</style>
     </div>
   );

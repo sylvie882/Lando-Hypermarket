@@ -3,217 +3,125 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Truck, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
-export default function DeliveryStaffLoginPage() {
+export default function DeliveryLoginPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError]   = useState('');
+  const [showPw, setShowPw] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  e.preventDefault();
+  setLoading(true); 
+  setError('');
 
-    try {
-      // CHANGE THIS LINE: Use /login instead of /delivery-staff/login
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-staff/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json', // ✅ IMPORTANT
+      },
+      body: JSON.stringify(formData),
+    });
 
-      const data = await response.json();
+    const data = await res.json();
 
-      if (response.ok) {
-        // Store token and user data
-        // NOTE: Your API returns different structure than expected
-        // Based on your curl response, data structure is:
-        // data.message, data.user, data.token
-        localStorage.setItem('delivery_token', data.token);
-        localStorage.setItem('delivery_user', JSON.stringify(data.user));
-        
-        // Check if user is delivery staff
-        if (data.user.role !== 'delivery_staff' && data.user.role !== 'delivery_manager') {
-          setError('Access denied. Not a delivery staff member.');
-          localStorage.removeItem('delivery_token');
-          localStorage.removeItem('delivery_user');
-          setLoading(false);
-          return;
-        }
-        
-        // Redirect to delivery dashboard
-        router.push('/delivery/dashboard');
-      } else {
-        setError(data.message || 'Invalid email or password');
-      }
-    } catch (err) {
-      setError('Unable to connect to server. Please try again.');
-      console.error('Login error:', err);
-    } finally {
-      setLoading(false);
+    if (res.ok) {
+      const token = data.token;
+      const user  = data.user;
+
+      localStorage.setItem('delivery_token', token);
+      localStorage.setItem('delivery_user', JSON.stringify(user));
+
+      router.push('/delivery/dashboard');
+    } else {
+      setError(data.message || 'Invalid credentials');
     }
-  };
+
+  } catch {
+    setError('Connection failed.');
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50 p-4">
-      <div className="w-full max-w-md">
-        {/* Logo/Brand */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="bg-blue-600 p-3 rounded-full">
-              <Truck className="w-12 h-12 text-white" />
-            </div>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{background:'#080808'}}>
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full" style={{background:'radial-gradient(circle,rgba(16,185,129,.15) 0%,transparent 70%)'}}/>
+        <div className="absolute -bottom-40 -right-40 w-80 h-80 rounded-full" style={{background:'radial-gradient(circle,rgba(16,185,129,.08) 0%,transparent 70%)'}}/>
+      </div>
+      <div className="w-full max-w-sm relative">
+        <div className="text-center mb-10">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
+            style={{background:'linear-gradient(135deg,#10b981,#059669)',boxShadow:'0 0 32px rgba(16,185,129,.35)'}}>
+            <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9 1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+            </svg>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Delivery Portal</h1>
-          <p className="text-gray-600 mt-2">Sign in to manage your deliveries</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Driver Portal</h1>
+          <p className="text-sm mt-1 text-gray-500">Sign in to start delivering</p>
         </div>
-
-        {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="rounded-3xl p-8" style={{background:'#111',border:'1px solid #1f1f1f'}}>
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
-              <AlertCircle className="w-5 h-5 text-red-500 mr-3" />
-              <span className="text-red-700">{error}</span>
+            <div className="mb-5 p-3.5 rounded-xl flex items-center gap-3 text-sm"
+              style={{background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.2)',color:'#f87171'}}>
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              {error}
             </div>
           )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Input */}
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
+              <label className="block text-xs font-semibold mb-2 uppercase tracking-widest text-gray-500">Email</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="you@example.com"
-                  required
-                  disabled={loading}
-                />
+                <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
+                </svg>
+                <input type="email" value={formData.email} onChange={e=>setFormData(p=>({...p,email:e.target.value}))}
+                  placeholder="driver@example.com" required disabled={loading}
+                  className="w-full pl-10 pr-4 py-3.5 rounded-xl text-sm text-white placeholder-gray-700 outline-none transition-all disabled:opacity-50"
+                  style={{background:'#1a1a1a',border:'1px solid #2a2a2a'}}
+                  onFocus={e=>(e.target.style.borderColor='#10b981')}
+                  onBlur={e=>(e.target.style.borderColor='#2a2a2a')}/>
               </div>
             </div>
-
-            {/* Password Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
+              <label className="block text-xs font-semibold mb-2 uppercase tracking-widest text-gray-500">Password</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="pl-10 pr-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="••••••••"
-                  required
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  disabled={loading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
+                <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                </svg>
+                <input type={showPw?'text':'password'} value={formData.password} onChange={e=>setFormData(p=>({...p,password:e.target.value}))}
+                  placeholder="••••••••" required disabled={loading}
+                  className="w-full pl-10 pr-12 py-3.5 rounded-xl text-sm text-white placeholder-gray-700 outline-none transition-all disabled:opacity-50"
+                  style={{background:'#1a1a1a',border:'1px solid #2a2a2a'}}
+                  onFocus={e=>(e.target.style.borderColor='#10b981')}
+                  onBlur={e=>(e.target.style.borderColor='#2a2a2a')}/>
+                <button type="button" onClick={()=>setShowPw(p=>!p)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-600">
+                  {showPw
+                    ? <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                    : <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M2.39 1.73 1 3.12l2.05 2.05C1.77 6.38.78 8.08.01 10c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l2.02 2.02 1.39-1.39L2.39 1.73zM12 17c-2.76 0-5-2.24-5-5 0-.77.18-1.5.49-2.14l1.57 1.57c-.03.18-.06.37-.06.57 0 1.66 1.34 3 3 3 .2 0 .38-.03.57-.07L14.14 16.51C13.5 16.82 12.77 17 12 17zm4.97-4.81-6.16-6.16C11.21 5.72 11.6 5.5 12 5.5c2.76 0 5 2.24 5 5 0 .4-.22.79-.03 1.19z"/></svg>}
                 </button>
               </div>
             </div>
-
-            {/* Remember & Forgot */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="remember"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  disabled={loading}
-                />
-                <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
-                  Remember me
-                </label>
-              </div>
-              <Link
-                href="/delivery/forgot-password"
-                className="text-sm font-medium text-blue-600 hover:text-blue-500"
-              >
-                Forgot password?
-              </Link>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Signing in...
-                </span>
-              ) : 'Sign in to Delivery Portal'}
+            <button type="submit" disabled={loading}
+              className="w-full py-4 rounded-xl text-sm font-bold text-black tracking-tight transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+              style={{background:'linear-gradient(135deg,#10b981,#059669)'}}>
+              {loading ? (<><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Signing in...</>) : 'Start Driving →'}
             </button>
           </form>
-
-          {/* Divider */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-center text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link
-                href="/delivery/register"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Register here
-              </Link>
-            </p>
-            <p className="text-center text-sm text-gray-600 mt-2">
-              Are you a customer?{' '}
-              <Link
-                href="/login"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Customer login
-              </Link>
-            </p>
+          <div className="flex items-center justify-between mt-6 pt-6" style={{borderTop:'1px solid #1f1f1f'}}>
+            <Link href="/delivery/forgot-password" className="text-xs font-medium" style={{color:'#10b981'}}>Forgot password?</Link>
+            <Link href="/" className="text-xs text-gray-600">← Main site</Link>
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-500">
-            Need help?{' '}
-            <a href="mailto:support@example.com" className="font-medium text-blue-600 hover:text-blue-500">
-              Contact support
-            </a>
-          </p>
-          <p className="text-xs text-gray-400 mt-2">
-            © {new Date().getFullYear()} Lando Ranch Delivery. All rights reserved.
-          </p>
-        </div>
+        <p className="text-center text-xs mt-6 text-gray-800">© {new Date().getFullYear()} Lando Ranch Delivery</p>
       </div>
     </div>
   );

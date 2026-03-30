@@ -151,7 +151,7 @@ const Header: React.FC = () => {
         
         {/* PROMO BAR */}
         <div className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 text-white text-xs">
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 flex items-center justify-between py-1.5">
+          <div className="w-full px-4 sm:px-6 lg:px-12 flex items-center justify-between py-1.5">
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5 font-medium"><Truck size={13}/> Free delivery on all orders</span>
               <span className="hidden sm:flex items-center gap-1.5 border-l border-white/25 pl-4"><Flame size={13} className="text-amber-300"/> Hot deals every day</span>
@@ -170,7 +170,7 @@ const Header: React.FC = () => {
 
         {/* DESKTOP MAIN BAR */}
         <div className="hidden md:block bg-white border-b border-gray-100/80">
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12">
+          <div className="w-full px-4 sm:px-6 lg:px-12">
             <div className="flex items-center gap-5 py-3.5">
               
               {/* Logo */}
@@ -313,7 +313,7 @@ const Header: React.FC = () => {
 
         {/* DESKTOP CATEGORIES */}
         <nav className="bg-white hidden md:block border-b border-gray-100" aria-label="Product categories">
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12">
+          <div className="w-full px-4 sm:px-6 lg:px-12">
             <div className="flex items-center py-2 relative">
               <button onClick={scrollLeft} className="absolute -left-1 z-20 p-1 text-gray-400 hover:text-emerald-600 transition-colors" aria-label="Scroll left"><ChevronLeft size={26}/></button>
               <div className="w-6 flex-shrink-0"/>

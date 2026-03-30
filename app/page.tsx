@@ -4,271 +4,144 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import BannerCarousel from '@/components/ui/BannerCarousel';
 import TopCategories from '@/components/ui/TopCategories';
 import FeaturedProducts from '@/components/ui/FeaturedProducts';
-import WoodenUtensils from '@/components/ui/WoodenUtensils';
-import CleaningSuppliesPage from '@/components/ui/CleaningSupplies';
-
-import ProductsPage from '@/components/ui/ProductsPage';
-
+import WoodenUtensilsPage from '@/components/ui/WoodenUtensils';
 import HandicraftsPage from '@/components/ui/Handicrafts';
 import NewArrivals from '@/components/ui/NewArrivals';
 import PersonalizedRecommendations from '@/components/ui/PersonalizedRecommendations';
-import { 
-  ArrowUp,
-  HelpCircle,
-  Phone,
-  Gift,
-  MessageSquare
+import ProductsPage from '@/components/ui/ProductsPage';
+import {
+  ArrowUp, HelpCircle, Phone, Gift, MessageSquare, ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth';
-import WoodenUtensilsPage from '@/components/ui/WoodenUtensils';
-import CleaningSupplies from '@/components/ui/CleaningSupplies';
 
 const HomePage: React.FC = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showCustomerSupport, setShowCustomerSupport] = useState(false);
-  
-  // Get authentication status from auth context
-  const { isAuthenticated } = useAuth();
-
-  // Refs
-  const featuredSectionRef = useRef<HTMLDivElement>(null);
-  const categoriesSectionRef = useRef<HTMLDivElement>(null);
-  const newArrivalsSectionRef = useRef<HTMLDivElement>(null);
-
-  // Colors - QuickMart style
-  const colors = {
-    primary: '#90EE90', // Light Green
-    primaryDark: '#5CD65C', // Darker Green
-    gold: '#FFD700', // Gold
-    orange: '#FFA500', // Warm Orange
-    secondary: '#333333',
-    green: '#28a745',
-    yellow: '#ffc107',
-    lightGray: '#f8f9fa',
-    dark: '#2c3e50'
-  };
 
   const whatsappNumber = '+254716354589';
   const whatsappMessage = encodeURIComponent('Hello! I have a question about your products.');
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
-  // Scroll to top
   const scrollToTop = useCallback(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Handle scroll animations
   useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 300);
-      
-      const sections = [
-        featuredSectionRef.current,
-        categoriesSectionRef.current,
-        newArrivalsSectionRef.current
-      ];
-      
-      sections.forEach(section => {
-        if (section) {
-          const rect = section.getBoundingClientRect();
-          const isVisible = rect.top < window.innerHeight - 100;
-          
-          if (isVisible) {
-            section.classList.add('animate-fade-up');
-          }
-        }
-      });
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    handleScroll();
-    
+    const handleScroll = () => setShowScrollTop(window.scrollY > 400);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Intersection observer for reveal animations
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('animate-fade-up');
+            entry.target.classList.remove('section-hidden');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.07, rootMargin: '0px 0px -40px 0px' }
+    );
+
+    const sections = document.querySelectorAll('.reveal-section');
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
   }, []);
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Custom scroll animation styles */}
-      <style jsx global>{`
-        @keyframes fadeUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .animate-fade-up {
-          animation: fadeUp 0.6s ease-out forwards;
-        }
-        
-        .section-hidden {
-          opacity: 0;
-          transform: translateY(30px);
-        }
-        
-        .scroll-hover {
-          transition: transform 0.3s ease;
-        }
-        
-        .scroll-hover:hover {
-          transform: translateY(-5px);
-        }
-        
-        .compact-section {
-          padding-top: 1.5rem !important;
-          padding-bottom: 1.5rem !important;
-        }
-        
-        @media (min-width: 768px) {
-          .compact-section {
-            padding-top: 2rem !important;
-            padding-bottom: 2rem !important;
-          }
-        }
+      {/* ── Banner ── */}
+      <section className="-mt-2 pt-0 sm:pt-2 md:pt-4 pb-0 overflow-hidden">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
+          <BannerCarousel
+            height={{ mobile: '280px', desktop: '390px' }}
+            rounded={false}
+          />
+        </div>
+      </section>
 
-        /* Floating buttons responsive sizes */
-        @media (max-width: 639px) {
-          .floating-button {
-            width: 44px !important;
-            height: 44px !important;
-          }
-          .floating-button svg {
-            width: 20px !important;
-            height: 20px !important;
-          }
-        }
-        
-        @media (min-width: 640px) and (max-width: 1023px) {
-          .floating-button {
-            width: 48px !important;
-            height: 48px !important;
-          }
-          .floating-button svg {
-            width: 22px !important;
-            height: 22px !important;
-          }
-        }
-        
-        @media (min-width: 1024px) {
-          .floating-button {
-            width: 52px !important;
-            height: 52px !important;
-          }
-          .floating-button svg {
-            width: 24px !important;
-            height: 24px !important;
-          }
-        }
-
-        @keyframes slide-up {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.2s ease-out;
-        }
-      `}</style>
-
-{/* Banner Section - Negative margin for mobile only */}
-<section className="-mt-2 pt-0 sm:pt-2 md:pt-4 lg:pt-6 pb-0 overflow-hidden">
-  <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
-    <BannerCarousel
-      height={{ mobile: '280px', desktop: '380px' }}
-      rounded={false}
-    />
-  </div>
-</section>
-
-      {/* Categories Section - Using new component */}
-      <div ref={categoriesSectionRef}>
-        <TopCategories 
-          limit={15}
-          showHeader={true}
-        />
+      {/* ── Top Categories ── */}
+      <div className="reveal-section section-hidden">
+        <TopCategories limit={15} showHeader={true} />
       </div>
 
-
-      {/* Featured Products Section - Using new component */}
-      <div>
-        <ProductsPage 
-        />
+      {/* ── All Products ── */}
+      <div className="reveal-section section-hidden mt-2">
+        <ProductsPage />
       </div>
 
-      {/* Featured Products Section - Using new component */}
-      <div ref={featuredSectionRef}>
-        <FeaturedProducts 
-          limit={12}
-          showHeader={true}
-        />
+      {/* ── Featured Products ── */}
+      <div className="reveal-section section-hidden">
+        <FeaturedProducts limit={12} showHeader={true} />
       </div>
 
-        <div>
+      {/* ── Handicrafts ── */}
+      <div className="reveal-section section-hidden">
         <HandicraftsPage />
       </div>
 
-      <div>
-      <PersonalizedRecommendations 
-    title="Recommended For You"
-    limit={12}
-    showHeader={true}
-    showStrategy={true}
-  />
-        </div>
-
-
-            {/* New Arrivals Section - Using new component */}
-      <div ref={newArrivalsSectionRef}>
-        <WoodenUtensilsPage />
-      </div>
-
-      {/* New Arrivals Section - Using new component */}
-      <div ref={newArrivalsSectionRef}>
-        <NewArrivals 
-          limit={48}
+      {/* ── Personalized Recommendations (no auth required) ── */}
+      <div className="reveal-section section-hidden">
+        <PersonalizedRecommendations
+          title="Recommended For You"
+          limit={12}
           showHeader={true}
+          showStrategy={false}
         />
       </div>
 
-      {/* Promotional Banner - Compact */}
-      <section className="compact-section mt-6 sm:mt-8 md:mt-10">
+      {/* ── Wooden Utensils ── */}
+      <div className="reveal-section section-hidden">
+        <WoodenUtensilsPage />
+      </div>
+
+      {/* ── New Arrivals ── */}
+      <div className="reveal-section section-hidden">
+        <NewArrivals limit={48} showHeader={true} />
+      </div>
+
+      {/* ── Promotional Banner ── */}
+      <section className="py-8 sm:py-10 md:py-12 reveal-section section-hidden">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
-          <div className="relative rounded-xl md:rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <div className="bg-gradient-to-r from-green-500 via-emerald-600 to-green-700 p-4 md:p-6 lg:p-8">
-              <div className="flex flex-col md:flex-row items-center justify-between">
-                <div className="text-white mb-4 md:mb-0 md:mr-6 lg:mr-8">
-                  <div className="inline-flex items-center px-3 md:px-4 py-1.5 md:py-2 bg-white/20 rounded-full mb-3 md:mb-4 backdrop-blur-sm">
+          <div className="relative rounded-2xl overflow-hidden">
+            {/* Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800" />
+            {/* Decorative circles */}
+            <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-white/5 blur-xl" />
+            <div className="absolute -bottom-10 -left-10 w-52 h-52 rounded-full bg-emerald-400/20 blur-lg" />
+            <div className="absolute top-1/2 right-1/4 w-32 h-32 rounded-full bg-yellow-400/10" />
+
+            <div className="relative z-10 p-6 md:p-8 lg:p-10">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="text-white">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/15 rounded-full mb-4 backdrop-blur-sm border border-white/20 text-sm font-medium">
                     <Gift size={14} />
-                    <span className="ml-1.5 md:ml-2 font-medium text-sm md:text-base">Weekend Special</span>
+                    Weekend Special
                   </div>
-                  <h3 className="text-xl md:text-2xl lg:text-3xl font-bold mb-2 md:mb-3">Fresh Produce Sale!</h3>
-                  <p className="text-base md:text-lg mb-4 md:mb-6 opacity-90">Up to 50% off on organic fruits & vegetables</p>
+                  <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 leading-tight">
+                    Fresh Produce Sale!
+                  </h3>
+                  <p className="text-base md:text-lg opacity-85 mb-6 max-w-md">
+                    Up to 50% off on organic fruits &amp; vegetables. Limited time offer — shop before it&apos;s gone.
+                  </p>
                   <Link
                     href="/deals"
-                    className="inline-flex items-center bg-white text-green-700 px-4 md:px-6 py-2.5 md:py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg hover:shadow-xl text-sm md:text-base"
+                    className="inline-flex items-center gap-2 bg-white text-emerald-700 px-5 py-2.5 rounded-xl font-semibold hover:bg-emerald-50 transition-all duration-200 shadow-lg hover:shadow-xl text-sm md:text-base group"
                   >
                     Shop Now
-                    <ArrowUp className="ml-2" size={16} />
+                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform duration-200" />
                   </Link>
                 </div>
-                <div className="relative mt-4 md:mt-0">
-                  <div className="w-32 h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm">
-                    <div className="text-center">
-                      <div className="text-3xl md:text-4xl lg:text-5xl font-bold mb-1 md:mb-2">50%</div>
-                      <div className="text-base md:text-lg font-semibold">OFF</div>
+
+                <div className="flex-shrink-0">
+                  <div className="w-28 h-28 md:w-36 md:h-36 lg:w-44 lg:h-44 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/20">
+                    <div className="text-center text-white">
+                      <div className="text-4xl md:text-5xl font-bold leading-none">50%</div>
+                      <div className="text-sm font-semibold tracking-widest opacity-90 mt-1">OFF</div>
                     </div>
                   </div>
                 </div>
@@ -278,117 +151,113 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-    
-
-
-      {/* <div ref={newArrivalsSectionRef}>
-        <CleaningSupplies />
-      </div> */}
-
-      {/* Floating Action Buttons */}
-     {/* Floating Action Buttons - Adjusted for mobile to avoid cart overlap */}
-<div className="fixed bottom-20 right-4 z-40 flex flex-col items-end gap-3">
-  {/* WhatsApp Button */}
-  <a
-    href={whatsappUrl}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="floating-button flex items-center justify-center rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110"
-    style={{
-      background: 'linear-gradient(135deg, #25D366, #128C7E)',
-      boxShadow: '0 4px 20px rgba(37, 211, 102, 0.4)'
-    }}
-    aria-label="Chat on WhatsApp"
-  >
-    <MessageSquare className="text-white" size={20} />
-  </a>
-
-  {/* Scroll to Top Button */}
-  <button
-    onClick={scrollToTop}
-    className={`floating-button flex items-center justify-center rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 ${
-      showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
-    }`}
-    style={{
-      background: `linear-gradient(135deg, ${colors.primary}, ${colors.primaryDark})`,
-      boxShadow: '0 4px 20px rgba(90, 221, 90, 0.4)'
-    }}
-    aria-label="Scroll to top"
-  >
-    <ArrowUp className="text-white" size={20} />
-  </button>
-
-  {/* Customer Support Button */}
-  <button
-    onClick={() => setShowCustomerSupport(!showCustomerSupport)}
-    className="floating-button flex items-center justify-center rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110"
-    style={{
-      background: `linear-gradient(135deg, ${colors.primary}, ${colors.primaryDark})`,
-      boxShadow: '0 4px 20px rgba(90, 221, 90, 0.4)'
-    }}
-    aria-label="Customer Support"
-  >
-    <HelpCircle className="text-white" size={20} />
-  </button>
-
-  {/* Customer Support Dropdown */}
-  {showCustomerSupport && (
-    <div className="absolute right-0 bottom-full mb-3 bg-white rounded-xl shadow-2xl border border-gray-200 w-56 md:w-64 overflow-hidden animate-slide-up">
-      <div 
-        className="p-3 text-white"
-        style={{
-          background: `linear-gradient(135deg, ${colors.primary}, ${colors.primaryDark})`
-        }}
-      >
-        <h3 className="font-bold text-sm md:text-base">Need Help?</h3>
-        <p className="text-xs opacity-90">We're here 24/7</p>
-      </div>
-      
-      <div className="p-2 space-y-1">
+      {/* ── Floating Action Buttons ── */}
+      <div className="fixed bottom-20 right-4 z-40 flex flex-col items-end gap-3">
+        {/* WhatsApp */}
         <a
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+          className="fab w-12 h-12 flex items-center justify-center rounded-full shadow-xl"
+          style={{
+            background: 'linear-gradient(135deg, #25D366, #128C7E)',
+            boxShadow: '0 4px 20px rgba(37, 211, 102, 0.45)'
+          }}
+          aria-label="Chat on WhatsApp"
         >
-          <div className="p-1.5 rounded-lg bg-green-100">
-            <MessageSquare size={16} className="text-green-600" />
-          </div>
-          <div className="flex-1">
-            <div className="font-medium text-gray-900 text-sm">WhatsApp</div>
-            <div className="text-xs text-gray-600">Instant reply</div>
-          </div>
+          <MessageSquare className="text-white" size={20} />
         </a>
-        
-        <a
-          href="tel:+254716354589"
-          className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+
+        {/* Scroll to Top */}
+        <button
+          onClick={scrollToTop}
+          className={`fab w-12 h-12 flex items-center justify-center rounded-full shadow-xl transition-all duration-300 ${
+            showScrollTop ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
+          }`}
+          style={{
+            background: 'linear-gradient(135deg, #10b981, #059669)',
+            boxShadow: '0 4px 20px rgba(16, 185, 129, 0.45)'
+          }}
+          aria-label="Scroll to top"
         >
-          <div className="p-1.5 rounded-lg bg-blue-100">
-            <Phone size={16} className="text-blue-600" />
-          </div>
-          <div className="flex-1">
-            <div className="font-medium text-gray-900 text-sm">Call Us</div>
-            <div className="text-xs text-gray-600">+254 716 354 589</div>
-          </div>
-        </a>
-        
-        <Link
-          href="/help"
-          className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+          <ArrowUp className="text-white" size={20} />
+        </button>
+
+        {/* Support */}
+        <button
+          onClick={() => setShowCustomerSupport(!showCustomerSupport)}
+          className="fab w-12 h-12 flex items-center justify-center rounded-full shadow-xl"
+          style={{
+            background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+            boxShadow: '0 4px 20px rgba(99, 102, 241, 0.45)'
+          }}
+          aria-label="Customer Support"
         >
-          <div className="p-1.5 rounded-lg bg-purple-100">
-            <HelpCircle size={16} className="text-purple-600" />
+          <HelpCircle className="text-white" size={20} />
+        </button>
+
+        {/* Support Dropdown */}
+        {showCustomerSupport && (
+          <div className="absolute right-0 bottom-full mb-3 bg-white rounded-2xl shadow-2xl border border-gray-100 w-60 overflow-hidden toast-enter">
+            <div className="p-4 bg-gradient-to-r from-indigo-500 to-purple-600">
+              <h3 className="font-bold text-sm text-white">Need Help?</h3>
+              <p className="text-xs text-white/80 mt-0.5">We&apos;re here 24/7 for you</p>
+            </div>
+            <div className="p-2 space-y-1">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors group"
+              >
+                <div className="p-2 rounded-lg bg-green-100 group-hover:bg-green-200 transition-colors">
+                  <MessageSquare size={15} className="text-green-600" />
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900 text-sm">WhatsApp</div>
+                  <div className="text-xs text-gray-500">Instant reply</div>
+                </div>
+              </a>
+
+              <a
+                href="tel:+254716354589"
+                className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors group"
+              >
+                <div className="p-2 rounded-lg bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                  <Phone size={15} className="text-blue-600" />
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900 text-sm">Call Us</div>
+                  <div className="text-xs text-gray-500">+254 716 354 589</div>
+                </div>
+              </a>
+
+              <Link
+                href="/support"
+                onClick={() => setShowCustomerSupport(false)}
+                className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors group"
+              >
+                <div className="p-2 rounded-lg bg-purple-100 group-hover:bg-purple-200 transition-colors">
+                  <HelpCircle size={15} className="text-purple-600" />
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900 text-sm">Help Center</div>
+                  <div className="text-xs text-gray-500">FAQs &amp; guides</div>
+                </div>
+              </Link>
+            </div>
           </div>
-          <div className="flex-1">
-            <div className="font-medium text-gray-900 text-sm">Help Center</div>
-            <div className="text-xs text-gray-600">FAQs & guides</div>
-          </div>
-        </Link>
+        )}
       </div>
-    </div>
-  )}
-</div>
+
+      <style jsx global>{`
+        .section-hidden { opacity: 0; transform: translateY(22px); }
+        .animate-fade-up { animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(22px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };
