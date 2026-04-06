@@ -255,7 +255,7 @@ const Header: React.FC = () => {
                 <div className="relative flex-shrink-0">
                   <button onClick={() => setAccountMenuOpen(!accountMenuOpen)}
                     className="flex items-center gap-2.5 p-1.5 rounded hover:bg-gray-50 transition-colors">
-                    <div className="w-9 h-9 rounded-full ring-2 overflow-hidden bg-blue-100 flex-shrink-0" style={{ ringColor: '#004E9A' }}>
+                    <div className="w-9 h-9 rounded-full ring-2 overflow-hidden bg-blue-100 flex-shrink-0" style={{ boxShadow: '0 0 0 2px #004E9A' }}>
                       <img src={getAvatarUrl()} alt={getDisplayName()} className="w-full h-full object-cover" onError={() => setAvatarError(true)} />
                     </div>
                     <div className="text-left hidden lg:block">
@@ -402,7 +402,7 @@ const Header: React.FC = () => {
                   <LogIn size={13}/> <span className="hidden sm:inline">Login</span>
                 </Link>
               ) : (
-                <button onClick={() => setMobileAccountMenuOpen(!mobileAccountMenuOpen)} className="flex-shrink-0 w-9 h-9 rounded-full ring-2 overflow-hidden bg-blue-100" style={{ ringColor: '#004E9A' }}>
+                <button onClick={() => setMobileAccountMenuOpen(!mobileAccountMenuOpen)} className="flex-shrink-0 w-9 h-9 rounded-full ring-2 overflow-hidden bg-blue-100" style={{ boxShadow: '0 0 0 2px #004E9A' }}>
                   <img src={getAvatarUrl()} alt={getDisplayName()} className="w-full h-full object-cover" onError={() => setAvatarError(true)}/>
                 </button>
               )}
