@@ -210,10 +210,12 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
             slug: rec.slug,
             description: rec.description || '',
             price: parseFloat(rec.price) || 0,
-            discounted_price: rec.discounted_price ? parseFloat(rec.discounted_price) : null,
+            discounted_price: rec.discounted_price ? parseFloat(rec.discounted_price) : undefined,
             final_price: parseFloat(finalPrice) || 0,
             thumbnail,
             main_image,
+            sku: rec.sku || '', // Add SKU property
+            category_id: rec.category_id || null, // Add category_id property
             category: rec.category ? {
               id: rec.category.id,
               name: rec.category.name,
@@ -224,7 +226,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
               order: 0,
               created_at: rec.category.created_at || new Date().toISOString(),
               updated_at: rec.category.updated_at || new Date().toISOString()
-            } : null,
+            } : undefined,
             vendor: rec.vendor ? {
               id: rec.vendor.id,
               name: rec.vendor.name,
@@ -232,8 +234,10 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
               phone: rec.vendor.phone || '',
               is_active: true,
               created_at: rec.vendor.created_at || new Date().toISOString(),
-              updated_at: rec.vendor.updated_at || new Date().toISOString()
-            } : null,
+              updated_at: rec.vendor.updated_at || new Date().toISOString(),
+              role: rec.vendor.role || 'user', // Default role if not provided
+              loyalty_points: rec.vendor.loyalty_points || 0 // Default loyalty points if not provided
+            } : undefined,
             rating: parseFloat(rec.rating) || 0,
             review_count: parseInt(rec.review_count) || 0,
             stock_quantity: parseInt(rec.stock_quantity) || 0,
