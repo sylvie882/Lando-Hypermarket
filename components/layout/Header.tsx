@@ -200,7 +200,7 @@ const Header: React.FC = () => {
                       onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                       className="w-full pl-4 pr-2 py-2.5 border-2 border-gray-200 rounded-l-md focus:outline-none focus:border-blue-600 bg-white text-sm transition-all placeholder-gray-400 font-medium"
                       autoComplete="off" aria-autocomplete="list" aria-haspopup="listbox" />
-                    <button type="submit" style={{ background: '#E3000B' }} className="px-5 hover:opacity-90 text-white rounded-r-md text-sm font-bold transition-all flex items-center gap-1.5 flex-shrink-0">
+                    <button type="submit"  className="px-5 hover:opacity-90 text-white bg-[#E67E22] hover:bg-[#D35400] rounded-r-md text-sm font-bold transition-all flex items-center gap-1.5 flex-shrink-0">
                       <Search size={16} />
                     </button>
                   </div>
@@ -293,7 +293,7 @@ const Header: React.FC = () => {
               ) : (
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Link href="/auth/login" className="text-sm font-bold text-gray-700 hover:text-blue-700 px-4 py-2 rounded border border-gray-200 hover:border-blue-300 transition-all">Sign In</Link>
-                  <Link href="/auth/register" className="text-sm font-bold text-white px-4 py-2 rounded transition-all" style={{ background: '#E3000B' }}>Register</Link>
+                  <Link href="/auth/register" className="text-sm font-bold text-white px-4 py-2 rounded transition-all bg-[#E67E22] hover:bg-[#D35400]" >Register</Link>
                 </div>
               )}
 

@@ -199,7 +199,7 @@ const TopCategories: React.FC<TopCategoriesProps> = ({
   if (isLoading) {
     return (
       <div className={`compact-section bg-white ${className}`}>
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
+        <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
           <div className="animate-pulse">
             {showHeader && (
               <div className="flex items-center justify-between mb-6">
@@ -227,7 +227,7 @@ const TopCategories: React.FC<TopCategoriesProps> = ({
 
   return (
     <section className={`compact-section bg-white ${className}`}>
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
+      <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
         {showHeader && (
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">

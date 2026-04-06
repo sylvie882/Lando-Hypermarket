@@ -308,7 +308,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
   if (isLoading) {
     return (
       <div className={`bg-white py-8 ${className}`}>
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
+        <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
           {showHeader && (
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
@@ -344,7 +344,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
 
   return (
     <div className={`bg-white py-8 ${className}`}>
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
+      <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
         {showHeader && (
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <div className="flex items-center gap-3">

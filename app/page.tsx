@@ -56,7 +56,7 @@ const HomePage: React.FC = () => {
     <div className="min-h-screen bg-white">
       {/* ── Banner ── */}
       <section className="-mt-2 pt-0 sm:pt-2 md:pt-4 pb-0 overflow-hidden">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
+        <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
           <BannerCarousel
             height={{ mobile: '280px', desktop: '390px' }}
             rounded={false}
@@ -106,7 +106,7 @@ const HomePage: React.FC = () => {
 
       {/* ── Promotional Banner ── */}
       <section className="py-8 sm:py-10 md:py-12 reveal-section section-hidden">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
+        <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
           <div className="relative rounded-2xl overflow-hidden">
             {/* Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800" />

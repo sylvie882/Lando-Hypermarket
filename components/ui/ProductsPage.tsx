@@ -41,11 +41,18 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
   const [discountedProductsLoaded, setDiscountedProductsLoaded] = useState(false);
   
   // Define tabs with their category IDs (from your data)
-  const tabs = [
-    { id: 'offers', label: 'Offers', categoryId: null },
-    { id: 'fruits', label: 'Fruits', categoryId: 45 }, // ID 45 = Fresh Fruits
-    { id: 'vegetables', label: 'Vegetables', categoryId: 46 }, // ID 46 = Fresh Vegetables
-  ];
+// Define tabs with their category IDs (from your data)
+const tabs = [
+  { id: 'offers', label: 'Offers', categoryId: null },
+  { id: 'fruits', label: 'Fruits', categoryId: 45 }, // ID 45 = Fresh Fruits
+  { id: 'vegetables', label: 'Vegetables', categoryId: 46 }, // ID 46 = Fresh Vegetables
+  { id: 'handcraft', label: 'Handcraft', categoryId: 42 }, // ID 42 = Handicrafts & Artisans
+  { id: 'wooden-utensils', label: 'Wooden utensils', categoryId: 63 }, // ID 63 = Wooden Utensils
+  { id: 'meat', label: 'Meat', categoryId: 31 }, // ID 31 = Pasture Raised Meat
+  { id: 'fish-seafood', label: 'Fish & Seafood', categoryId: 32 }, // ID 32 = Fish & Seafood
+  { id: 'cereals-grains', label: 'Cereals & Grains', categoryId: 34 }, // ID 34 = Cereals & Grains
+  { id: 'beverages', label: 'Beverages', categoryId: 39 }, // ID 39 = Beverages
+];
 
   // Fetch products based on active tab
   useEffect(() => {
@@ -334,7 +341,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
+      <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900">
@@ -342,7 +349,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
           </h1>
           <Link
             href="/products"
-            className="text-md text-emerald-600 underline underline-offset-2 hover:text-gray-900 transition-colors"
+            className="text-md text-gray-700 underline underline-offset-2 hover:text-gray-900 transition-colors"
           >
             View all products
           </Link>
@@ -358,7 +365,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
               className={`
                 px-5 py-2 rounded-full text-sm font-medium border transition-all whitespace-nowrap
                 ${activeTab === tab.id
-                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  ? 'bg-[#E67E22] text-white border-gray-600'
                   : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'
                 }
                 ${loading ? 'opacity-50 cursor-not-allowed' : ''}
@@ -390,7 +397,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
               <p className="text-red-500 mb-4">{error}</p>
               <button
                 onClick={handleRetry}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#E67E22] hover:bg-[#D35400] text-white rounded-lg font-medium  transition-colors"
               >
                 <RefreshCw size={18} />
                 <span>Try Again</span>
@@ -398,7 +405,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
             </div>
           ) : products.length === 0 ? (
             <div className="text-center py-16">
-              <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-5">
+              <div className="w-20 h-20 rounded-full bg-[#E67E22] flex items-center justify-center mx-auto mb-5">
                 <ShoppingBag size={32} className="text-emerald-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">
@@ -412,7 +419,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
               {activeTab !== 'offers' && (
                 <button
                   onClick={() => handleTabChange('offers')}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#E67E22] text-white rounded-lg font-medium hover:bg-[#D35400] transition-colors"
                 >
                   View offers instead
                 </button>
