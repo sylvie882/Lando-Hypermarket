@@ -1,0 +1,798 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
+import { Cart, CartItem } from '@/types';
+import LoadingSpinner from '@/components/shared/LoadingSpinner';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Tag, Image as ImageIcon } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+// Add this interface for promo code response
+interface Promotion {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  type: 'percentage' | 'fixed_amount' | 'free_shipping' | 'buy_one_get_one';
+  discount_value: number;
+  max_discount_amount: number | null;
+  min_order_amount: number | null;
+  valid_from: string;
+  valid_to: string;
+}
+
+interface PromotionValidationResponse {
+  valid: boolean;
+  message?: string;
+  promotion?: Promotion;
+  discount_amount?: number;
+}
+
+// Format currency to KSH
+const formatKSH = (amount: any): string => {
+  const numAmount = amount ? parseFloat(String(amount)) : 0;
+  
+  if (isNaN(numAmount) || numAmount <= 0) {
+    return 'KSh 0';
+  }
+  
+  return new Intl.NumberFormat('en-KE', {
+    style: 'currency',
+    currency: 'KES',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(numAmount);
+};
+
+// Helper to get proper image URL from API
+const getImageUrl = (thumbnail: string | null | undefined): string => {
+  if (!thumbnail) {
+    return '/images/placeholder-product.jpg';
+  }
+  
+  // Clean any leading slash
+  const cleanThumbnail = thumbnail.replace(/^\//, '');
+  
+  // Check if it's already a full URL
+  if (thumbnail.startsWith('http')) {
+    return thumbnail;
+  }
+  
+  // Construct proper storage URL
+  // Assuming your API is at https://api.hypermarket.co.ke
+  return `https://api.hypermarket.co.ke/storage/${cleanThumbnail}`;
+};
+
+// Helper to get gallery images
+const getGalleryImages = (product: any): string[] => {
+  if (!product || !product.images) {
+    return [];
+  }
+  
+  // Handle different image formats from API
+  const images = [];
+  
+  if (Array.isArray(product.images)) {
+    // If images is an array of strings
+    images.push(...product.images);
+  } else if (product.images.gallery_images && Array.isArray(product.images.gallery_images)) {
+    // If images has gallery_images property
+    images.push(...product.images.gallery_images);
+  } else if (product.gallery_images && Array.isArray(product.gallery_images)) {
+    // If gallery_images is directly on product
+    images.push(...product.gallery_images);
+  }
+  
+  // Process each image to get proper URL
+  return images.map(img => getImageUrl(img));
+};
+
+const CartPage: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [updatingItems, setUpdatingItems] = useState<number[]>([]);
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<Promotion | null>(null);
+  const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [selectedProductImages, setSelectedProductImages] = useState<{[key: number]: string[]}>({});
+
+  // Helper function to create empty cart
+  const getEmptyCart = (): Cart => ({
+    items: [],
+    id: 0,
+    user_id: 0,
+    total: 0,
+    item_count: 0
+  });
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchCart();
+    } else {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  const fetchCart = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.cart.get();
+      console.log('Cart API Response:', response); // Debug log
+      
+      // Handle different response structures
+      let cartData;
+      if (response.data && response.data.cart) {
+        // Structure: { cart: {...}, total: X, item_count: X }
+        cartData = response.data.cart;
+      } else if (response.data) {
+        // Structure: cart data directly in response.data
+        cartData = response.data;
+      } else {
+        // No data
+        cartData = getEmptyCart();
+      }
+      
+      setCart(cartData);
+      
+      // Extract gallery images for each product
+      const items = cartData?.items || [];
+      const imageMap: {[key: number]: string[]} = {};
+      
+      items.forEach((item: CartItem) => {
+        if (item.product) {
+          imageMap[item.product.id] = getGalleryImages(item.product);
+        }
+      });
+      
+      setSelectedProductImages(imageMap);
+    } catch (error: any) {
+      console.error('Failed to fetch cart:', error);
+      
+      // Check if it's a 401 error (not logged in)
+      if (error.response?.status === 401) {
+        toast.error('Please login to view your cart');
+      } else if (error.response?.status === 404) {
+        // Cart doesn't exist yet, create empty one
+        toast.error('Your cart is empty');
+        setCart(getEmptyCart());
+      } else {
+        toast.error('Failed to load cart');
+        setCart(getEmptyCart());
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // FIXED: updateQuantity function with proper number handling
+  const updateQuantity = async (itemId: number, newQuantity: number) => {
+    // Ensure we're working with numbers and parse as integer
+    const quantity = Math.floor(Number(newQuantity));
+    
+    // Validate quantity
+    if (isNaN(quantity) || quantity < 1) return;
+    
+    setUpdatingItems(prev => [...prev, itemId]);
+    try {
+      // Make sure we're sending a number, not a string
+      await api.cart.updateItem(itemId, { quantity: quantity });
+      await fetchCart(); // Refresh cart
+      
+      // Dispatch event for header update
+      window.dispatchEvent(new Event('cart:updated'));
+      
+      toast.success('Cart updated');
+    } catch (error: any) {
+      console.error('Update cart error:', error);
+      const message = error.response?.data?.message || error.message || 'Failed to update cart';
+      toast.error(message);
+    } finally {
+      setUpdatingItems(prev => prev.filter(id => id !== itemId));
+    }
+  };
+
+  const removeItem = async (itemId: number) => {
+    if (!confirm('Are you sure you want to remove this item?')) return;
+    
+    try {
+      await api.cart.removeItem(itemId);
+      await fetchCart(); // Refresh cart
+      
+      // Dispatch event for header update
+      window.dispatchEvent(new Event('cart:itemRemoved'));
+      
+      toast.success('Item removed from cart');
+    } catch (error: any) {
+      console.error('Remove item error:', error);
+      const message = error.response?.data?.message || error.message || 'Failed to remove item';
+      toast.error(message);
+    }
+  };
+
+  const applyPromoCode = async () => {
+    if (!promoCode.trim()) {
+      toast.error('Please enter a promo code');
+      return;
+    }
+    
+    if (!cart || cart.items.length === 0) {
+      toast.error('Cart is empty');
+      return;
+    }
+    
+    try {
+      setIsApplyingPromo(true);
+      
+      // Calculate subtotal
+      const subtotal = cart.items.reduce((sum, item) => {
+        const price = safeParseNumber(item.price);
+        const quantity = safeParseNumber(item.quantity);
+        return sum + (price * quantity);
+      }, 0);
+      
+      // Use the promotions API
+      const response = await api.promotions.validate({
+        code: promoCode.trim(),
+        order_amount: subtotal
+      });
+      
+      const data = response.data;
+      
+      if (data.valid && data.promotion) {
+        setAppliedPromo(data.promotion);
+        
+        // Use discount amount from server if available
+        if (data.discount_amount !== undefined) {
+          setAppliedDiscount(data.discount_amount);
+        } else {
+          // Calculate discount client-side as fallback
+          let discount = 0;
+          if (data.promotion.type === 'percentage') {
+            discount = subtotal * (data.promotion.discount_value / 100);
+            // Apply max discount if set
+            if (data.promotion.max_discount_amount && discount > data.promotion.max_discount_amount) {
+              discount = data.promotion.max_discount_amount;
+            }
+          } else if (data.promotion.type === 'fixed_amount') {
+            discount = Math.min(data.promotion.discount_value, subtotal);
+          }
+          setAppliedDiscount(discount);
+        }
+        
+        toast.success(`Promo code applied! Discount: ${formatKSH(appliedDiscount)}`);
+      } else {
+        toast.error(data.message || 'Invalid promo code');
+        removePromoCode();
+      }
+    } catch (error: any) {
+      console.error('Promo code error:', error);
+      const message = error.response?.data?.message || error.message || 'Failed to apply promo code';
+      toast.error(message);
+      removePromoCode();
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  };
+
+  const removePromoCode = () => {
+    setAppliedPromo(null);
+    setAppliedDiscount(0);
+    setPromoCode('');
+  };
+
+  const clearCart = async () => {
+    if (!cart || cart.items.length === 0) return;
+    
+    if (!confirm('Are you sure you want to clear your cart?')) return;
+    
+    try {
+      await api.cart.clear();
+      setCart(getEmptyCart());
+      removePromoCode();
+      
+      // Dispatch event for header update
+      window.dispatchEvent(new Event('cart:cleared'));
+      
+      toast.success('Cart cleared');
+    } catch (error: any) {
+      const message = error.response?.data?.message || error.message || 'Failed to clear cart';
+      toast.error(message);
+    }
+  };
+
+  // Helper function to safely parse numbers
+  const safeParseNumber = (value: any): number => {
+    if (value === null || value === undefined) return 0;
+    
+    const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+    
+    return isNaN(num) ? 0 : num;
+  };
+
+  // Helper function to calculate item total
+  const calculateItemTotal = (item: CartItem): number => {
+    const price = safeParseNumber(item.price);
+    const quantity = safeParseNumber(item.quantity);
+    return price * quantity;
+  };
+
+  // Listen for cart updates from other components
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      fetchCart();
+    };
+
+    window.addEventListener('cart:updated', handleCartUpdate);
+    window.addEventListener('cart:itemAdded', handleCartUpdate);
+    window.addEventListener('cart:itemRemoved', handleCartUpdate);
+    
+    return () => {
+      window.removeEventListener('cart:updated', handleCartUpdate);
+      window.removeEventListener('cart:itemAdded', handleCartUpdate);
+      window.removeEventListener('cart:itemRemoved', handleCartUpdate);
+    };
+  }, []);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto">
+          <ShoppingBag size={64} className="mx-auto text-gray-300 mb-6" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Please Login</h1>
+          <p className="text-gray-600 mb-6">Login to view your shopping cart</p>
+          <Link
+            href="/auth/login"
+            className="inline-flex items-center justify-center bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
+          >
+            Login to Continue
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  const cartItems = cart?.items || [];
+  
+  if (!cart || cartItems.length === 0) {
+    return (
+      <div className="min-h-screen">
+        <div className="container mx-auto px-4 py-16">
+          <div className="text-center max-w-md mx-auto">
+            <ShoppingBag size={64} className="mx-auto text-gray-300 mb-6" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h1>
+            <p className="text-gray-600 mb-8">Add some items to get started!</p>
+            <Link
+              href="/products"
+              className="inline-flex items-center justify-center bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
+              onClick={() => {
+                // Dispatch event to refresh header cart count
+                window.dispatchEvent(new Event('cart:updated'));
+              }}
+            >
+              Continue Shopping
+              <ArrowRight className="ml-2" size={20} />
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate totals - FREE DELIVERY, NO VAT
+  const subtotal = cartItems.reduce((sum, item) => {
+    return sum + calculateItemTotal(item);
+  }, 0);
+  
+  const shipping = 0; // FREE DELIVERY
+  const tax = 0; // NO VAT
+  const total = Math.max(0, subtotal + shipping + tax - appliedDiscount);
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Cart Items - Table Style with Borders */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+              {/* Table Header */}
+              <div className="hidden md:grid grid-cols-12 gap-4 p-4 bg-gray-50 border-b border-gray-200 font-medium text-gray-700">
+                <div className="col-span-6">Product</div>
+                <div className="col-span-2 text-center">Price</div>
+                <div className="col-span-2 text-center">Quantity</div>
+                <div className="col-span-2 text-center">Total</div>
+              </div>
+
+              {/* Cart Items */}
+              <div className="divide-y divide-gray-200">
+                {cartItems.map((item) => {
+                  const imageUrl = getImageUrl(item.product?.thumbnail || item.product?.main_image);
+                  const galleryImages = selectedProductImages[item.product?.id || 0] || [];
+                  const itemTotal = calculateItemTotal(item);
+                  const isUpdating = updatingItems.includes(item.id);
+                  const stockQuantity = safeParseNumber(item.product?.stock_quantity);
+                  const currentQuantity = safeParseNumber(item.quantity);
+                  
+                  return (
+                    <div key={item.id} className="p-4 hover:bg-gray-50 transition-colors duration-200 border-b border-gray-200 last:border-b-0">
+                      {/* Mobile View */}
+                      <div className="md:hidden">
+                        <div className="flex gap-4">
+                          {/* Product Image */}
+                          <div className="flex-shrink-0">
+                            <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden relative border border-gray-200">
+                              {imageUrl ? (
+                                <img
+                                  src={imageUrl}
+                                  alt={item.product?.name || 'Product'}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.src = '/images/placeholder-product.jpg';
+                                  }}
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                  <ImageIcon size={24} className="text-gray-400" />
+                                </div>
+                              )}
+                              {stockQuantity === 0 && (
+                                <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex items-center justify-center">
+                                  <span className="text-white font-bold text-xs">Out of Stock</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Product Info */}
+                          <div className="flex-1">
+                            <Link
+                              href={`/products/${item.product?.id}`}
+                              className="font-medium text-gray-900 hover:text-green-600 transition-colors"
+                            >
+                              {item.product?.name || 'Product'}
+                            </Link>
+                            
+                            {stockQuantity < 10 && stockQuantity > 0 && (
+                              <p className="text-xs text-orange-600 mt-1">
+                                Only {stockQuantity} left!
+                              </p>
+                            )}
+
+                            <div className="mt-2 flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-gray-500">Price:</p>
+                                <p className="font-medium">{formatKSH(item.price)}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm text-gray-500">Total:</p>
+                                <p className="font-bold text-green-600">{formatKSH(itemTotal)}</p>
+                              </div>
+                            </div>
+
+                            {/* Quantity Controls - Mobile */}
+                            <div className="mt-3 flex items-center justify-between">
+                              <div className="flex items-center border border-gray-300 rounded-lg">
+                                <button
+                                  onClick={() => updateQuantity(item.id, Number(currentQuantity) - 1)}
+                                  disabled={isUpdating || Number(currentQuantity) <= 1}
+                                  className="w-8 h-8 flex items-center justify-center rounded-l hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <Minus size={14} />
+                                </button>
+                                <span className="w-10 h-8 flex items-center justify-center border-l border-r border-gray-300 bg-gray-50 text-sm">
+                                  {isUpdating ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                                  ) : (
+                                    currentQuantity
+                                  )}
+                                </span>
+                                <button
+                                  onClick={() => updateQuantity(item.id, Number(currentQuantity) + 1)}
+                                  disabled={isUpdating || Number(currentQuantity) >= stockQuantity}
+                                  className="w-8 h-8 flex items-center justify-center rounded-r hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              </div>
+
+                              <button
+                                onClick={() => removeItem(item.id)}
+                                disabled={isUpdating}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded transition-colors disabled:opacity-50"
+                                title="Remove item"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Desktop View - Grid Layout */}
+                      <div className="hidden md:grid md:grid-cols-12 gap-4 items-center">
+                        {/* Product Info - Col Span 6 */}
+                        <div className="col-span-6 flex items-center gap-4">
+                          <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden relative flex-shrink-0 border border-gray-200">
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={item.product?.name || 'Product'}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = '/images/placeholder-product.jpg';
+                                }}
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                <ImageIcon size={20} className="text-gray-400" />
+                              </div>
+                            )}
+                            {stockQuantity === 0 && (
+                              <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex items-center justify-center">
+                                <span className="text-white font-bold text-xs">Out of Stock</span>
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <Link
+                              href={`/products/${item.product?.id}`}
+                              className="font-medium text-gray-900 hover:text-green-600 transition-colors"
+                            >
+                              {item.product?.name || 'Product'}
+                            </Link>
+                            {stockQuantity < 10 && stockQuantity > 0 && (
+                              <p className="text-xs text-orange-600 mt-1">
+                                Only {stockQuantity} left in stock!
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Price - Col Span 2 */}
+                        <div className="col-span-2 text-center">
+                          <span className="font-medium">{formatKSH(item.price)}</span>
+                          {item.price !== item.product?.price && (
+                            <p className="text-xs text-gray-500 line-through">
+                              {formatKSH(item.product?.price)}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Quantity - Col Span 2 */}
+                        <div className="col-span-2 flex justify-center">
+                          <div className="flex items-center border border-gray-300 rounded-lg">
+                            <button
+                              onClick={() => updateQuantity(item.id, Number(currentQuantity) - 1)}
+                              disabled={isUpdating || Number(currentQuantity) <= 1}
+                              className="w-8 h-8 flex items-center justify-center rounded-l hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <Minus size={14} />
+                            </button>
+                            <span className="w-10 h-8 flex items-center justify-center border-l border-r border-gray-300 bg-gray-50 text-sm">
+                              {isUpdating ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                              ) : (
+                                currentQuantity
+                              )}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.id, Number(currentQuantity) + 1)}
+                              disabled={isUpdating || Number(currentQuantity) >= stockQuantity}
+                              className="w-8 h-8 flex items-center justify-center rounded-r hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Total & Actions - Col Span 2 */}
+                        <div className="col-span-2 flex items-center justify-between">
+                          <span className="font-bold text-green-600">{formatKSH(itemTotal)}</span>
+                          <button
+                            onClick={() => removeItem(item.id)}
+                            disabled={isUpdating}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded transition-colors disabled:opacity-50"
+                            title="Remove item"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Cart Footer with Actions */}
+              <div className="p-4 bg-gray-50 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <Link
+                    href="/products"
+                    className="text-green-600 hover:text-green-700 font-medium hover:underline transition-colors"
+                    onClick={() => {
+                      window.dispatchEvent(new Event('cart:updated'));
+                    }}
+                  >
+                    ← Continue Shopping
+                  </Link>
+                  <button
+                    onClick={clearCart}
+                    className="text-red-600 hover:text-red-700 font-medium hover:underline transition-colors"
+                    disabled={cartItems.length === 0}
+                  >
+                    Clear Cart
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Order Summary */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-8 border border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-200">Order Summary</h3>
+
+              {/* Promo Code */}
+              <div className="mb-6">
+                <div className="flex items-center mb-2">
+                  <Tag size={16} className="mr-2 text-gray-500" />
+                  <label className="text-sm font-medium text-gray-700">
+                    Promo Code
+                  </label>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    placeholder="Enter promo code"
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors disabled:bg-gray-100"
+                    disabled={!!appliedPromo || isApplyingPromo}
+                  />
+                  {appliedPromo ? (
+                    <button
+                      onClick={removePromoCode}
+                      className="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors disabled:opacity-50 min-w-[80px] flex items-center justify-center"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      onClick={applyPromoCode}
+                      disabled={isApplyingPromo || !promoCode.trim()}
+                      className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 min-w-[80px] flex items-center justify-center"
+                    >
+                      {isApplyingPromo ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      ) : (
+                        'Apply'
+                      )}
+                    </button>
+                  )}
+                </div>
+                {appliedPromo && (
+                  <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Tag size={14} className="mr-2 text-green-600" />
+                        <span className="text-sm font-medium text-green-800">
+                          {appliedPromo.code} applied!
+                        </span>
+                      </div>
+                      <span className="text-sm font-bold text-green-800">
+                        -{formatKSH(appliedDiscount)}
+                      </span>
+                    </div>
+                    {appliedPromo.name && (
+                      <p className="text-xs text-green-600 mt-1">{appliedPromo.name}</p>
+                    )}
+                    {appliedPromo.type === 'percentage' && (
+                      <p className="text-xs text-green-600">
+                        {appliedPromo.discount_value}% off
+                        {appliedPromo.max_discount_amount && (
+                          ` (max ${formatKSH(appliedPromo.max_discount_amount)})`
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Summary Details */}
+              <div className="space-y-4 mb-8">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="font-medium text-gray-900">{formatKSH(subtotal)}</span>
+                </div>
+                
+                {/* FREE DELIVERY */}
+                <div className="flex justify-between items-center text-green-600">
+                  <span className="font-medium">Delivery</span>
+                  <span className="font-bold">FREE</span>
+                </div>
+                
+                {appliedDiscount > 0 && (
+                  <div className="flex justify-between items-center text-green-600">
+                    <span className="font-medium">Discount</span>
+                    <span className="font-bold">-{formatKSH(appliedDiscount)}</span>
+                  </div>
+                )}
+                
+                <div className="border-t border-gray-200 my-4"></div>
+                
+                <div className="flex justify-between items-center text-xl font-bold text-gray-900">
+                  <span>Total</span>
+                  <span>{formatKSH(total)}</span>
+                </div>
+                
+                {/* FREE DELIVERY MESSAGE */}
+                <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center">
+                    <span className="text-green-600 font-medium text-sm">🎉 Free Delivery on All Orders</span>
+                  </div>
+                  <p className="text-xs text-green-600 mt-1">
+                    Enjoy free delivery to your doorstep on every order
+                  </p>
+                </div>
+              </div>
+
+              {/* Checkout Button */}
+              <div className="space-y-4">
+                <Link
+                  href="/checkout"
+                  className="block w-full text-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed border border-orange-700"
+                  onClick={() => {
+                    window.dispatchEvent(new Event('cart:updated'));
+                  }}
+                >
+                  Proceed to Checkout
+                </Link>
+                
+                <Link
+                  href="/products"
+                  className="block w-full text-center border-2 border-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  onClick={() => {
+                    window.dispatchEvent(new Event('cart:updated'));
+                  }}
+                >
+                  Continue Shopping
+                </Link>
+              </div>
+
+              {/* Payment Methods */}
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <p className="text-center text-sm text-gray-500 mb-3">Secure checkout with</p>
+                <div className="flex justify-center items-center gap-6">
+                  <div className="text-xl" title="Credit Cards">💳</div>
+                  <div className="text-xl" title="Bank Transfer">🏦</div>
+                  <div className="text-xl" title="M-Pesa">📱</div>
+                  <div className="text-xl" title="PayPal">💰</div>
+                </div>
+                <p className="text-center text-xs text-gray-400 mt-3">
+                  256-bit SSL encryption • Your data is secure
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CartPage;
