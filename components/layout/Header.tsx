@@ -149,7 +149,7 @@ const Header: React.FC = () => {
       <header className={`sticky top-0 z-50 bg-white transition-all duration-300 ${isScrolled ? 'header-scrolled' : ''}`} role="banner">
         
         {/* TOP BAR - Carrefour blue */}
-        <div style={{ background: '#004E9A' }} className="text-white text-xs">
+        <div style={{ background: '#004E9A' }} className="text-white bg-emerald-600 text-xs">
           <div className="w-full px-4 sm:px-6 lg:px-12 flex items-center justify-between py-1.5">
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5 font-semibold opacity-90">
@@ -200,7 +200,7 @@ const Header: React.FC = () => {
                       onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                       className="w-full pl-4 pr-2 py-2.5 border-2 border-gray-200 rounded-l-md focus:outline-none focus:border-blue-600 bg-white text-sm transition-all placeholder-gray-400 font-medium"
                       autoComplete="off" aria-autocomplete="list" aria-haspopup="listbox" />
-                    <button type="submit"  className="px-5 hover:opacity-90 text-white bg-[#E67E22] hover:bg-[#D35400] rounded-r-md text-sm font-bold transition-all flex items-center gap-1.5 flex-shrink-0">
+                    <button type="submit"  className="px-5 hover:opacity-90 text-white bg-[#004E9A] hover:bg-[#D35400] rounded-r-md text-sm font-bold transition-all flex items-center gap-1.5 flex-shrink-0">
                       <Search size={16} />
                     </button>
                   </div>
@@ -293,7 +293,7 @@ const Header: React.FC = () => {
               ) : (
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Link href="/auth/login" className="text-sm font-bold text-gray-700 hover:text-blue-700 px-4 py-2 rounded border border-gray-200 hover:border-blue-300 transition-all">Sign In</Link>
-                  <Link href="/auth/register" className="text-sm font-bold text-white px-4 py-2 rounded transition-all bg-[#E67E22] hover:bg-[#D35400]" >Register</Link>
+                  <Link href="/auth/register" className="text-sm font-bold text-white px-4 py-2 rounded transition-all bg-[#004E9A] hover:bg-[#003A75]" >Register</Link>
                 </div>
               )}
 

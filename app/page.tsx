@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import BannerCarousel from '@/components/ui/BannerCarousel';
 import TopCategories from '@/components/ui/TopCategories';
 import FeaturedProducts from '@/components/ui/FeaturedProducts';
@@ -9,14 +9,25 @@ import HandicraftsPage from '@/components/ui/Handicrafts';
 import NewArrivals from '@/components/ui/NewArrivals';
 import PersonalizedRecommendations from '@/components/ui/PersonalizedRecommendations';
 import ProductsPage from '@/components/ui/ProductsPage';
+import OffersTickerStrip from '@/components/ui/OffersTickerStrip';
+import { api } from '@/lib/api';
+
 import {
   ArrowUp, HelpCircle, Phone, Gift, MessageSquare, ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 
+interface OfferItem {
+  id: number;
+  name: string;
+  price: string;
+  badge: string;
+}
+
 const HomePage: React.FC = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showCustomerSupport, setShowCustomerSupport] = useState(false);
+  const [offers, setOffers] = useState<OfferItem[]>([]);
 
   const whatsappNumber = '+254716354589';
   const whatsappMessage = encodeURIComponent('Hello! I have a question about your products.');
@@ -24,6 +35,24 @@ const HomePage: React.FC = () => {
 
   const scrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  // Fetch featured products for the offers ticker
+  useEffect(() => {
+    api.products.getFeatured()
+      .then((res) => {
+        const data = res.data?.data ?? res.data ?? [];
+        const mapped: OfferItem[] = data
+          .filter((p: any) => p.is_active && p.is_featured)
+          .map((p: any) => ({
+            id: p.id,                                              // ← product id for the link
+            name: p.name,
+            price: `KES ${Number(p.final_price).toLocaleString()}`,
+            badge: p.discounted_price ? 'SALE' : 'FEATURED',
+          }));
+        setOffers(mapped);
+      })
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -57,6 +86,9 @@ const HomePage: React.FC = () => {
       {/* ── Banner ── */}
       <section className="-mt-2 pt-0 sm:pt-2 md:pt-4 pb-0 overflow-hidden">
         <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
+
+          {offers.length > 0 && <OffersTickerStrip offers={offers} />}
+
           <BannerCarousel
             height={{ mobile: '280px', desktop: '390px' }}
             rounded={false}
@@ -84,7 +116,7 @@ const HomePage: React.FC = () => {
         <HandicraftsPage />
       </div>
 
-      {/* ── Personalized Recommendations (no auth required) ── */}
+      {/* ── Personalized Recommendations ── */}
       <div className="reveal-section section-hidden">
         <PersonalizedRecommendations
           title="Recommended For You"
@@ -108,9 +140,7 @@ const HomePage: React.FC = () => {
       <section className="py-8 sm:py-10 md:py-12 reveal-section section-hidden">
         <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
           <div className="relative rounded-2xl overflow-hidden">
-            {/* Background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800" />
-            {/* Decorative circles */}
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-600 via-gray-700 to-teal-800" />
             <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-white/5 blur-xl" />
             <div className="absolute -bottom-10 -left-10 w-52 h-52 rounded-full bg-emerald-400/20 blur-lg" />
             <div className="absolute top-1/2 right-1/4 w-32 h-32 rounded-full bg-yellow-400/10" />

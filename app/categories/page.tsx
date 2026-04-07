@@ -260,7 +260,7 @@ const CategoriesPage: React.FC = () => {
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-r from-green-600 to-emerald-700 text-white">
         <div className="absolute inset-0 bg-[url('/images/pattern.svg')] opacity-10" />
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 py-16 md:py-24 relative">
+        <div className="mx-auto px-4 sm:px-6 lg:px-12 py-16 md:py-24 relative">
           <div className="max-w-4xl">
             <div className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-full mb-8">
               <Sparkles size={20} />
@@ -301,7 +301,7 @@ const CategoriesPage: React.FC = () => {
 
       {/* Main Content */}
       <section className="py-12">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12">
+        <div className="mx-auto px-4 sm:px-6 lg:px-12">
           {/* Stats Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">

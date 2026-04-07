@@ -363,9 +363,9 @@ const tabs = [
               onClick={() => handleTabChange(tab.id)}
               disabled={loading}
               className={`
-                px-5 py-2 rounded-full text-sm font-medium border transition-all whitespace-nowrap
+                px-5 py-2 rounded text-sm font-medium border transition-all whitespace-nowrap
                 ${activeTab === tab.id
-                  ? 'bg-[#E67E22] text-white border-gray-600'
+                  ? 'bg-[#004E9A]   text-white border-gray-600'
                   : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'
                 }
                 ${loading ? 'opacity-50 cursor-not-allowed' : ''}
@@ -405,7 +405,7 @@ const tabs = [
             </div>
           ) : products.length === 0 ? (
             <div className="text-center py-16">
-              <div className="w-20 h-20 rounded-full bg-[#E67E22] flex items-center justify-center mx-auto mb-5">
+              <div className="w-20 h-20 rounded-full bg-[#004E9A] flex items-center justify-center mx-auto mb-5">
                 <ShoppingBag size={32} className="text-emerald-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">

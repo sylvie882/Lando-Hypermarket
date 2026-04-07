@@ -47,33 +47,47 @@ const ProductDetailPage: React.FC = () => {
 
   useEffect(() => { fetchProductDetails(); }, [productId]);
 
-  const fetchProductDetails = async () => {
-    try {
-      setIsLoading(true);
-      setImageLoaded(false);
-      const [productRes, reviewsRes, relatedRes] = await Promise.all([
-        api.products.getById(productId),
-        api.products.getReviews(productId),
-        api.products.getRelated(productId)
-      ]);
-      const p = {
-        ...productRes.data,
-        rating: parseFloat(productRes.data.rating) || 0,
-        price: parseFloat(productRes.data.price),
-        discounted_price: productRes.data.discounted_price ? parseFloat(productRes.data.discounted_price) : null,
-        stock_quantity: parseInt(productRes.data.stock_quantity),
-        review_count: parseInt(productRes.data.review_count || '0'),
-        sold_count: parseInt(productRes.data.sold_count || '0'),
-      };
-      setProduct(p);
-      setReviews(reviewsRes.data.data || []);
-      setRelatedProducts(relatedRes.data || []);
-      if (isAuthenticated) {
-        try { const wl = await api.wishlist.check(p.id); setInWishlist(wl.data.in_wishlist); } catch {}
-      }
-    } catch { toast.error('Failed to load product details'); }
-    finally { setIsLoading(false); }
-  };
+const fetchProductDetails = async () => {
+  try {
+    setIsLoading(true);
+    setImageLoaded(false);
+
+    const [productRes, reviewsRes, relatedRes] = await Promise.all([
+      api.products.getById(productId),
+      api.products.getReviews(productId),
+      api.products.getRelated(productId)
+    ]);
+
+    // ← Handle both { data: {...} } and flat response shapes
+    const raw = productRes.data?.data ?? productRes.data;
+
+    const p = {
+      ...raw,
+      rating: parseFloat(raw.rating) || 0,
+      price: parseFloat(raw.price),
+      discounted_price: raw.discounted_price ? parseFloat(raw.discounted_price) : null,
+      stock_quantity: parseInt(raw.stock_quantity),
+      review_count: parseInt(raw.review_count || '0'),
+      sold_count: parseInt(raw.sold_count || '0'),
+    };
+
+    setProduct(p);
+    setReviews(reviewsRes.data?.data || reviewsRes.data || []);
+    setRelatedProducts(relatedRes.data?.data || relatedRes.data || []);
+
+    if (isAuthenticated) {
+      try {
+        const wl = await api.wishlist.check(p.id);
+        setInWishlist(wl.data.in_wishlist);
+      } catch {}
+    }
+  } catch (err) {
+    console.error('Product fetch error:', err); // ← shows exact failure
+    toast.error('Failed to load product details');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const getImageUrl = (path?: string) => {
     if (!path) return '/images/placeholder-product.jpg';
