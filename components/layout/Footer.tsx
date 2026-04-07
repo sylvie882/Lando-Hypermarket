@@ -60,13 +60,13 @@ export default function Footer() {
       </div>
 
       {/* Main Footer */}
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 py-10">
+      <div className="mx-auto px-4 sm:px-6 lg:px-12 py-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
           
           {/* Brand Column */}
           <div className="lg:col-span-1">
             <Link href="/" className="inline-block -ml-2 mb-4" aria-label="Home">
-              <Image src="/logo10.png" alt="Lando Ranch Hypermarket Kenya" width={160} height={55} className="object-cover w-[150px] h-[55px]" />
+              <Image src="/logo10.png" alt="Lando Hypermarket Kenya" width={160} height={55} className="object-cover w-[150px] h-[55px]" />
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed mb-5">
               Kenya's premier online hypermarket. Fresh farm produce, household essentials & more — delivered fast across Nairobi.
@@ -173,10 +173,10 @@ export default function Footer() {
 
       {/* Bottom Bar */}
       <div className="border-t border-gray-800" style={{ background: '#004E9A' }}>
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 py-4">
+        <div className="mx-auto px-4 sm:px-6 lg:px-12 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-white/70 text-center sm:text-left">
-              © {currentYear} <strong className="text-white">Lando Ranch Hypermarket</strong>. All rights reserved. Made with ❤️ in Kenya.
+              © {currentYear} <strong className="text-white">Lando Hypermarket</strong>. All rights reserved. Made with ❤️ in Kenya.
             </p>
             <div className="flex items-center gap-4 text-xs">
               {legalLinks.map(link => (

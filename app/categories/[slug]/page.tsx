@@ -257,7 +257,7 @@ const CategoryPage = () => {
     return (
       <div className="min-h-screen bg-white">
         <div className="border-b border-gray-100">
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 py-3">
+          <div className="mx-auto px-4 sm:px-6 lg:px-12 py-3">
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <Link href="/" className="flex items-center gap-1 hover:text-emerald-600"><Home size={14} /><span>Home</span></Link>
               <ChevronRight size={14} />
@@ -268,7 +268,7 @@ const CategoryPage = () => {
           </div>
         </div>
 
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 py-12">
+        <div className="mx-auto px-4 sm:px-6 lg:px-12 py-12">
           <div className="max-w-lg mx-auto text-center">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="text-red-600" size={32} />
