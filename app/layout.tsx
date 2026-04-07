@@ -550,8 +550,8 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
-        <meta name="msapplication-TileColor" content="#10b981" />
-        <meta name="theme-color" content="#10b981" />
+        <meta name="msapplication-TileColor" content="#004E9A" />
+        <meta name="theme-color" content="#004E9A" />
         
         {/* Mobile App Meta Tags */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
