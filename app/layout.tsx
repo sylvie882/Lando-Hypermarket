@@ -9,8 +9,8 @@ import AuthSync from '@/components/auth/AuthSync';
 import OpeningSoonSuspense from '@/components/suspense/OpeningSoonSuspense';
 import Script from 'next/script';
 
-const SITE_URL = 'https://lando.co.ke';
-const SITE_NAME = 'Lando Ranch Hypermarket';
+const SITE_URL = 'https://hypermarket.co.ke';
+const SITE_NAME = 'Lando Hypermarket';
 const BUSINESS_PHONE = '+254 716 354 589';
 const BUSINESS_EMAIL = 'landoranchh@gmail.com';
 const BUSINESS_WHATSAPP = '+254716354589';
@@ -21,16 +21,16 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  themeColor: '#10b981',
+  themeColor: '#1d2ae7ff',
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Lando Ranch Hypermarket | Fresh Vegetables, Pasture Raised Meat, Kienyeji Eggs, Baby Products & More',
-    template: '%s | Lando Ranch Hypermarket'
+    default: 'Lando Hypermarket | Fresh Vegetables, Pasture Raised Meat, Kienyeji Eggs, Baby Products & More',
+    template: '%s | Lando Hypermarket'
   },
-  description: 'Shop Lando Ranch Hypermarket for fresh farm produce: pasture raised meat (goat, sheep, rabbit), kienyeji eggs, fresh vegetables, tropical fruits, dairy products, baby essentials, stationery, cleaning supplies, wooden utensils, samosas, and traditional handicrafts. Everything you need and love. Amazing products, quickly delivered in 99 minutes at every day prices. Free delivery Nairobi. Order now!',
+  description: 'Shop Lando Hypermarket for fresh farm produce: pasture raised meat (goat, sheep, rabbit), kienyeji eggs, fresh vegetables, tropical fruits, dairy products, baby essentials, stationery, cleaning supplies, wooden utensils, samosas, and traditional handicrafts. Everything you need and love. Amazing products, quickly delivered in 99 minutes at every day prices. Free delivery Nairobi. Order now!',
   keywords: [
     // ============================================
     // FRESH PRODUCE CATEGORIES
@@ -425,9 +425,9 @@ export const metadata: Metadata = {
     'samli',
     'bidii products'
   ],
-  authors: [{ name: 'Lando Ranch Hypermarket', url: 'https://lando.co.ke/about' }],
-  creator: 'Lando Ranch Hypermarket',
-  publisher: 'Lando Ranch Hypermarket',
+  authors: [{ name: 'Lando Hypermarket', url: 'https://hypermarket.co.ke/about' }],
+  creator: 'Lando Hypermarket',
+  publisher: 'Lando Hypermarket',
   formatDetection: {
     email: true,
     address: true,
@@ -449,22 +449,22 @@ export const metadata: Metadata = {
     locale: 'en_KE',
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: 'Lando Ranch Hypermarket | Fresh Vegetables, Pasture Raised Meat, Kienyeji Eggs & Baby Products',
+    title: 'Lando Hypermarket | Fresh Vegetables, Pasture Raised Meat, Kienyeji Eggs & Baby Products',
     description: '🛒 Shop online: Fresh vegetables • Pasture raised meat (goat, sheep, rabbit) • Kienyeji eggs • Dairy • Baby products • Stationery • Cleaning supplies • Wooden utensils • Samosas • Handicrafts. Free delivery Nairobi over KES 2000!',
     images: [
       {
         url: `${SITE_URL}/og-image.jpg`,
         width: 1200,
         height: 630,
-        alt: 'Lando Ranch Hypermarket - Online Supermarket for Fresh Produce, Meat, Eggs & Household Essentials',
+        alt: 'Lando Hypermarket - Online Supermarket for Fresh Produce, Meat, Eggs & Household Essentials',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    site: '@landoranch_ke',
-    creator: '@landoranch_ke',
-    title: 'Lando Ranch Hypermarket | Fresh Farm Produce & Groceries Delivered',
+    site: '@landohypermarket_ke',
+    creator: '@landohypermarket_ke',
+    title: 'Lando Hypermarket | Fresh Farm Produce & Groceries Delivered',
     description: 'Farm fresh vegetables, pasture raised meat, kienyeji eggs, baby products & more. Free delivery Nairobi over KES 2000.',
     images: [`${SITE_URL}/twitter-image.jpg`],
   },
@@ -582,7 +582,7 @@ export default function RootLayout({
               "@id": `${SITE_URL}/#organization`,
               "name": SITE_NAME,
               "url": SITE_URL,
-              "logo": `${SITE_URL}/logo.png`,
+              "logo": `${SITE_URL}/logo10.png`,
               "image": `${SITE_URL}/og-image.jpg`,
               "description": "Kenya's premier online supermarket offering fresh vegetables, pasture raised meat, kienyeji eggs, baby products, stationery, cleaning supplies, wooden utensils, samosas, handicrafts, and household essentials with express delivery in Nairobi.",
               "address": {
@@ -635,7 +635,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "GroceryStore",
               "@id": `${SITE_URL}/#store`,
-              "name": "Lando Ranch Hypermarket",
+              "name": "Lando Hypermarket",
               "image": `${SITE_URL}/store-image.jpg`,
               "url": SITE_URL,
               "telephone": BUSINESS_PHONE,
@@ -884,7 +884,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "LocalBusiness",
               "@id": `${SITE_URL}/#localbusiness`,
-              "name": "Lando Ranch Hypermarket",
+              "name": "Lando Hypermarket",
               "image": `${SITE_URL}/store-front.jpg`,
               "url": SITE_URL,
               "telephone": BUSINESS_PHONE,
@@ -1211,7 +1211,7 @@ export default function RootLayout({
                 success: {
                   duration: 3000,
                   style: {
-                    background: '#10b981',
+                    background: '#2546dbff',
                   },
                 },
               }}
