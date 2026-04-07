@@ -140,7 +140,7 @@ const HomePage: React.FC = () => {
       <section className="py-8 sm:py-10 md:py-12 reveal-section section-hidden">
         <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
           <div className="relative rounded-2xl overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br bg-blue-600" />
+            <div className="absolute inset-0 bg-gradient-to-br bg-orange-600" />
             <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-white/5 blur-xl" />
             <div className="absolute -bottom-10 -left-10 w-52 h-52 rounded-full bg-emerald-400/20 blur-lg" />
             <div className="absolute top-1/2 right-1/4 w-32 h-32 rounded-full bg-yellow-400/10" />
