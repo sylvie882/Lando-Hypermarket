@@ -319,7 +319,7 @@ const CategoryPage = () => {
     <div className="min-h-screen bg-white">
       {/* Breadcrumb */}
       <div className="border-b border-gray-100">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 py-3">
+        <div className="mx-auto px-4 sm:px-6 lg:px-12 py-3">
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <Link href="/" className="flex items-center gap-1 hover:text-emerald-600"><Home size={14} /><span>Home</span></Link>
             <ChevronRight size={14} />
@@ -331,8 +331,8 @@ const CategoryPage = () => {
       </div>
 
       {/* Category Header */}
-      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 py-8">
+      <div className="bg-gradient-to-r  border-b border-gray-100">
+        <div className="mx-auto px-4 sm:px-6 lg:px-12 py-8">
           <div className="flex flex-col md:flex-row items-start gap-8">
             <div className="md:w-1/5">
               <div className="bg-white rounded-2xl overflow-hidden border border-emerald-200 shadow-md">
@@ -351,9 +351,9 @@ const CategoryPage = () => {
 
             <div className="md:w-4/5">
               <div className="flex items-center gap-2 mb-3">
-                {!category.parent_id && (
+                {/* {!category.parent_id && (
                   <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Main Category</span>
-                )}
+                )} */}
                 {hasSubcategories && (
                   <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
                     {category.children?.length} Subcategories
@@ -375,10 +375,6 @@ const CategoryPage = () => {
                 <Link href="/categories" className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium text-sm bg-white border border-emerald-200 px-4 py-2 rounded-lg transition-colors">
                   <ArrowLeft size={16} /><span>Back to categories</span>
                 </Link>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <ShoppingBag size={16} />
-                  <span>{productCount} products</span>
-                </div>
               </div>
             </div>
           </div>
@@ -387,7 +383,7 @@ const CategoryPage = () => {
 
       {/* Products Section */}
       <div className="py-8">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12">
+        <div className="mx-auto px-4 sm:px-6 lg:px-12">
           
           {/* Subcategories Section */}
           {hasSubcategories && (

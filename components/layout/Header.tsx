@@ -5,14 +5,23 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
-  Search, ShoppingCart, ChevronDown, X, Home, User, LayoutGrid, Tag, ShoppingBag, MapPin, LogOut, Heart, Package, User as UserIcon,
+  Search, ShoppingCart, ChevronDown, X, Home, User, LayoutGrid, Tag, ShoppingBag, MapPin, LogOut, Heart, Package, UserIcon,
   ChevronLeft, ChevronRight, LogIn, UserPlus, Truck, Flame, Menu, Phone
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import debounce from 'lodash/debounce';
 
-interface Category { id: number; name: string; slug: string; is_active: boolean; }
+interface Category { 
+  id: number; 
+  name: string; 
+  slug: string; 
+  is_active: boolean;
+  parent_id: number | null;
+  order: number;
+  children?: Category[];  // Already coming from API!
+}
+
 interface UserProfile { id: number; name: string; email: string; phone: string; avatar: string | null; avatar_url?: string | null; role: string; }
 interface SearchSuggestion { id: number; name: string; price: string | number; thumbnail: string | null; }
 
@@ -20,7 +29,7 @@ const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]); // Already nested from API!
   const [location, setLocation] = useState<string>('Detecting...');
   const [isLocating, setIsLocating] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -33,9 +42,11 @@ const Header: React.FC = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [hoveredCategory, setHoveredCategory] = useState<number | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
@@ -78,12 +89,29 @@ const Header: React.FC = () => {
 
   useEffect(() => { getLocation(); }, []);
 
+  // Use the API's built-in tree endpoint - NO manual tree building needed!
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const r = await api.categories.getAll();
-        setCategories((r.data || []).filter((c: Category) => c.is_active !== false));
-      } catch { setCategories([]); }
+        // Using the tree endpoint which already returns nested categories!
+        const response = await api.categories.getTree();
+        const categoriesData = response.data || [];
+        
+        // Sort main categories by order (API already does this, but just to be safe)
+        const sortedCategories = categoriesData.sort((a: Category, b: Category) => (a.order || 0) - (b.order || 0));
+        
+        // Also sort children by order for each category
+        sortedCategories.forEach((category: Category) => {
+          if (category.children && category.children.length > 0) {
+            category.children.sort((a: Category, b: Category) => (a.order || 0) - (b.order || 0));
+          }
+        });
+        
+        setCategories(sortedCategories);
+      } catch (error) { 
+        console.error('Failed to fetch categories:', error);
+        setCategories([]); 
+      }
     };
     fetchCategories();
   }, []);
@@ -130,6 +158,18 @@ const Header: React.FC = () => {
     return () => document.removeEventListener('mousedown', fn);
   }, []);
 
+  // Handle hover with delay for better UX
+  const handleCategoryHover = (categoryId: number) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setHoveredCategory(categoryId);
+  };
+
+  const handleCategoryLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setHoveredCategory(null);
+    }, 150);
+  };
+
   const getProductImageUrl = (t: string | null) => t ? api.getImageUrl(t, '/images/placeholder.jpg') : '/images/placeholder.jpg';
   const formatPrice = (p: string | number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 0 }).format(typeof p === 'string' ? parseFloat(p) : p);
   const handleLogout = async () => { try { await logout(); router.push('/'); setAccountMenuOpen(false); setMobileAccountMenuOpen(false); setProfile(null); } catch {} };
@@ -144,12 +184,17 @@ const Header: React.FC = () => {
   const getFullName = () => profile?.name || user?.name || 'User';
   const getEmail = () => profile?.email || user?.email || '';
 
+  // Helper to check if a category has children
+  const hasChildren = (category: Category): boolean => {
+    return !!category.children && category.children.length > 0;
+  };
+
   return (
     <>
       <header className={`sticky top-0 z-50 bg-white transition-all duration-300 ${isScrolled ? 'header-scrolled' : ''}`} role="banner">
         
-        {/* TOP BAR - Carrefour blue */}
-        <div style={{ background: '#004E9A' }} className="text-white bg-emerald-600 text-xs">
+        {/* TOP BAR - Blue */}
+        <div style={{ background: '#004E9A' }} className="text-white text-xs">
           <div className="w-full px-4 sm:px-6 lg:px-12 flex items-center justify-between py-1.5">
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5 font-semibold opacity-90">
@@ -200,7 +245,7 @@ const Header: React.FC = () => {
                       onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                       className="w-full pl-4 pr-2 py-2.5 border-2 border-gray-200 rounded-l-md focus:outline-none focus:border-blue-600 bg-white text-sm transition-all placeholder-gray-400 font-medium"
                       autoComplete="off" aria-autocomplete="list" aria-haspopup="listbox" />
-                    <button type="submit"  className="px-5 hover:opacity-90 text-white bg-[#004E9A] hover:bg-[#D35400] rounded-r-md text-sm font-bold transition-all flex items-center gap-1.5 flex-shrink-0">
+                    <button type="submit" className="px-5 hover:opacity-90 text-white bg-[#004E9A] hover:bg-[#D35400] rounded-r-md text-sm font-bold transition-all flex items-center gap-1.5 flex-shrink-0">
                       <Search size={16} />
                     </button>
                   </div>
@@ -316,7 +361,7 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* DESKTOP CATEGORIES NAV */}
+        {/* DESKTOP CATEGORIES NAV WITH DROPDOWNS */}
         <nav className="hidden md:block border-b border-gray-200" style={{ background: '#004E9A' }} aria-label="Product categories">
           <div className="w-full px-4 sm:px-6 lg:px-12">
             <div className="flex items-center py-0 relative">
@@ -333,12 +378,52 @@ const Header: React.FC = () => {
                   🔥 Hot Deals
                 </Link>
                 <div className="w-px h-5 bg-white/20 flex-shrink-0 mx-1"/>
-                {categories.length > 0 ? categories.map(c => (
-                  <Link key={c.id} href={`/categories/${c.slug}`}
-                    className={`text-sm font-semibold px-3.5 py-3 whitespace-nowrap flex-shrink-0 transition-all border-b-2 ${pathname===`/categories/${c.slug}`?'border-white text-white':'border-transparent text-white/80 hover:text-white hover:border-white/50'}`}>
-                    {c.name}
-                  </Link>
-                )) : [1,2,3,4,5].map(i=><div key={i} className="w-20 h-5 bg-white/20 rounded animate-pulse flex-shrink-0 mx-2"/>)}
+                
+                {/* Categories with Dropdowns - Using API's nested structure */}
+                {categories.length > 0 ? categories.map(category => (
+                  <div 
+                    key={category.id}
+                    className="relative"
+                    onMouseEnter={() => handleCategoryHover(category.id)}
+                    onMouseLeave={handleCategoryLeave}
+                  >
+                    <Link 
+                      href={`/categories/${category.slug}`}
+                      className={`flex items-center gap-1 text-sm font-semibold px-3.5 py-3 whitespace-nowrap flex-shrink-0 transition-all border-b-2 ${
+                        pathname === `/categories/${category.slug}` 
+                          ? 'border-white text-white' 
+                          : 'border-transparent text-white/80 hover:text-white hover:border-white/50'
+                      }`}
+                    >
+                      {category.name}
+                      {hasChildren(category) && (
+                        <ChevronDown size={12} className={`transition-transform duration-200 ${hoveredCategory === category.id ? 'rotate-180' : ''}`} />
+                      )}
+                    </Link>
+                    
+                    {/* Dropdown Menu - Shows subcategories */}
+                    {hasChildren(category) && hoveredCategory === category.id && (
+                      <div 
+                        className="absolute left-0 top-full mt-0 bg-white shadow-xl rounded-b-lg min-w-[220px] z-50 overflow-hidden"
+                        onMouseEnter={() => handleCategoryHover(category.id)}
+                        onMouseLeave={handleCategoryLeave}
+                      >
+                        <div className="py-2">
+                          {category.children!.map(subCategory => (
+                            <Link
+                              key={subCategory.id}
+                              href={`/categories/${subCategory.slug}`}
+                              className="block px-5 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors font-medium"
+                              onClick={() => setHoveredCategory(null)}
+                            >
+                              {subCategory.name}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )) : [1,2,3,4,5].map(i => <div key={i} className="w-20 h-5 bg-white/20 rounded animate-pulse flex-shrink-0 mx-2"/>)}
               </div>
               <div className="w-5 flex-shrink-0"/>
               <button onClick={scrollRight} className="absolute -right-1 z-20 p-1 text-white/60 hover:text-white transition-colors" aria-label="Scroll right"><ChevronRight size={22}/></button>
@@ -414,7 +499,13 @@ const Header: React.FC = () => {
               <Link href="/" className={`text-xs font-bold px-3 py-2.5 whitespace-nowrap flex-shrink-0 border-b-2 transition-all ${pathname==='/'?'border-white text-white':'border-transparent text-white/80'}`}>Home</Link>
               <Link href="/deals" className="text-xs font-black px-3 py-2.5 whitespace-nowrap flex-shrink-0 text-yellow-300 border-b-2 border-transparent">🔥 Deals</Link>
               {categories.slice(0,8).map(c=>(
-                <Link key={c.id} href={`/categories/${c.slug}`} className={`text-xs font-semibold px-3 py-2.5 whitespace-nowrap flex-shrink-0 border-b-2 transition-all ${pathname===`/categories/${c.slug}`?'border-white text-white':'border-transparent text-white/80'}`}>{c.name}</Link>
+                <div key={c.id} className="relative group">
+                  <Link href={`/categories/${c.slug}`} 
+                    className={`text-xs font-semibold px-3 py-2.5 whitespace-nowrap flex-shrink-0 border-b-2 transition-all inline-flex items-center gap-1 ${pathname===`/categories/${c.slug}`?'border-white text-white':'border-transparent text-white/80'}`}>
+                    {c.name}
+                    {hasChildren(c) && <ChevronDown size={10} />}
+                  </Link>
+                </div>
               ))}
             </div>
           </div>
@@ -461,10 +552,13 @@ const Header: React.FC = () => {
               </div>
               <div className="space-y-0.5">
                 {categories.length > 0 ? categories.map(c=>(
-                  <Link key={c.id} href={`/categories/${c.slug}`} onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between px-4 py-3 rounded text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
-                    {c.name} <ChevronRight size={14} className="text-gray-300"/>
-                  </Link>
+                  <div key={c.id}>
+                    <Link href={`/categories/${c.slug}`} onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-between px-4 py-3 rounded text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                      {c.name} 
+                      {hasChildren(c) && <ChevronRight size={14} className="text-gray-300"/>}
+                    </Link>
+                  </div>
                 )) : <div className="text-gray-400 px-4 py-3 text-sm">Loading…</div>}
               </div>
             </div>
@@ -504,6 +598,8 @@ const Header: React.FC = () => {
       <style jsx global>{`
         @media (max-width: 768px) { body { padding-bottom: 64px; } }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 8px); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
     </>
   );
