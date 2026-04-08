@@ -66,39 +66,48 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
   }, []);
 
   const fetchFeaturedProducts = async () => {
-    try {
-      setIsLoading(true);
-      
-      const featuredRes = await api.products.getFeatured();
-      let featuredData = featuredRes.data || [];
-      
-      if (featuredData.length < limit) {
-        try {
-          const moreProductsRes = await api.products.getAll({ 
-            per_page: limit - featuredData.length,
-            sort: 'featured',
-            order: 'desc' 
-          });
-          const moreProducts = moreProductsRes.data?.data || moreProductsRes.data || [];
-          featuredData = [...featuredData, ...moreProducts];
-        } catch (error) {
-          console.error('Error fetching additional products:', error);
-        }
+  try {
+    setIsLoading(true);
+    
+    const featuredRes = await api.products.getFeatured();
+    let featuredData = featuredRes.data || [];
+    
+    if (featuredData.length < limit) {
+      try {
+        const moreProductsRes = await api.products.getAll({ 
+          per_page: limit - featuredData.length,
+          sort: 'featured',
+          order: 'desc' 
+        });
+        const moreProducts = moreProductsRes.data?.data || moreProductsRes.data || [];
+        featuredData = [...featuredData, ...moreProducts];
+      } catch (error) {
+        console.error('Error fetching additional products:', error);
       }
-      
-      if (featuredData.length > limit) {
-        featuredData = featuredData.slice(0, limit);
-      }
-      
-      setFeaturedProducts(featuredData);
-
-    } catch (error) {
-      console.error('Failed to fetch featured products:', error);
-      setFeaturedProducts([]);
-    } finally {
-      setIsLoading(false);
     }
-  };
+    
+    // Sort products by updated_at (if available) or created_at
+    const sortedProducts = featuredData.sort((a: Product, b: Product) => {
+      // Get dates - use updated_at if available, otherwise created_at
+      const dateA = new Date(a.updated_at || a.created_at || 0);
+      const dateB = new Date(b.updated_at || b.created_at || 0);
+      
+      // Sort in descending order (newest first)
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    // Apply limit after sorting
+    const limitedProducts = sortedProducts.slice(0, limit);
+    
+    setFeaturedProducts(limitedProducts);
+
+  } catch (error) {
+    console.error('Failed to fetch featured products:', error);
+    setFeaturedProducts([]);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const trackProductView = async (productId: number) => {
     try {

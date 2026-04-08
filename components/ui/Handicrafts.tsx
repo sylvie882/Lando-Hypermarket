@@ -148,29 +148,52 @@ const HandicraftsPage: React.FC = () => {
     }
   };
 
-  const fetchProducts = async () => {
-    try {
-      setIsLoading(true);
-      
-      const params: any = {
-        per_page: 20,
-        category_id: 42,
-        sort: 'sold_count',
-        order: 'desc'
+const fetchProducts = async () => {
+  try {
+    setIsLoading(true);
+    
+    const params: any = {
+      per_page: 20,
+      category_id: 42,
+      // Remove the sold_count sort
+      // sort: 'sold_count',
+      // order: 'desc'
+    };
+    
+    const response = await api.products.getAll(params);
+    
+    let productsData = response.data?.data || response.data || [];
+    
+    // Sort by updated_at (if available) or created_at
+    const sortedProducts = productsData.sort((a: Product, b: Product) => {
+      // Get the most recent date for each product
+      const getLatestDate = (product: Product) => {
+        const updated = product.updated_at ? new Date(product.updated_at) : null;
+        const created = product.created_at ? new Date(product.created_at) : null;
+        
+        if (updated && created) {
+          return updated > created ? updated : created;
+        }
+        return updated || created || new Date(0);
       };
       
-      const response = await api.products.getAll(params);
+      const dateA = getLatestDate(a);
+      const dateB = getLatestDate(b);
       
-      const productsData = response.data?.data || response.data || [];
-      setProducts(productsData);
-      
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      setProducts([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      // Sort in descending order (newest first)
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    setProducts(sortedProducts);
+    
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    setProducts([]);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const trackProductView = async (productId: number) => {
     try {
@@ -180,9 +203,11 @@ const HandicraftsPage: React.FC = () => {
     }
   };
 
+
   const totalSlides = Math.ceil(products.length / visibleCards);
   const currentSlide = Math.floor(currentIndex / visibleCards);
 
+  
   // Loading Skeleton
   if (isLoading && !category) {
     return (
