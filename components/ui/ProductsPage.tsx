@@ -36,23 +36,19 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
   const [totalProducts, setTotalProducts] = useState(0);
   const [perPage, setPerPage] = useState(20);
   
-  // Store discounted products for offers tab
+  // Store discounted products for offers tab (only from fruits & vegetables)
   const [allDiscountedProducts, setAllDiscountedProducts] = useState<Product[]>([]);
   const [discountedProductsLoaded, setDiscountedProductsLoaded] = useState(false);
   
-  // Define tabs with their category IDs (from your data)
-// Define tabs with their category IDs (from your data)
-const tabs = [
-  { id: 'offers', label: 'Offers', categoryId: null },
-  { id: 'fruits', label: 'Fruits', categoryId: 45 }, // ID 45 = Fresh Fruits
-  { id: 'vegetables', label: 'Vegetables', categoryId: 46 }, // ID 46 = Fresh Vegetables
-  { id: 'handcraft', label: 'Handcraft', categoryId: 42 }, // ID 42 = Handicrafts & Artisans
-  { id: 'wooden-utensils', label: 'Wooden utensils', categoryId: 63 }, // ID 63 = Wooden Utensils
-  { id: 'meat', label: 'Meat', categoryId: 31 }, // ID 31 = Pasture Raised Meat
-  { id: 'fish-seafood', label: 'Fish & Seafood', categoryId: 32 }, // ID 32 = Fish & Seafood
-  { id: 'cereals-grains', label: 'Cereals & Grains', categoryId: 34 }, // ID 34 = Cereals & Grains
-  { id: 'beverages', label: 'Beverages', categoryId: 39 }, // ID 39 = Beverages
-];
+  // Define tabs - only Fruits and Vegetables categories
+  const tabs = [
+    { id: 'offers', label: 'Offers', categoryId: null },
+    { id: 'fruits', label: 'Fruits', categoryId: 45 }, // ID 45 = Fresh Fruits
+    { id: 'vegetables', label: 'Vegetables', categoryId: 46 }, // ID 46 = Fresh Vegetables
+  ];
+
+  // Categories that are allowed for offers (only fruits and vegetables)
+  const allowedOfferCategories = [45, 46]; // Fruits and Vegetables
 
   // Fetch products based on active tab
   useEffect(() => {
@@ -75,70 +71,70 @@ const tabs = [
     setCurrentPage(1);
   }, [activeTab]);
 
+  // Filter to only include products from fruits and vegetables categories
+  const filterOnlyFruitsAndVegetables = (products: Product[]): Product[] => {
+    return products.filter(product => {
+      const productCategoryId = product.category_id || product.category?.id;
+      return productCategoryId !== undefined && allowedOfferCategories.includes(productCategoryId);
+    });
+  };
+
   const fetchAllDiscountedProducts = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      console.log('Fetching all discounted products across all pages');
+      console.log('Fetching discounted products only from Fruits and Vegetables categories');
       
-      // First, fetch the first page to get total pages
-      const firstPageResponse = await api.products.getAll({ per_page: 100 });
+      // Fetch products from Fruits category (ID 45)
+      const fruitsResponse = await api.products.getAll({ 
+        category_id: 45,
+        per_page: 100 
+      });
+      
+      // Fetch products from Vegetables category (ID 46)
+      const vegetablesResponse = await api.products.getAll({ 
+        category_id: 46,
+        per_page: 100 
+      });
+      
       let allDiscounted: Product[] = [];
       
-      if (firstPageResponse?.data) {
-        // Handle pagination wrapper
-        const paginatedData = firstPageResponse.data as any;
-        const firstPageProducts = paginatedData.data || firstPageResponse.data;
-        const totalPages = paginatedData.last_page || 1;
-        
-        console.log(`Total pages available: ${totalPages}`);
-        
-        // Process first page
-        const firstPageArray = Array.isArray(firstPageProducts) ? firstPageProducts : [];
-        const firstPageDiscounted = firstPageArray.filter(isProductDiscounted);
-        allDiscounted = [...firstPageDiscounted];
-        
-        // Fetch remaining pages
-        if (totalPages > 1) {
-          const pagePromises = [];
-          
-          // Limit to 20 pages max for performance (or adjust as needed)
-          const pagesToFetch = Math.min(totalPages, 20);
-          
-          for (let page = 2; page <= pagesToFetch; page++) {
-            pagePromises.push(api.products.getAll({ per_page: 100, page }));
-          }
-          
-          const remainingResponses = await Promise.all(pagePromises);
-          
-          remainingResponses.forEach(response => {
-            if (response?.data) {
-              const pageData = (response.data as any).data || response.data;
-              if (Array.isArray(pageData)) {
-                const pageDiscounted = pageData.filter(isProductDiscounted);
-                allDiscounted = [...allDiscounted, ...pageDiscounted];
-              }
-            }
-          });
+      // Process Fruits
+      if (fruitsResponse?.data) {
+        const fruitsData = (fruitsResponse.data as any).data || fruitsResponse.data;
+        if (Array.isArray(fruitsData)) {
+          const fruitsDiscounted = fruitsData.filter(isProductDiscounted);
+          allDiscounted = [...allDiscounted, ...fruitsDiscounted];
+          console.log(`Found ${fruitsDiscounted.length} discounted products in Fruits`);
         }
-        
-        console.log(`Total discounted products found: ${allDiscounted.length}`);
-        
-        // Store all discounted products
-        setAllDiscountedProducts(allDiscounted);
-        setDiscountedProductsLoaded(true);
-        
-        // Calculate pagination for offers
-        const offersPerPage = 20;
-        const offersLastPage = Math.ceil(allDiscounted.length / offersPerPage);
-        setLastPage(offersLastPage);
-        setTotalProducts(allDiscounted.length);
-        setPerPage(offersPerPage);
-        
-        // Update current page products
-        updateCurrentPageProducts(allDiscounted);
       }
+      
+      // Process Vegetables
+      if (vegetablesResponse?.data) {
+        const vegetablesData = (vegetablesResponse.data as any).data || vegetablesResponse.data;
+        if (Array.isArray(vegetablesData)) {
+          const vegetablesDiscounted = vegetablesData.filter(isProductDiscounted);
+          allDiscounted = [...allDiscounted, ...vegetablesDiscounted];
+          console.log(`Found ${vegetablesDiscounted.length} discounted products in Vegetables`);
+        }
+      }
+      
+      console.log(`Total discounted products found in Fruits & Vegetables: ${allDiscounted.length}`);
+      
+      // Store all discounted products
+      setAllDiscountedProducts(allDiscounted);
+      setDiscountedProductsLoaded(true);
+      
+      // Calculate pagination for offers
+      const offersPerPage = 20;
+      const offersLastPage = Math.ceil(allDiscounted.length / offersPerPage);
+      setLastPage(offersLastPage);
+      setTotalProducts(allDiscounted.length);
+      setPerPage(offersPerPage);
+      
+      // Update current page products
+      updateCurrentPageProducts(allDiscounted);
     } catch (error: any) {
       console.error('Error fetching discounted products:', error);
       setError(error?.message || 'Failed to load offers');
@@ -199,7 +195,7 @@ const tabs = [
     setLoading(false);
   };
 
-  // FIXED: Ensure we always return a boolean
+  // Check if product is discounted
   const isProductDiscounted = (product: Product): boolean => {
     const hasDiscountedPrice = !!(product.discounted_price && 
                               Number(product.discounted_price) > 0 && 
@@ -355,7 +351,7 @@ const tabs = [
           </Link>
         </div>
 
-        {/* Pill Tabs */}
+        {/* Pill Tabs - Only Offers, Fruits, and Vegetables */}
         <div className="flex gap-3 mb-8 overflow-x-auto hide-scrollbar">
           {tabs.map((tab) => (
             <button
@@ -365,14 +361,13 @@ const tabs = [
               className={`
                 px-5 py-2 rounded text-sm font-medium border transition-all whitespace-nowrap
                 ${activeTab === tab.id
-                  ? 'bg-[#004E9A]   text-white border-gray-600'
+                  ? 'bg-[#004E9A] text-white border-gray-600'
                   : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'
                 }
                 ${loading ? 'opacity-50 cursor-not-allowed' : ''}
               `}
             >
               {tab.label}
-           
             </button>
           ))}
         </div>
@@ -397,7 +392,7 @@ const tabs = [
               <p className="text-red-500 mb-4">{error}</p>
               <button
                 onClick={handleRetry}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#E67E22] hover:bg-[#D35400] text-white rounded-lg font-medium  transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#E67E22] hover:bg-[#D35400] text-white rounded-lg font-medium transition-colors"
               >
                 <RefreshCw size={18} />
                 <span>Try Again</span>
@@ -413,7 +408,7 @@ const tabs = [
               </h3>
               <p className="text-gray-600 mb-6 max-w-md mx-auto">
                 {activeTab === 'offers' 
-                  ? 'No discounted products available at the moment. Check back later!' 
+                  ? 'No discounted products available for Fruits and Vegetables at the moment. Check back later!' 
                   : `No products available in the ${activeTab} category at the moment.`}
               </p>
               {activeTab !== 'offers' && (
