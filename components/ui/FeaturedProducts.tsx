@@ -237,7 +237,7 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                   onClick={scrollPrev}
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
                     currentSlide === 0
-                      ? 'bg-orange-600 text-white hover:bg-orange-700'
+                      ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
                       : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
                   aria-label="Previous products"
@@ -248,7 +248,7 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                   onClick={scrollNext}
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
                     currentSlide === totalSlides - 1
-                      ? 'bg-orange-600 text-white hover:bg-orange-700'
+                      ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
                       : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
                   aria-label="Next products"

@@ -241,7 +241,7 @@ const TopCategories: React.FC<TopCategoriesProps> = ({
                   onClick={scrollPrev}
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
                     currentSlide === 0
-                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
                       : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
                   aria-label="Previous categories"
@@ -252,7 +252,7 @@ const TopCategories: React.FC<TopCategoriesProps> = ({
                   onClick={scrollNext}
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
                     currentSlide === totalSlides - 1
-                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
                       : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
                   aria-label="Next categories"
@@ -288,9 +288,9 @@ const TopCategories: React.FC<TopCategoriesProps> = ({
               >
                 <Link
                   href={`/categories/${category.slug}`}
-                  className="category-card bg-white rounded-xl p-3 hover:shadow-lg transition-all duration-300 text-center group border border-gray-100 hover:border-emerald-200 h-full block"
+                  className="category-card bg-white rounded-xl p-3 hover:shadow-lg transition-all duration-300 text-center group border border-gray-100 hover:border-[#004E9A] h-full block"
                 >
-                  <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-full flex items-center justify-center group-hover:from-emerald-100 group-hover:to-emerald-200 transition-all duration-300">
+                  <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 bg-gradient-to-br from-[#004E9A] to-[#003E9A] rounded-full flex items-center justify-center group-hover:from-[#004E9A] group-hover:to-[#003E9A] transition-all duration-300">
                     {category.image ? (
                       <img 
                         src={getImageUrl(category.image)} 

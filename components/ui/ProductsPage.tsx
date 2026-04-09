@@ -290,7 +290,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
             disabled={loading}
             className={`w-10 h-10 rounded-lg border ${
               currentPage === page
-                ? 'bg-emerald-600 text-white border-emerald-600'
+                ? 'bg-[#004E9A] text-white border-[#004E9A]'
                 : 'border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >

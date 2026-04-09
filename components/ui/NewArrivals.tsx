@@ -222,8 +222,8 @@ const NewArrivals: React.FC<NewArrivalsProps> = ({
                     onClick={scrollPrev}
                     className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
                       currentSlide === 0
-                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                        : 'bg-white text-gray-600 hover:bg-emerald-50 border border-gray-200'
+                        ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
+                        : 'bg-white text-gray-600 hover:bg-[#004E9A] border border-gray-200'
                     }`}
                     aria-label="Previous products"
                   >
@@ -233,8 +233,8 @@ const NewArrivals: React.FC<NewArrivalsProps> = ({
                     onClick={scrollNext}
                     className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
                       currentSlide === totalSlides - 1
-                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                        : 'bg-white text-gray-600 hover:bg-emerald-50 border border-gray-200'
+                        ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
+                        : 'bg-white text-gray-600 hover:bg-[#004E9A] border border-gray-200'
                     }`}
                     aria-label="Next products"
                   >

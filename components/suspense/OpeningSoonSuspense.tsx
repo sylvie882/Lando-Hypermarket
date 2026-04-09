@@ -5,8 +5,10 @@ import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Timer, Mail, Phone, MapPin, ShoppingBag, Star, Truck } from 'lucide-react';
 import Image from 'next/image';
+import { useAuth } from '@/lib/auth';
 
 export default function OpeningSoonSuspense() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [isVisible, setIsVisible] = useState(true);
   const [showFlashDrop, setShowFlashDrop] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
@@ -168,6 +170,8 @@ export default function OpeningSoonSuspense() {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  if (authLoading) return null;
+  if (isAuthenticated) return null;
   if (!isVisible) return null;
 
   return (

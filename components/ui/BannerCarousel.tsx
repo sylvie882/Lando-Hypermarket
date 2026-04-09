@@ -394,7 +394,7 @@ const BannerSlide: React.FC<{
           
           {/* Button - Warm Orange */}
           {banner.button_text && (
-            <button className="group/btn inline-flex items-center gap-1.5 md:gap-2 px-4 py-2 md:px-6 md:py-3 bg-[#E67E22] hover:bg-[#D35400] text-white font-semibold rounded-lg md:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 text-xs md:text-sm">
+            <button className="group/btn inline-flex items-center gap-1.5 md:gap-2 px-4 py-2 md:px-6 md:py-3 bg-[#004E9A] hover:bg-[#003E9A] text-white font-semibold rounded-lg md:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 text-xs md:text-sm">
               <span>{banner.button_text}</span>
               <ArrowRight size={14} className="md:w-4 md:h-4 group-hover/btn:translate-x-1 transition-transform" />
             </button>
