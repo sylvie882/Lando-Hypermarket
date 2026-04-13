@@ -103,9 +103,9 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* ── Promotional Banners ── */}
-      <div className="reveal-section section-hidden">
+      {/* <div className="reveal-section section-hidden">
         <PromoBanners limit={3} heading="Special Offers" />
-      </div>
+      </div> */}
 
       {/* ── All Products ── */}
       <div className="reveal-section section-hidden mt-2">
