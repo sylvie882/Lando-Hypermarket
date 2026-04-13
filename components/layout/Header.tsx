@@ -201,10 +201,10 @@ const Header: React.FC = () => {
         <div className="hidden md:block bg-white border-b border-gray-100">
           <div className="w-full px-4 sm:px-6 lg:px-12 flex items-center justify-between py-1.5">
             <div className="flex items-center gap-1">
-              <button className="flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold transition-all" style={{ background: '#004E9A', color: '#fff' }}>
+              <button className="flex items-center gap-2 px-4 py-1.5  text-xs font-bold transition-all" style={{ background: '#004E9A', color: '#fff' }}>
                 <img src="/images/schedule.png" alt="" className="w-3.5 h-3.5 object-contain" aria-hidden="true"/> Scheduled
               </button>
-              <button className="flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-100 transition-all">
+              <button className="flex items-center gap-2 px-4 py-1.5  text-xs font-bold text-gray-600 hover:bg-gray-100 transition-all">
                 <img src="/images/express.png" alt="" className="w-3.5 h-3.5 object-contain" aria-hidden="true"/> Express
               </button>
             </div>

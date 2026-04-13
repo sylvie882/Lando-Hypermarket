@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import BannerCarousel from '@/components/ui/BannerCarousel';
+import PromoBanners from '@/components/ui/PromoBanners';
 import TopCategories from '@/components/ui/TopCategories';
 import FeaturedProducts from '@/components/ui/FeaturedProducts';
 import WoodenUtensilsPage from '@/components/ui/WoodenUtensils';
@@ -99,6 +100,11 @@ const HomePage: React.FC = () => {
       {/* ── Top Categories ── */}
       <div className="reveal-section section-hidden">
         <TopCategories limit={15} showHeader={true} />
+      </div>
+
+      {/* ── Promotional Banners ── */}
+      <div className="reveal-section section-hidden">
+        <PromoBanners limit={3} heading="Special Offers" />
       </div>
 
       {/* ── All Products ── */}

@@ -72,8 +72,9 @@ const getCsrfToken = (): string | null => {
 // FIXED: Image compression function that preserves transparency
 const compressImage = async (file: File, maxWidth = 1920, quality = 0.8): Promise<File> => {
   return new Promise((resolve, reject) => {
-    // Skip compression for small files (< 2MB) OR for PNG/GIF files to preserve transparency
-    if (file.size < 2 * 1024 * 1024 || file.type === 'image/png' || file.type === 'image/gif') {
+    // Skip compression only for PNG/GIF (preserve transparency) — always compress JPEG/WebP
+    const isTransparentFormat = file.type === 'image/png' || file.type === 'image/gif';
+    if (isTransparentFormat) {
       console.log(`Skipping compression for ${file.type} file: ${file.name}`);
       resolve(file);
       return;
@@ -296,7 +297,7 @@ export default function CreateBannerPage() {
         setIsAuthenticated(true);
         
         // Check server upload limits
-        const response = await fetch('http://localhost:8000/api/upload-limits', {
+        const response = await fetch('https://api.hypermarket.co.ke/api/upload-limits', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json',
@@ -506,7 +507,7 @@ export default function CreateBannerPage() {
       const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout
 
       try {
-        const response = await fetch('http://localhost:8000/api/admin/banners', {
+        const response = await fetch('https://api.hypermarket.co.ke/api/admin/banners', {
           method: 'POST',
           headers: headers,
           body: formDataToSend,

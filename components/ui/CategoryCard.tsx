@@ -16,7 +16,6 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
 
   const getCategoryIcon = () => {
     const name = category.name.toLowerCase();
-    
     if (name.includes('fruit')) return '🍎';
     if (name.includes('vegetable')) return '🥦';
     if (name.includes('dairy') || name.includes('milk')) return '🥛';
@@ -38,119 +37,104 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
 
   const getCategoryColor = () => {
     const name = category.name.toLowerCase();
-    
     if (name.includes('fruit')) return 'from-orange-400 to-orange-500';
     if (name.includes('vegetable')) return 'from-green-500 to-emerald-600';
-    if (name.includes('dairy')) return 'from-blue-100 to-blue-200';
+    if (name.includes('dairy')) return 'from-blue-200 to-blue-300';
     if (name.includes('meat') || name.includes('animal')) return 'from-red-400 to-rose-500';
     if (name.includes('fish') || name.includes('seafood')) return 'from-blue-400 to-cyan-500';
-    if (name.includes('nut') || name.includes('seed')) return 'from-amber-500 to-yellow-500';
-    if (name.includes('grain') || name.includes('flour')) return 'from-amber-200 to-amber-300';
+    if (name.includes('nut') || name.includes('seed')) return 'from-amber-400 to-yellow-500';
+    if (name.includes('grain') || name.includes('flour')) return 'from-amber-200 to-amber-400';
     if (name.includes('herb') || name.includes('spice')) return 'from-lime-400 to-green-500';
     if (name.includes('beverage')) return 'from-purple-400 to-indigo-500';
-    return 'from-gray-100 to-gray-200';
+    return 'from-[#004E9A]/20 to-[#004E9A]/40';
   };
 
   const getImageUrl = (): string | null => {
     if (category.image) {
-      let cleanImage = category.image.trim();
-      
-      if (cleanImage.startsWith('/')) {
-        cleanImage = cleanImage.substring(1);
-      }
-      
-      if (cleanImage.startsWith('storage/')) {
-        cleanImage = cleanImage.substring('storage/'.length);
-      }
-      
-      if (cleanImage.startsWith('categories/')) {
-        cleanImage = cleanImage.substring('categories/'.length);
-      }
-      
-      return `https://api.hypermarket.co.ke/storage/categories/${cleanImage}`;
+      let clean = category.image.trim();
+      if (clean.startsWith('/')) clean = clean.substring(1);
+      if (clean.startsWith('storage/')) clean = clean.substring('storage/'.length);
+      if (clean.startsWith('categories/')) clean = clean.substring('categories/'.length);
+      return `https://api.hypermarket.co.ke/storage/categories/${clean}`;
     }
-    
     if (category.image_url) {
-      let url = category.image_url.trim();
-      url = url.replace('https://hypermarket.co.ke', 'https://api.hypermarket.co.ke');
-      url = url.replace('http://hypermarket.co.ke', 'https://api.hypermarket.co.ke');
-      url = url.replace('hypermarket.co.ke', 'api.hypermarket.co.ke');
-      return url;
+      return category.image_url
+        .trim()
+        .replace('https://hypermarket.co.ke', 'https://api.hypermarket.co.ke')
+        .replace('http://hypermarket.co.ke', 'https://api.hypermarket.co.ke')
+        .replace('hypermarket.co.ke', 'api.hypermarket.co.ke');
     }
-    
     return null;
   };
 
   const imageUrl = getImageUrl();
-  const productCount = category.active_products_count || category.products_count || 0;
   const icon = getCategoryIcon();
   const gradient = getCategoryColor();
 
   return (
     <Link
       href={`/categories/${category.slug || category.id}`}
-      className="group relative block"
+      className="group block"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-500 hover:-translate-y-1 overflow-hidden">
-        {/* Image container */}
-        <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
-          {imageUrl && !imageError ? (
+      <div
+        className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-[#004E9A]/30 transition-all duration-300 hover:-translate-y-1 overflow-hidden flex flex-col"
+        style={{ height: '220px' }}
+      >
+        {/* Image area — fixed height, same on every card */}
+        <div className="relative flex-shrink-0 overflow-hidden" style={{ height: '148px' }}>
+
+          {/* Fallback gradient + emoji */}
+          <div className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br ${gradient}`}>
+            <span className="text-5xl select-none">{icon}</span>
+          </div>
+
+          {/* Real image */}
+          {imageUrl && !imageError && (
             <>
               {!imageLoaded && (
-                <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+                <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 z-10" />
               )}
-              
               <img
                 src={imageUrl}
                 alt={category.name}
-                className={`w-full h-full object-cover transition-transform duration-700 ${
-                  isHovered ? 'scale-110' : 'scale-100'
-                } ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                className={`absolute inset-0 w-full h-full object-cover z-20 ${
+                  imageLoaded ? 'opacity-100' : 'opacity-0'
+                } ${isHovered ? 'scale-105' : 'scale-100'}`}
+                style={{ transition: 'opacity 0.4s ease, transform 0.5s ease' }}
                 loading="lazy"
                 onLoad={() => setImageLoaded(true)}
                 onError={() => setImageError(true)}
               />
             </>
-          ) : (
-            <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${gradient}`}>
-              <span className="text-6xl opacity-80">{icon}</span>
-            </div>
           )}
-          
-          {/* Subtle overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
-          
-          {/* Minimal product count */}
-          {productCount > 0 && (
-            <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-medium text-gray-700">
-              {productCount} items
-            </div>
-          )}
+
+          {/* Bottom fade */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent z-30 pointer-events-none" />
         </div>
-        
-        {/* Content */}
-        <div className="p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-green-600 transition-colors">
-                {category.name}
-              </h3>
-              
-              {category.description && (
-                <p className="text-sm text-gray-500 mt-1 line-clamp-1">
-                  {category.description}
-                </p>
-              )}
-            </div>
-            
-            {/* Simple arrow indicator */}
-            <div className={`w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center transition-all duration-300 ${
-              isHovered ? 'bg-green-100 translate-x-1' : ''
-            }`}>
-              <ChevronRight size={18} className="text-gray-600" />
-            </div>
+
+        {/* Text area */}
+        <div className="flex items-center justify-between px-3 flex-1 min-h-0">
+          <h3
+            className="flex-1 font-semibold text-gray-900 group-hover:text-[#004E9A] transition-colors duration-200 leading-tight pr-2"
+            style={{
+              fontSize: '0.82rem',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical' as const,
+              overflow: 'hidden',
+            }}
+          >
+            {category.name}
+          </h3>
+
+          <div
+            className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+              isHovered ? 'bg-[#004E9A] text-white' : 'bg-gray-100 text-gray-400'
+            }`}
+          >
+            <ChevronRight size={14} />
           </div>
         </div>
       </div>
