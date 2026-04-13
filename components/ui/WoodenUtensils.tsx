@@ -23,12 +23,11 @@ const WoodenUtensils: React.FC = () => {
   const [category, setCategory] = useState<Category | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [visibleCards, setVisibleCards] = useState(4);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [itemsPerRow, setItemsPerRow] = useState(4);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const resizeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -45,13 +44,13 @@ const WoodenUtensils: React.FC = () => {
         setIsTablet(width >= 640 && width < 1024);
         
         if (width < 640) {
-          setVisibleCards(2); // Changed from 1 to 2
+          setItemsPerRow(2);
         } else if (width < 768) {
-          setVisibleCards(2);
+          setItemsPerRow(2);
         } else if (width < 1024) {
-          setVisibleCards(3);
+          setItemsPerRow(3);
         } else {
-          setVisibleCards(4);
+          setItemsPerRow(4);
         }
       }, 150);
     };
@@ -70,65 +69,6 @@ const WoodenUtensils: React.FC = () => {
       fetchProducts();
     }
   }, [category]);
-
-  const scrollToIndex = (index: number) => {
-    if (!scrollContainerRef.current || products.length === 0) return;
-    
-    const container = scrollContainerRef.current;
-    const cardElements = container.children;
-    if (cardElements.length === 0) return;
-    
-    const cardWidth = cardElements[0].clientWidth || 256;
-    const gap = 16;
-    const scrollPosition = (cardWidth + gap) * index;
-    
-    container.scrollTo({
-      left: scrollPosition,
-      behavior: 'smooth'
-    });
-    setCurrentIndex(index);
-  };
-
-  const scrollNext = () => {
-    if (products.length <= visibleCards) return;
-    
-    let nextIndex = currentIndex + 1;
-    
-    if (nextIndex > products.length - visibleCards) {
-      nextIndex = 0;
-    }
-    
-    scrollToIndex(nextIndex);
-  };
-
-  const scrollPrev = () => {
-    if (products.length <= visibleCards) return;
-    
-    let prevIndex = currentIndex - 1;
-    
-    if (prevIndex < 0) {
-      prevIndex = Math.max(0, products.length - visibleCards);
-    }
-    
-    scrollToIndex(prevIndex);
-  };
-
-  const handleScroll = () => {
-    if (!scrollContainerRef.current) return;
-    
-    const container = scrollContainerRef.current;
-    const cardElements = container.children;
-    if (cardElements.length === 0) return;
-    
-    const cardWidth = cardElements[0].clientWidth || 256;
-    const gap = 16;
-    const scrollPosition = container.scrollLeft;
-    const newIndex = Math.round(scrollPosition / (cardWidth + gap));
-    
-    if (newIndex !== currentIndex) {
-      setCurrentIndex(Math.max(0, newIndex));
-    }
-  };
 
   const fetchWoodenUtensilsCategory = async () => {
     try {
@@ -180,8 +120,35 @@ const WoodenUtensils: React.FC = () => {
     }
   };
 
-  const totalSlides = Math.ceil(products.length / visibleCards);
-  const currentSlide = Math.floor(currentIndex / visibleCards);
+  // Calculate products per page (itemsPerRow * 2 rows)
+  const productsPerPage = itemsPerRow * 2;
+  const totalPages = Math.ceil(products.length / productsPerPage);
+  
+  // Get current page products
+  const currentProducts = products.slice(
+    currentPage * productsPerPage,
+    (currentPage + 1) * productsPerPage
+  );
+  
+  // Split current products into two rows
+  const firstRowProducts = currentProducts.slice(0, itemsPerRow);
+  const secondRowProducts = currentProducts.slice(itemsPerRow, productsPerPage);
+
+  const nextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1);
+    } else {
+      setCurrentPage(0); // Loop back to first page
+    }
+  };
+
+  const prevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    } else {
+      setCurrentPage(totalPages - 1); // Loop to last page
+    }
+  };
 
   // Loading Skeleton
   if (isLoading && !category) {
@@ -200,18 +167,23 @@ const WoodenUtensils: React.FC = () => {
                   <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
                 </div>
               </div>
-              <div className="flex overflow-x-hidden space-x-4 pb-4">
-                {[...Array(4)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="flex-none w-64 animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
-                  >
-                    <div className="bg-gray-200 h-48"></div>
-                    <div className="p-4">
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
-                      <div className="h-8 bg-gray-200 rounded"></div>
-                    </div>
+              {/* Two rows of skeleton loaders */}
+              <div className="space-y-4">
+                {[1, 2].map((row) => (
+                  <div key={row} className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {[...Array(itemsPerRow)].map((_, i) => (
+                      <div 
+                        key={i} 
+                        className="animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                      >
+                        <div className="bg-gray-200 h-48"></div>
+                        <div className="p-4">
+                          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                          <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+                          <div className="h-8 bg-gray-200 rounded"></div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -224,113 +196,113 @@ const WoodenUtensils: React.FC = () => {
 
   return (
     <div className="bg-white">
-        <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
-          {/* Header with Title and Navigation Icons */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-2">
-              {/* <div className="p-2 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg">
-                <Sparkles size={20} className="text-white" />
-              </div> */}
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-                {category?.name || 'Wooden Utensils'}
-              </h2>
-            </div>
-            
-            {/* Navigation Icons */}
-            {products.length > visibleCards && (
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={scrollPrev}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    currentSlide === 0
-                      ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
-                      : 'bg-white text-gray-600 hover:bg-amber-50 border border-gray-200'
-                  }`}
-                  aria-label="Previous products"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <button
-                  onClick={scrollNext}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    currentSlide === totalSlides - 1
-                      ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
-                      : 'bg-white text-gray-600 hover:bg-amber-50 border border-gray-200'
-                  }`}
-                  aria-label="Next products"
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-            )}
+      <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full py-8">
+        {/* Header with Title and Navigation Icons */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-2">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+              {category?.name || 'Wooden Utensils'}
+            </h2>
           </div>
           
-          {/* Products Row */}
-          {products.length > 0 ? (
-            <div
-              ref={scrollContainerRef}
-              className="flex overflow-x-auto space-x-4 pb-2 hide-scrollbar snap-x snap-mandatory"
-              onScroll={handleScroll}
-              style={{ scrollBehavior: 'smooth' }}
-            >
-              {products.map((product, index) => (
-                <div
-                  key={product.id}
-                  className="snap-start flex-none"
-                  style={{
-                    width: isMobile ? '44vw' : // Changed from 85vw to 44vw for 2 items
-                           isTablet ? '45vw' : 
-                           '23vw',
-                    minWidth: isMobile ? '44vw' : // Changed from 85vw to 44vw
-                             isTablet ? '45vw' : 
-                             '23vw',
-                  }}
-                >
-                  <div className="h-full bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-amber-300 overflow-hidden transition-all duration-300">
+          {/* Navigation Icons */}
+          {totalPages > 1 && (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={prevPage}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  currentPage === 0
+                    ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
+                    : 'bg-white text-gray-600 hover:bg-amber-50 border border-gray-200'
+                }`}
+                aria-label="Previous products"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={nextPage}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  currentPage === totalPages - 1
+                    ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
+                    : 'bg-white text-gray-600 hover:bg-amber-50 border border-gray-200'
+                }`}
+                aria-label="Next products"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {/* Products Grid - Two Rows */}
+        {products.length > 0 ? (
+          <div className="space-y-4">
+            {/* First Row */}
+            {firstRowProducts.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {firstRowProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="h-full bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-amber-300 overflow-hidden transition-all duration-300"
+                  >
                     <ProductCard
                       product={product}
                       onViewTrack={trackProductView}
                       hideFeaturedBadge={true}
                     />
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            !isLoading && (
-              <div className="text-center py-12">
-                <div className="bg-amber-50 rounded-2xl p-12">
-                  <p className="text-gray-600">
-                    No products found in this category.
-                  </p>
-                </div>
+                ))}
               </div>
-            )
-          )}
-      </div>
+            )}
+            
+            {/* Second Row */}
+            {secondRowProducts.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {secondRowProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="h-full bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-amber-300 overflow-hidden transition-all duration-300"
+                  >
+                    <ProductCard
+                      product={product}
+                      onViewTrack={trackProductView}
+                      hideFeaturedBadge={true}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          !isLoading && (
+            <div className="text-center py-12">
+              <div className="bg-amber-50 rounded-2xl p-12">
+                <p className="text-gray-600">
+                  No products found in this category.
+                </p>
+              </div>
+            </div>
+          )
+        )}
 
-      <style jsx global>{`
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        
-        .snap-x {
-          -webkit-overflow-scrolling: touch;
-        }
-        
-        .snap-mandatory {
-          scroll-snap-type: x mandatory;
-        }
-        
-        .snap-start {
-          scroll-snap-align: start;
-        }
-      `}</style>
+        {/* Page Indicators */}
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-6 gap-2">
+            {Array.from({ length: totalPages }).map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentPage(idx)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  currentPage === idx
+                    ? 'bg-[#004E9A] w-8'
+                    : 'bg-gray-300 w-2 hover:bg-gray-400'
+                }`}
+                aria-label={`Go to page ${idx + 1}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

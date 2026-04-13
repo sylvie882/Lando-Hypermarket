@@ -277,27 +277,9 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
           })}
         </div>
 
-        {/* Navigation Controls */}
+        {/* Only Dots Indicator - Navigation buttons and counter removed */}
         {banners.length > 1 && (
           <>
-            <button
-              onClick={prevSlide}
-              disabled={isAnimating}
-              className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-2 md:p-3 rounded-xl backdrop-blur-sm transition-all duration-300 z-30 shadow-lg hover:shadow-xl hover:scale-110 opacity-0 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Previous slide"
-            >
-              <ChevronLeft size={20} className="md:w-6 md:h-6 text-[#E67E22]" />
-            </button>
-            
-            <button
-              onClick={nextSlide}
-              disabled={isAnimating}
-              className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-2 md:p-3 rounded-xl backdrop-blur-sm transition-all duration-300 z-30 shadow-lg hover:shadow-xl hover:scale-110 opacity-0 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Next slide"
-            >
-              <ChevronRight size={20} className="md:w-6 md:h-6 text-[#E67E22]" />
-            </button>
-            
             {/* Dots Indicator */}
             <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 flex space-x-2 md:space-x-3 z-30">
               {banners.map((_, index) => (
@@ -320,11 +302,6 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
                   }`} />
                 </button>
               ))}
-            </div>
-
-            {/* Slide Counter */}
-            <div className="absolute bottom-4 md:bottom-6 right-4 md:right-6 z-30 bg-black/40 backdrop-blur-md text-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-xs md:text-sm font-medium">
-              {activeIndex + 1} / {banners.length}
             </div>
           </>
         )}

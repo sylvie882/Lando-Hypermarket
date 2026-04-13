@@ -32,7 +32,7 @@ const OffersTickerStrip: React.FC<{ offers: OfferItem[] }> = ({ offers }) => {
   return (
     <div
       style={{
-        background: '#004E9A',
+        background: '#f9f9f0',
         borderRadius: '10px',
         overflow: 'hidden',
         display: 'flex',
@@ -100,7 +100,7 @@ const OffersTickerStrip: React.FC<{ offers: OfferItem[] }> = ({ offers }) => {
                   alignItems: 'center',
                   gap: '7px',
                   padding: '0 20px',
-                  color: '#fff',
+                  color: '#004E9A',
                   fontSize: '12.5px',
                   height: '40px',
                   borderRight: '1px solid rgba(255,255,255,0.22)',

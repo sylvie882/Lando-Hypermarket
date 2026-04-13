@@ -23,12 +23,11 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
 }) => {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [visibleCards, setVisibleCards] = useState(4);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [itemsPerRow, setItemsPerRow] = useState(4);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const resizeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -45,13 +44,13 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
         setIsTablet(width >= 640 && width < 1024);
         
         if (width < 640) {
-          setVisibleCards(2); // Changed from 1 to 2
+          setItemsPerRow(2);
         } else if (width < 768) {
-          setVisibleCards(2);
+          setItemsPerRow(2);
         } else if (width < 1024) {
-          setVisibleCards(3);
+          setItemsPerRow(3);
         } else {
-          setVisibleCards(4);
+          setItemsPerRow(4);
         }
       }, 150);
     };
@@ -66,48 +65,44 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
   }, []);
 
   const fetchFeaturedProducts = async () => {
-  try {
-    setIsLoading(true);
-    
-    const featuredRes = await api.products.getFeatured();
-    let featuredData = featuredRes.data || [];
-    
-    if (featuredData.length < limit) {
-      try {
-        const moreProductsRes = await api.products.getAll({ 
-          per_page: limit - featuredData.length,
-          sort: 'featured',
-          order: 'desc' 
-        });
-        const moreProducts = moreProductsRes.data?.data || moreProductsRes.data || [];
-        featuredData = [...featuredData, ...moreProducts];
-      } catch (error) {
-        console.error('Error fetching additional products:', error);
-      }
-    }
-    
-    // Sort products by updated_at (if available) or created_at
-    const sortedProducts = featuredData.sort((a: Product, b: Product) => {
-      // Get dates - use updated_at if available, otherwise created_at
-      const dateA = new Date(a.updated_at || a.created_at || 0);
-      const dateB = new Date(b.updated_at || b.created_at || 0);
+    try {
+      setIsLoading(true);
       
-      // Sort in descending order (newest first)
-      return dateB.getTime() - dateA.getTime();
-    });
-    
-    // Apply limit after sorting
-    const limitedProducts = sortedProducts.slice(0, limit);
-    
-    setFeaturedProducts(limitedProducts);
-
-  } catch (error) {
-    console.error('Failed to fetch featured products:', error);
-    setFeaturedProducts([]);
-  } finally {
-    setIsLoading(false);
-  }
-};
+      const featuredRes = await api.products.getFeatured();
+      let featuredData = featuredRes.data || [];
+      
+      if (featuredData.length < limit) {
+        try {
+          const moreProductsRes = await api.products.getAll({ 
+            per_page: limit - featuredData.length,
+            sort: 'featured',
+            order: 'desc' 
+          });
+          const moreProducts = moreProductsRes.data?.data || moreProductsRes.data || [];
+          featuredData = [...featuredData, ...moreProducts];
+        } catch (error) {
+          console.error('Error fetching additional products:', error);
+        }
+      }
+      
+      // Sort products by updated_at (if available) or created_at
+      const sortedProducts = featuredData.sort((a: Product, b: Product) => {
+        const dateA = new Date(a.updated_at || a.created_at || 0);
+        const dateB = new Date(b.updated_at || b.created_at || 0);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      // Apply limit after sorting
+      const limitedProducts = sortedProducts.slice(0, limit);
+      
+      setFeaturedProducts(limitedProducts);
+    } catch (error) {
+      console.error('Failed to fetch featured products:', error);
+      setFeaturedProducts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const trackProductView = async (productId: number) => {
     try {
@@ -117,67 +112,35 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
     }
   };
 
-  const scrollToIndex = (index: number) => {
-    if (!scrollContainerRef.current || featuredProducts.length === 0) return;
-    
-    const container = scrollContainerRef.current;
-    const cardElements = container.children;
-    if (cardElements.length === 0) return;
-    
-    const cardWidth = cardElements[0].clientWidth || 256;
-    const gap = 16; // space-x-4 = 16px
-    const scrollPosition = (cardWidth + gap) * index;
-    
-    container.scrollTo({
-      left: scrollPosition,
-      behavior: 'smooth'
-    });
-    setCurrentIndex(index);
-  };
+  // Calculate products per page (itemsPerRow * 2 rows)
+  const productsPerPage = itemsPerRow * 2;
+  const totalPages = Math.ceil(featuredProducts.length / productsPerPage);
+  
+  // Get current page products
+  const currentProducts = featuredProducts.slice(
+    currentPage * productsPerPage,
+    (currentPage + 1) * productsPerPage
+  );
+  
+  // Split current products into two rows
+  const firstRowProducts = currentProducts.slice(0, itemsPerRow);
+  const secondRowProducts = currentProducts.slice(itemsPerRow, productsPerPage);
 
-  const scrollNext = () => {
-    if (featuredProducts.length <= visibleCards) return;
-    
-    let nextIndex = currentIndex + 1;
-    
-    if (nextIndex > featuredProducts.length - visibleCards) {
-      nextIndex = 0;
-    }
-    
-    scrollToIndex(nextIndex);
-  };
-
-  const scrollPrev = () => {
-    if (featuredProducts.length <= visibleCards) return;
-    
-    let prevIndex = currentIndex - 1;
-    
-    if (prevIndex < 0) {
-      prevIndex = Math.max(0, featuredProducts.length - visibleCards);
-    }
-    
-    scrollToIndex(prevIndex);
-  };
-
-  const handleScroll = () => {
-    if (!scrollContainerRef.current) return;
-    
-    const container = scrollContainerRef.current;
-    const cardElements = container.children;
-    if (cardElements.length === 0) return;
-    
-    const cardWidth = cardElements[0].clientWidth || 256;
-    const gap = 16;
-    const scrollPosition = container.scrollLeft;
-    const newIndex = Math.round(scrollPosition / (cardWidth + gap));
-    
-    if (newIndex !== currentIndex) {
-      setCurrentIndex(Math.max(0, newIndex));
+  const nextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1);
+    } else {
+      setCurrentPage(0); // Loop back to first page
     }
   };
 
-  const totalSlides = Math.ceil(featuredProducts.length / visibleCards);
-  const currentSlide = Math.floor(currentIndex / visibleCards);
+  const prevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    } else {
+      setCurrentPage(totalPages - 1); // Loop to last page
+    }
+  };
 
   if (isLoading) {
     return (
@@ -193,18 +156,23 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                 </div>
               </div>
             )}
-            <div className="flex space-x-4 overflow-x-hidden pb-4">
-              {[...Array(Math.min(limit, 4))].map((_, i) => (
-                <div 
-                  key={i} 
-                  className="flex-none w-64 animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
-                >
-                  <div className="bg-gray-200 h-48"></div>
-                  <div className="p-4">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
-                    <div className="h-8 bg-gray-200 rounded"></div>
-                  </div>
+            {/* Two rows of skeleton loaders */}
+            <div className="space-y-4">
+              {[1, 2].map((row) => (
+                <div key={row} className="flex space-x-4">
+                  {[...Array(itemsPerRow)].map((_, i) => (
+                    <div 
+                      key={i} 
+                      className="flex-1 animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                    >
+                      <div className="bg-gray-200 h-48"></div>
+                      <div className="p-4">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+                        <div className="h-8 bg-gray-200 rounded"></div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -224,19 +192,16 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
         {showHeader && (
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
-              {/* <div className="p-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg">
-                <Flame size={20} className="text-white" />
-              </div> */}
               <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h2>
             </div>
             
             {/* Navigation Icons at Top Right */}
-            {featuredProducts.length > visibleCards && (
+            {totalPages > 1 && (
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={scrollPrev}
+                  onClick={prevPage}
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    currentSlide === 0
+                    currentPage === 0
                       ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
                       : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
@@ -245,9 +210,9 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                   <ChevronLeft size={20} />
                 </button>
                 <button
-                  onClick={scrollNext}
+                  onClick={nextPage}
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    currentSlide === totalSlides - 1
+                    currentPage === totalPages - 1
                       ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
                       : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
@@ -260,60 +225,63 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
           </div>
         )}
         
-        {/* Products Row */}
-        <div
-          ref={scrollContainerRef}
-          className="flex overflow-x-auto space-x-4 pb-2 hide-scrollbar snap-x snap-mandatory"
-          onScroll={handleScroll}
-          style={{ scrollBehavior: 'smooth' }}
-        >
-          {featuredProducts.map((product, index) => (
-            <div 
-              key={product.id} 
-              className="snap-start flex-none"
-              style={{
-                width: isMobile ? '44vw' : // Changed from 85vw to 44vw for 2 items
-                       isTablet ? '45vw' : 
-                       '23vw',
-                minWidth: isMobile ? '44vw' : // Changed from 85vw to 44vw
-                         isTablet ? '45vw' : 
-                         '23vw',
-              }}
-            >
-              <div className="h-full bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-orange-200 overflow-hidden transition-all duration-300">
-                <ProductCard 
-                  product={product} 
-                  onViewTrack={trackProductView}
-                  hideFeaturedBadge={true}
-                />
-              </div>
+        {/* Products Grid - Two Rows */}
+        <div className="space-y-4">
+          {/* First Row */}
+          {firstRowProducts.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {firstRowProducts.map((product) => (
+                <div 
+                  key={product.id} 
+                  className="h-full bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-orange-200 overflow-hidden transition-all duration-300"
+                >
+                  <ProductCard 
+                    product={product} 
+                    onViewTrack={trackProductView}
+                    hideFeaturedBadge={true}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+          
+          {/* Second Row */}
+          {secondRowProducts.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {secondRowProducts.map((product) => (
+                <div 
+                  key={product.id} 
+                  className="h-full bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-orange-200 overflow-hidden transition-all duration-300"
+                >
+                  <ProductCard 
+                    product={product} 
+                    onViewTrack={trackProductView}
+                    hideFeaturedBadge={true}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      </div>
 
-      <style jsx global>{`
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        
-        .snap-x {
-          -webkit-overflow-scrolling: touch;
-        }
-        
-        .snap-mandatory {
-          scroll-snap-type: x mandatory;
-        }
-        
-        .snap-start {
-          scroll-snap-align: start;
-        }
-      `}</style>
+        {/* Page Indicators */}
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-6 gap-2">
+            {Array.from({ length: totalPages }).map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentPage(idx)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  currentPage === idx
+                    ? 'bg-[#004E9A] w-8'
+                    : 'bg-gray-300 w-2 hover:bg-gray-400'
+                }`}
+                aria-label={`Go to page ${idx + 1}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 };

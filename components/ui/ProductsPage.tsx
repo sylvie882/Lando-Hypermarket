@@ -1,25 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import ProductCard from '@/components/ui/ProductCard';
-import { Product, Category } from '@/types';
+import { Product } from '@/types';
 import { api } from '@/lib/api';
-import { ShoppingBag, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingBag, AlertCircle, RefreshCw } from 'lucide-react';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 interface ProductsPageProps {
   title?: string;
-}
-
-interface PaginatedResponse {
-  data: Product[];
-  current_page: number;
-  last_page: number;
-  per_page: number;
-  total: number;
-  next_page_url: string | null;
-  prev_page_url: string | null;
 }
 
 const ProductsPage: React.FC<ProductsPageProps> = ({
@@ -30,69 +20,162 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('offers');
   
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [perPage, setPerPage] = useState(20);
-  
   // Store discounted products for offers tab (only from fruits & vegetables)
   const [allDiscountedProducts, setAllDiscountedProducts] = useState<Product[]>([]);
   const [discountedProductsLoaded, setDiscountedProductsLoaded] = useState(false);
   
+  // Carousel states
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [itemsPerView, setItemsPerView] = useState(4);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [isHovering, setIsHovering] = useState(false);
+  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const resizeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
   // Define tabs - only Fruits and Vegetables categories
   const tabs = [
     { id: 'offers', label: 'Offers', categoryId: null },
-    { id: 'fruits', label: 'Fruits', categoryId: 45 }, // ID 45 = Fresh Fruits
-    { id: 'vegetables', label: 'Vegetables', categoryId: 46 }, // ID 46 = Fresh Vegetables
+    { id: 'fruits', label: 'Fruits', categoryId: 45 },
+    { id: 'vegetables', label: 'Vegetables', categoryId: 46 },
   ];
 
-  // Categories that are allowed for offers (only fruits and vegetables)
-  const allowedOfferCategories = [45, 46]; // Fruits and Vegetables
+  const allowedOfferCategories = [45, 46];
+
+  // Handle responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      if (resizeTimerRef.current) {
+        clearTimeout(resizeTimerRef.current);
+      }
+      
+      resizeTimerRef.current = setTimeout(() => {
+        const width = window.innerWidth;
+        setIsMobile(width < 640);
+        setIsTablet(width >= 640 && width < 1024);
+        
+        if (width < 640) {
+          setItemsPerView(2);
+        } else if (width < 768) {
+          setItemsPerView(2);
+        } else if (width < 1024) {
+          setItemsPerView(3);
+        } else {
+          setItemsPerView(4);
+        }
+      }, 150);
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
+    };
+  }, []);
+
+  // Auto-scroll functionality
+  useEffect(() => {
+    if (isAutoPlaying && !isHovering && products.length > itemsPerView * 3) {
+      autoPlayIntervalRef.current = setInterval(() => {
+        nextSlide();
+      }, 5000);
+    }
+    
+    return () => {
+      if (autoPlayIntervalRef.current) {
+        clearInterval(autoPlayIntervalRef.current);
+      }
+    };
+  }, [isAutoPlaying, isHovering, products.length, itemsPerView, currentSlide]);
+
+  // Scroll to specific slide
+  const scrollToSlide = (slideIndex: number) => {
+    if (!scrollContainerRef.current || products.length === 0) return;
+    
+    const container = scrollContainerRef.current;
+    const slideWidth = container.clientWidth;
+    const scrollPosition = slideWidth * slideIndex;
+    
+    container.scrollTo({
+      left: scrollPosition,
+      behavior: 'smooth'
+    });
+    setCurrentSlide(slideIndex);
+  };
+
+  const nextSlide = () => {
+    if (products.length <= itemsPerView * 3) return;
+    
+    const totalSlides = Math.ceil(products.length / (itemsPerView * 3));
+    let nextIndex = currentSlide + 1;
+    
+    if (nextIndex >= totalSlides) {
+      nextIndex = 0;
+    }
+    
+    scrollToSlide(nextIndex);
+  };
+
+  const prevSlide = () => {
+    if (products.length <= itemsPerView * 3) return;
+    
+    const totalSlides = Math.ceil(products.length / (itemsPerView * 3));
+    let prevIndex = currentSlide - 1;
+    
+    if (prevIndex < 0) {
+      prevIndex = totalSlides - 1;
+    }
+    
+    scrollToSlide(prevIndex);
+  };
+
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    
+    const container = scrollContainerRef.current;
+    const slideWidth = container.clientWidth;
+    const scrollPosition = container.scrollLeft;
+    const newSlide = Math.round(scrollPosition / slideWidth);
+    
+    if (newSlide !== currentSlide) {
+      setCurrentSlide(Math.max(0, newSlide));
+    }
+  };
 
   // Fetch products based on active tab
   useEffect(() => {
     if (activeTab === 'offers') {
-      // For offers, we need to load all discounted products first if not loaded
       if (!discountedProductsLoaded) {
         fetchAllDiscountedProducts();
       } else {
-        // If already loaded, just update the current page
         updateCurrentPageProducts();
       }
     } else {
-      // For category tabs, fetch paginated products
-      fetchCategoryProducts(currentPage);
+      fetchCategoryProducts();
     }
-  }, [activeTab, currentPage, discountedProductsLoaded]);
+  }, [activeTab, discountedProductsLoaded]);
 
-  // Reset pagination when tab changes
+  // Reset carousel when tab changes
   useEffect(() => {
-    setCurrentPage(1);
+    setCurrentSlide(0);
+    setIsAutoPlaying(true);
   }, [activeTab]);
-
-  // Filter to only include products from fruits and vegetables categories
-  const filterOnlyFruitsAndVegetables = (products: Product[]): Product[] => {
-    return products.filter(product => {
-      const productCategoryId = product.category_id || product.category?.id;
-      return productCategoryId !== undefined && allowedOfferCategories.includes(productCategoryId);
-    });
-  };
 
   const fetchAllDiscountedProducts = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      console.log('Fetching discounted products only from Fruits and Vegetables categories');
-      
-      // Fetch products from Fruits category (ID 45)
       const fruitsResponse = await api.products.getAll({ 
         category_id: 45,
         per_page: 100 
       });
       
-      // Fetch products from Vegetables category (ID 46)
       const vegetablesResponse = await api.products.getAll({ 
         category_id: 46,
         per_page: 100 
@@ -100,40 +183,24 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
       
       let allDiscounted: Product[] = [];
       
-      // Process Fruits
       if (fruitsResponse?.data) {
         const fruitsData = (fruitsResponse.data as any).data || fruitsResponse.data;
         if (Array.isArray(fruitsData)) {
           const fruitsDiscounted = fruitsData.filter(isProductDiscounted);
           allDiscounted = [...allDiscounted, ...fruitsDiscounted];
-          console.log(`Found ${fruitsDiscounted.length} discounted products in Fruits`);
         }
       }
       
-      // Process Vegetables
       if (vegetablesResponse?.data) {
         const vegetablesData = (vegetablesResponse.data as any).data || vegetablesResponse.data;
         if (Array.isArray(vegetablesData)) {
           const vegetablesDiscounted = vegetablesData.filter(isProductDiscounted);
           allDiscounted = [...allDiscounted, ...vegetablesDiscounted];
-          console.log(`Found ${vegetablesDiscounted.length} discounted products in Vegetables`);
         }
       }
       
-      console.log(`Total discounted products found in Fruits & Vegetables: ${allDiscounted.length}`);
-      
-      // Store all discounted products
       setAllDiscountedProducts(allDiscounted);
       setDiscountedProductsLoaded(true);
-      
-      // Calculate pagination for offers
-      const offersPerPage = 20;
-      const offersLastPage = Math.ceil(allDiscounted.length / offersPerPage);
-      setLastPage(offersLastPage);
-      setTotalProducts(allDiscounted.length);
-      setPerPage(offersPerPage);
-      
-      // Update current page products
       updateCurrentPageProducts(allDiscounted);
     } catch (error: any) {
       console.error('Error fetching discounted products:', error);
@@ -143,7 +210,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     }
   };
 
-  const fetchCategoryProducts = async (page: number) => {
+  const fetchCategoryProducts = async () => {
     setLoading(true);
     setError(null);
     
@@ -156,25 +223,14 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
         return;
       }
 
-      console.log(`Fetching products for category ID: ${currentTab.categoryId}, page: ${page}`);
       const response = await api.products.getAll({ 
         category_id: currentTab.categoryId,
-        per_page: 20,
-        page: page
+        per_page: 100
       });
       
       if (response?.data) {
-        // Handle paginated response
-        const paginatedData = response.data as any;
-        const categoryProducts = paginatedData.data || paginatedData;
-        
-        setProducts(Array.isArray(categoryProducts) ? categoryProducts : []);
-        
-        // Set pagination info
-        setCurrentPage(paginatedData.current_page || page);
-        setLastPage(paginatedData.last_page || 1);
-        setTotalProducts(paginatedData.total || 0);
-        setPerPage(paginatedData.per_page || 20);
+        const productsData = (response.data as any).data || response.data;
+        setProducts(Array.isArray(productsData) ? productsData : []);
       } else {
         setProducts([]);
       }
@@ -188,14 +244,10 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
   };
 
   const updateCurrentPageProducts = (discountedList = allDiscountedProducts) => {
-    const startIndex = (currentPage - 1) * perPage;
-    const endIndex = startIndex + perPage;
-    const pageProducts = discountedList.slice(startIndex, endIndex);
-    setProducts(pageProducts);
+    setProducts(discountedList);
     setLoading(false);
   };
 
-  // Check if product is discounted
   const isProductDiscounted = (product: Product): boolean => {
     const hasDiscountedPrice = !!(product.discounted_price && 
                               Number(product.discounted_price) > 0 && 
@@ -209,7 +261,6 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
                          Number(product.final_price) > 0 && 
                          Number(product.final_price) < Number(product.price));
     
-    // Also check if there's a discount percentage
     const hasDiscountPercentage = !!(product.discount_percentage && 
                                    Number(product.discount_percentage) > 0);
     
@@ -221,111 +272,34 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
       setDiscountedProductsLoaded(false);
       fetchAllDiscountedProducts();
     } else {
-      fetchCategoryProducts(currentPage);
+      fetchCategoryProducts();
     }
   };
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
     setError(null);
+    setCurrentSlide(0);
   };
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= lastPage) {
-      setCurrentPage(newPage);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Split products into rows (3 rows)
+  const getRows = () => {
+    const rows = [];
+    const itemsPerRow = itemsPerView;
+    
+    for (let i = 0; i < products.length; i += itemsPerRow * 3) {
+      const slideProducts = products.slice(i, i + itemsPerRow * 3);
+      const row1 = slideProducts.slice(0, itemsPerRow);
+      const row2 = slideProducts.slice(itemsPerRow, itemsPerRow * 2);
+      const row3 = slideProducts.slice(itemsPerRow * 2, itemsPerRow * 3);
+      rows.push({ row1, row2, row3 });
     }
+    
+    return rows;
   };
 
-  // Render pagination component
-  const renderPagination = () => {
-    if (lastPage <= 1) return null;
-
-    const pageNumbers = [];
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(lastPage, startPage + maxVisiblePages - 1);
-
-    if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pageNumbers.push(i);
-    }
-
-    return (
-      <div className="flex items-center justify-center gap-2 mt-8 mb-4">
-        {/* Previous button */}
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1 || loading}
-          className={`p-2 rounded-lg border ${
-            currentPage === 1 
-              ? 'border-gray-200 text-gray-400 cursor-not-allowed' 
-              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          <ChevronLeft size={20} />
-        </button>
-
-        {/* First page if not visible */}
-        {startPage > 1 && (
-          <>
-            <button
-              onClick={() => handlePageChange(1)}
-              className="w-10 h-10 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              1
-            </button>
-            {startPage > 2 && <span className="text-gray-500">...</span>}
-          </>
-        )}
-
-        {/* Page numbers */}
-        {pageNumbers.map((page) => (
-          <button
-            key={page}
-            onClick={() => handlePageChange(page)}
-            disabled={loading}
-            className={`w-10 h-10 rounded-lg border ${
-              currentPage === page
-                ? 'bg-[#004E9A] text-white border-[#004E9A]'
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            {page}
-          </button>
-        ))}
-
-        {/* Last page if not visible */}
-        {endPage < lastPage && (
-          <>
-            {endPage < lastPage - 1 && <span className="text-gray-500">...</span>}
-            <button
-              onClick={() => handlePageChange(lastPage)}
-              className="w-10 h-10 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              {lastPage}
-            </button>
-          </>
-        )}
-
-        {/* Next button */}
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === lastPage || loading}
-          className={`p-2 rounded-lg border ${
-            currentPage === lastPage 
-              ? 'border-gray-200 text-gray-400 cursor-not-allowed' 
-              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          <ChevronRight size={20} />
-        </button>
-      </div>
-    );
-  };
+  const rows = getRows();
+  const totalSlides = rows.length;
 
   if (loading && products.length === 0) {
     return (
@@ -343,15 +317,9 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
           <h1 className="text-xl md:text-2xl font-bold text-gray-900">
             {title}
           </h1>
-          <Link
-            href="/products"
-            className="text-md text-gray-700 underline underline-offset-2 hover:text-gray-900 transition-colors"
-          >
-            View all products
-          </Link>
         </div>
 
-        {/* Pill Tabs - Only Offers, Fruits, and Vegetables */}
+        {/* Pill Tabs */}
         <div className="flex gap-3 mb-8 overflow-x-auto hide-scrollbar">
           {tabs.map((tab) => (
             <button
@@ -372,15 +340,19 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
           ))}
         </div>
 
-        {/* Products Grid */}
+        {/* Products Section */}
         <div>
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="bg-gray-100 aspect-square rounded-2xl mb-3"></div>
-                  <div className="h-4 bg-gray-100 rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-gray-100 rounded w-1/2"></div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((row) => (
+                <div key={row} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {[...Array(itemsPerView)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="bg-gray-100 aspect-square rounded-2xl mb-3"></div>
+                      <div className="h-4 bg-gray-100 rounded w-3/4 mb-2"></div>
+                      <div className="h-4 bg-gray-100 rounded w-1/2"></div>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -422,30 +394,78 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
             </div>
           ) : (
             <>
-              {/* Product count info */}
-              <div className="flex justify-between items-center mb-4 text-sm text-gray-600">
-                <span>
-                  Showing {((currentPage - 1) * perPage) + 1} - {Math.min(currentPage * perPage, totalProducts)} of {totalProducts} products
-                </span>
+              {/* 3-Row Horizontal Scrollable Products Carousel - No Controls Visible */}
+              <div
+                ref={scrollContainerRef}
+                className="overflow-x-auto hide-scrollbar snap-x snap-mandatory"
+                onScroll={handleScroll}
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
+                style={{ scrollBehavior: 'smooth' }}
+              >
+                <div className="flex">
+                  {rows.map((row, slideIndex) => (
+                    <div
+                      key={slideIndex}
+                      className="snap-start flex-none w-full"
+                      style={{ width: '100%', minWidth: '100%' }}
+                    >
+                      <div className="space-y-4">
+                        {/* Row 1 */}
+                        {row.row1.length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {row.row1.map((product) => (
+                              <div
+                                key={product.id}
+                                className="bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-100 hover:border-[#004E9A]/20 overflow-hidden transition-all duration-300"
+                              >
+                                <ProductCard
+                                  product={product}
+                                  onViewTrack={(id) => console.log('Viewing:', id)}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Row 2 */}
+                        {row.row2.length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {row.row2.map((product) => (
+                              <div
+                                key={product.id}
+                                className="bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-100 hover:border-[#004E9A]/20 overflow-hidden transition-all duration-300"
+                              >
+                                <ProductCard
+                                  product={product}
+                                  onViewTrack={(id) => console.log('Viewing:', id)}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Row 3 */}
+                        {row.row3.length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {row.row3.map((product) => (
+                              <div
+                                key={product.id}
+                                className="bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-100 hover:border-[#004E9A]/20 overflow-hidden transition-all duration-300"
+                              >
+                                <ProductCard
+                                  product={product}
+                                  onViewTrack={(id) => console.log('Viewing:', id)}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-
-              {/* Products grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {products.map((product) => (
-                  <div
-                    key={product.id}
-                    className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-sm transition-shadow duration-200"
-                  >
-                    <ProductCard
-                      product={product}
-                      onViewTrack={(id) => console.log('Viewing:', id)}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {/* Pagination */}
-              {renderPagination()}
             </>
           )}
         </div>
@@ -458,6 +478,15 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
         }
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
+        }
+        .snap-x {
+          -webkit-overflow-scrolling: touch;
+        }
+        .snap-mandatory {
+          scroll-snap-type: x mandatory;
+        }
+        .snap-start {
+          scroll-snap-align: start;
         }
       `}</style>
     </div>

@@ -107,6 +107,12 @@ const HomePage: React.FC = () => {
         <PromoBanners limit={3} heading="Special Offers" />
       </div> */}
 
+       {/* ── New Arrivals ── */}
+      <div className="reveal-section section-hidden">
+        <NewArrivals limit={48} showHeader={true} />
+      </div>
+
+
       {/* ── All Products ── */}
       <div className="reveal-section section-hidden mt-2">
         <ProductsPage />
@@ -137,11 +143,7 @@ const HomePage: React.FC = () => {
         <WoodenUtensilsPage />
       </div>
 
-      {/* ── New Arrivals ── */}
-      <div className="reveal-section section-hidden">
-        <NewArrivals limit={48} showHeader={true} />
-      </div>
-
+     
       {/* ── Promotional Banner ── */}
       <section className="py-8 sm:py-10 md:py-12 reveal-section section-hidden">
         <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">

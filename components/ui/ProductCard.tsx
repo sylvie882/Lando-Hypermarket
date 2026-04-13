@@ -120,11 +120,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true, 
     <article
       className="group relative bg-white flex flex-col transition-all duration-200 ease-out"
       style={{
-        borderRadius: '6px',
+        borderRadius: '8px',
         boxShadow: isHovered
-          ? '0 6px 20px rgba(0,0,0,0.12)'
+          ? '0 8px 24px rgba(0,0,0,0.12)'
           : '0 1px 4px rgba(0,0,0,0.08)',
-        border: isHovered ? '1px solid #c5d8f0' : '1px solid #e8e8e8',
         transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
         overflow: 'hidden',
       }}
@@ -139,7 +138,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true, 
         {/* Discount Badge - Carrefour red */}
         {discountPercentage > 0 && (
           <div className="absolute top-2 left-2 z-30">
-            <span className="text-[10px] sm:text-xs font-black px-2 py-1 text-white" style={{ background: '#E3000B', borderRadius: '3px' }}>
+            <span className="text-[10px] sm:text-xs font-black px-2 py-1 text-white" style={{ background: '#E3000B', borderRadius: '4px' }}>
               -{discountPercentage}%
             </span>
           </div>
@@ -148,7 +147,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true, 
         {/* New badge */}
         {isNewProduct && (
           <div className="absolute top-2 left-2 z-30">
-            <span className="text-[10px] sm:text-xs font-black px-2 py-1 text-white" style={{ background: '#004E9A', borderRadius: '3px' }}>
+            <span className="text-[10px] sm:text-xs font-black px-2 py-1 text-white" style={{ background: '#004E9A', borderRadius: '4px' }}>
               NEW
             </span>
           </div>
@@ -157,7 +156,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true, 
         {/* Featured */}
         {product.is_featured && !hideFeaturedBadge && !isNewProduct && discountPercentage === 0 && (
           <div className="absolute top-2 left-2 z-30">
-            <span className="text-[9px] sm:text-[11px] font-black px-2 py-1 text-white" style={{ background: '#FFD100', color: '#1a1a2e', borderRadius: '3px' }}>
+            <span className="text-[9px] sm:text-[11px] font-black px-2 py-1 text-white" style={{ background: '#FFD100', color: '#1a1a2e', borderRadius: '4px' }}>
               FEATURED
             </span>
           </div>
@@ -166,7 +165,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true, 
         {/* Bestseller */}
         {(product as any).is_bestseller && (
           <div className="absolute top-2 right-2 z-30">
-            <span className="text-[9px] sm:text-[11px] font-black px-2 py-1 text-white" style={{ background: '#FFD100', color: '#1a1a2e', borderRadius: '3px' }}>
+            <span className="text-[9px] sm:text-[11px] font-black px-2 py-1 text-white" style={{ background: '#FFD100', color: '#1a1a2e', borderRadius: '4px' }}>
               ★ BEST
             </span>
           </div>
@@ -200,18 +199,67 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true, 
           </div>
         </Link>
 
+        {/* Hover Add to Cart Button - Professional Design */}
+        <div 
+          className={`absolute bottom-0 left-0 right-0 z-40 transition-all duration-300 ease-out ${
+            isHovered && isInStock ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
+          }`}
+          style={{ 
+            pointerEvents: isHovered && isInStock ? 'auto' : 'none',
+            padding: '12px 16px 16px 16px'
+          }}
+        >
+          <button 
+            onClick={handleAddToCart} 
+            disabled={isAddingToCart || !isInStock}
+            className="w-full py-3 px-4 font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 hover:gap-3 shadow-lg"
+            style={{
+              background: '#E3000B',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              transition: 'all 0.2s ease',
+              cursor: isAddingToCart || !isInStock ? 'not-allowed' : 'pointer',
+              opacity: isAddingToCart || !isInStock ? 0.7 : 1
+            }}
+            onMouseEnter={(e) => {
+              if (!isAddingToCart && isInStock) {
+                e.currentTarget.style.background = '#004E9A';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isAddingToCart && isInStock) {
+                e.currentTarget.style.background = '#E3000B';
+              }
+            }}
+            aria-label={!isInStock ? 'Out of stock' : `Add ${product.name} to cart`}
+          >
+            {isAddingToCart ? (
+              <>
+                <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                <span>Adding to Cart...</span>
+              </>
+            ) : (
+              <>
+                <ShoppingCart size={16} />
+                <span>{!isInStock ? 'Out of Stock' : 'Add to Cart'}</span>
+              </>
+            )}
+          </button>
+        </div>
+
         {/* Out of Stock Overlay */}
         {!isInStock && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center bg-white/70">
-            <span className="text-xs font-bold px-3 py-1.5 bg-white rounded border border-gray-200 text-gray-600 shadow-sm">
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-white/80 backdrop-blur-[1px]">
+            <span className="text-xs font-bold px-3 py-1.5 bg-white rounded-lg border border-gray-200 text-gray-600 shadow-sm">
               Out of Stock
             </span>
           </div>
         )}
       </div>
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col px-3 sm:px-3.5 pt-2.5 pb-3 bg-white border-t border-gray-100">
+      {/* Content - Removed border-top to eliminate double border */}
+      <div className="flex-1 flex flex-col px-3 sm:px-3.5 pt-2.5 pb-3 bg-white">
         
         {/* Product Name */}
         <Link href={`/products/${product.id}`} onClick={() => onViewTrack?.(product.id)} className="block mb-2">
@@ -221,7 +269,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true, 
         </Link>
 
         {/* Price */}
-        <div className="mb-2.5" itemProp="offers" itemScope itemType="https://schema.org/Offer">
+        <div className="mb-0" itemProp="offers" itemScope itemType="https://schema.org/Offer">
           <div className="flex items-baseline gap-1.5 flex-wrap">
             <span className="text-base sm:text-lg font-black text-gray-900" itemProp="price" content={String(finalPriceNum)}>
               {formatKSH(finalPriceNum)}
@@ -237,30 +285,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, showActions = true, 
             </span>
           )}
         </div>
-
-        {/* Add to Cart - Carrefour blue */}
-        {showActions && (
-          <button onClick={handleAddToCart} disabled={isAddingToCart || !isInStock}
-            className={`relative w-full py-2 sm:py-2.5 px-3 rounded font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5
-              ${isInStock
-                ? 'text-white hover:opacity-90 active:scale-[0.97]'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              } disabled:opacity-60 disabled:cursor-not-allowed`}
-            style={isInStock ? { background: '#004E9A' } : {}}
-            aria-label={!isInStock ? 'Out of stock' : `Add ${product.name} to cart`}>
-            {isAddingToCart ? (
-              <>
-                <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                <span>Adding…</span>
-              </>
-            ) : (
-              <>
-                <ShoppingCart size={13} className="sm:w-[14px] sm:h-[14px]" />
-                <span>{!isInStock ? 'Out of Stock' : 'Add to Cart'}</span>
-              </>
-            )}
-          </button>
-        )}
       </div>
     </article>
   );

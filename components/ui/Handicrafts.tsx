@@ -23,13 +23,16 @@ const HandicraftsPage: React.FC = () => {
   const [category, setCategory] = useState<Category | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [visibleCards, setVisibleCards] = useState(4);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [itemsPerRow, setItemsPerRow] = useState(4);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [isHovering, setIsHovering] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const resizeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchHandicraftsCategory();
@@ -45,13 +48,13 @@ const HandicraftsPage: React.FC = () => {
         setIsTablet(width >= 640 && width < 1024);
         
         if (width < 640) {
-          setVisibleCards(2); // Changed from 1 to 2
+          setItemsPerRow(2);
         } else if (width < 768) {
-          setVisibleCards(2);
+          setItemsPerRow(2);
         } else if (width < 1024) {
-          setVisibleCards(3);
+          setItemsPerRow(3);
         } else {
-          setVisibleCards(4);
+          setItemsPerRow(4);
         }
       }, 150);
     };
@@ -71,62 +74,71 @@ const HandicraftsPage: React.FC = () => {
     }
   }, [category]);
 
-  const scrollToIndex = (index: number) => {
+  // Auto-scroll functionality
+  useEffect(() => {
+    if (isAutoPlaying && !isHovering && products.length > itemsPerRow * 2) {
+      autoPlayIntervalRef.current = setInterval(() => {
+        nextSlide();
+      }, 5000);
+    }
+    
+    return () => {
+      if (autoPlayIntervalRef.current) {
+        clearInterval(autoPlayIntervalRef.current);
+      }
+    };
+  }, [isAutoPlaying, isHovering, products.length, itemsPerRow, currentSlide]);
+
+  const scrollToSlide = (slideIndex: number) => {
     if (!scrollContainerRef.current || products.length === 0) return;
     
     const container = scrollContainerRef.current;
-    const cardElements = container.children;
-    if (cardElements.length === 0) return;
-    
-    const cardWidth = cardElements[0].clientWidth || 256;
-    const gap = 16; // space-x-4 = 16px
-    const scrollPosition = (cardWidth + gap) * index;
+    const slideWidth = container.clientWidth;
+    const scrollPosition = slideWidth * slideIndex;
     
     container.scrollTo({
       left: scrollPosition,
       behavior: 'smooth'
     });
-    setCurrentIndex(index);
+    setCurrentSlide(slideIndex);
   };
 
-  const scrollNext = () => {
-    if (products.length <= visibleCards) return;
+  const nextSlide = () => {
+    if (products.length <= itemsPerRow * 2) return;
     
-    let nextIndex = currentIndex + 1;
+    const totalSlides = Math.ceil(products.length / (itemsPerRow * 2));
+    let nextIndex = currentSlide + 1;
     
-    if (nextIndex > products.length - visibleCards) {
+    if (nextIndex >= totalSlides) {
       nextIndex = 0;
     }
     
-    scrollToIndex(nextIndex);
+    scrollToSlide(nextIndex);
   };
 
-  const scrollPrev = () => {
-    if (products.length <= visibleCards) return;
+  const prevSlide = () => {
+    if (products.length <= itemsPerRow * 2) return;
     
-    let prevIndex = currentIndex - 1;
+    const totalSlides = Math.ceil(products.length / (itemsPerRow * 2));
+    let prevIndex = currentSlide - 1;
     
     if (prevIndex < 0) {
-      prevIndex = Math.max(0, products.length - visibleCards);
+      prevIndex = totalSlides - 1;
     }
     
-    scrollToIndex(prevIndex);
+    scrollToSlide(prevIndex);
   };
 
   const handleScroll = () => {
     if (!scrollContainerRef.current) return;
     
     const container = scrollContainerRef.current;
-    const cardElements = container.children;
-    if (cardElements.length === 0) return;
-    
-    const cardWidth = cardElements[0].clientWidth || 256;
-    const gap = 16;
+    const slideWidth = container.clientWidth;
     const scrollPosition = container.scrollLeft;
-    const newIndex = Math.round(scrollPosition / (cardWidth + gap));
+    const newSlide = Math.round(scrollPosition / slideWidth);
     
-    if (newIndex !== currentIndex) {
-      setCurrentIndex(Math.max(0, newIndex));
+    if (newSlide !== currentSlide) {
+      setCurrentSlide(Math.max(0, newSlide));
     }
   };
 
@@ -148,52 +160,46 @@ const HandicraftsPage: React.FC = () => {
     }
   };
 
-const fetchProducts = async () => {
-  try {
-    setIsLoading(true);
-    
-    const params: any = {
-      per_page: 20,
-      category_id: 42,
-      // Remove the sold_count sort
-      // sort: 'sold_count',
-      // order: 'desc'
-    };
-    
-    const response = await api.products.getAll(params);
-    
-    let productsData = response.data?.data || response.data || [];
-    
-    // Sort by updated_at (if available) or created_at
-    const sortedProducts = productsData.sort((a: Product, b: Product) => {
-      // Get the most recent date for each product
-      const getLatestDate = (product: Product) => {
-        const updated = product.updated_at ? new Date(product.updated_at) : null;
-        const created = product.created_at ? new Date(product.created_at) : null;
-        
-        if (updated && created) {
-          return updated > created ? updated : created;
-        }
-        return updated || created || new Date(0);
+  const fetchProducts = async () => {
+    try {
+      setIsLoading(true);
+      
+      const params: any = {
+        per_page: 100,
+        category_id: 42,
       };
       
-      const dateA = getLatestDate(a);
-      const dateB = getLatestDate(b);
+      const response = await api.products.getAll(params);
       
-      // Sort in descending order (newest first)
-      return dateB.getTime() - dateA.getTime();
-    });
-    
-    setProducts(sortedProducts);
-    
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    setProducts([]);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+      let productsData = response.data?.data || response.data || [];
+      
+      // Sort by updated_at (if available) or created_at
+      const sortedProducts = productsData.sort((a: Product, b: Product) => {
+        const getLatestDate = (product: Product) => {
+          const updated = product.updated_at ? new Date(product.updated_at) : null;
+          const created = product.created_at ? new Date(product.created_at) : null;
+          
+          if (updated && created) {
+            return updated > created ? updated : created;
+          }
+          return updated || created || new Date(0);
+        };
+        
+        const dateA = getLatestDate(a);
+        const dateB = getLatestDate(b);
+        
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      setProducts(sortedProducts);
+      
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      setProducts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const trackProductView = async (productId: number) => {
     try {
@@ -203,11 +209,24 @@ const fetchProducts = async () => {
     }
   };
 
+  // Split products into slides with 2 rows each
+  const getSlides = () => {
+    const slides = [];
+    const itemsPerSlide = itemsPerRow * 2;
+    
+    for (let i = 0; i < products.length; i += itemsPerSlide) {
+      const slideProducts = products.slice(i, i + itemsPerSlide);
+      const row1 = slideProducts.slice(0, itemsPerRow);
+      const row2 = slideProducts.slice(itemsPerRow, itemsPerRow * 2);
+      slides.push({ row1, row2 });
+    }
+    
+    return slides;
+  };
 
-  const totalSlides = Math.ceil(products.length / visibleCards);
-  const currentSlide = Math.floor(currentIndex / visibleCards);
+  const slides = getSlides();
+  const totalSlides = slides.length;
 
-  
   // Loading Skeleton
   if (isLoading && !category) {
     return (
@@ -219,24 +238,25 @@ const fetchProducts = async () => {
                 <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
                 <div className="h-8 w-48 bg-gray-200 rounded"></div>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-                <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-              </div>
             </div>
             
-            <div className="flex overflow-x-hidden space-x-4 pb-4">
-              {[...Array(4)].map((_, i) => (
-                <div 
-                  key={i} 
-                  className="flex-none w-64 animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
-                >
-                  <div className="bg-gray-200 h-48"></div>
-                  <div className="p-4">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
-                    <div className="h-8 bg-gray-200 rounded"></div>
-                  </div>
+            {/* 2 Rows of skeleton loaders */}
+            <div className="space-y-4">
+              {[1, 2].map((row) => (
+                <div key={row} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {[...Array(itemsPerRow)].map((_, i) => (
+                    <div 
+                      key={i} 
+                      className="animate-pulse bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                    >
+                      <div className="bg-gray-200 h-48"></div>
+                      <div className="p-4">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+                        <div className="h-8 bg-gray-200 rounded"></div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -249,73 +269,72 @@ const fetchProducts = async () => {
   return (
     <div className="bg-white py-8">
       <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
-        {/* Header with Title and Scroll Controls */}
+        {/* Header with Title */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900">
               {category?.name || 'Handicrafts & Artisan'}
             </h2>
           </div>
-          
-          {/* Navigation Icons at Top Right */}
-          {products.length > visibleCards && (
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={scrollPrev}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  currentSlide === 0
-                    ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
-                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                }`}
-                aria-label="Previous products"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                onClick={scrollNext}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  currentSlide === totalSlides - 1
-                    ? 'bg-[#004E9A] text-white hover:bg-[#003E9A]'
-                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                }`}
-                aria-label="Next products"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* Products Horizontal Scroll Row */}
+        {/* Products 2-Row Horizontal Scroll Carousel */}
         {products.length > 0 ? (
           <div
             ref={scrollContainerRef}
-            className="flex overflow-x-auto space-x-4 pb-2 hide-scrollbar snap-x snap-mandatory"
+            className="overflow-x-auto hide-scrollbar snap-x snap-mandatory"
             onScroll={handleScroll}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
             style={{ scrollBehavior: 'smooth' }}
           >
-            {products.map((product, index) => (
-              <div
-                key={product.id}
-                className="snap-start flex-none"
-                style={{
-                  width: isMobile ? '44vw' : // Changed from 85vw to 44vw for 2 items
-                         isTablet ? '45vw' : 
-                         '23vw',
-                  minWidth: isMobile ? '44vw' : // Changed from 85vw to 44vw
-                           isTablet ? '45vw' : 
-                           '23vw',
-                }}
-              >
-                <div className="h-full bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-orange-300 overflow-hidden transition-all duration-300">
-                  <ProductCard
-                    product={product}
-                    onViewTrack={trackProductView}
-                    hideFeaturedBadge={true}
-                  />
+            <div className="flex">
+              {slides.map((slide, slideIndex) => (
+                <div
+                  key={slideIndex}
+                  className="snap-start flex-none w-full"
+                  style={{ width: '100%', minWidth: '100%' }}
+                >
+                  <div className="space-y-4">
+                    {/* Row 1 */}
+                    {slide.row1.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {slide.row1.map((product) => (
+                          <div
+                            key={product.id}
+                            className="bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-orange-300 overflow-hidden transition-all duration-300"
+                          >
+                            <ProductCard
+                              product={product}
+                              onViewTrack={trackProductView}
+                              hideFeaturedBadge={true}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Row 2 */}
+                    {slide.row2.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {slide.row2.map((product) => (
+                          <div
+                            key={product.id}
+                            className="bg-white rounded-lg shadow-sm hover:shadow-md border border-gray-200 hover:border-orange-300 overflow-hidden transition-all duration-300"
+                          >
+                            <ProductCard
+                              product={product}
+                              onViewTrack={trackProductView}
+                              hideFeaturedBadge={true}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         ) : (
           !isLoading && (
