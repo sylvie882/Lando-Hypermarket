@@ -5,7 +5,7 @@ import Link from 'next/link';
 import ProductCard from '@/components/ui/ProductCard';
 import { Product } from '@/types';
 import { api } from '@/lib/api';
-import { ShoppingBag, AlertCircle, RefreshCw } from 'lucide-react';
+import { ShoppingBag, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
 interface ProductsPageProps {
@@ -32,15 +32,19 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [isHovering, setIsHovering] = useState(false);
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const resizeTimerRef = useRef<NodeJS.Timeout | null>(null);
   const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Define tabs - only Fruits and Vegetables categories
   const tabs = [
-    { id: 'offers', label: 'Offers', categoryId: null },
     { id: 'fruits', label: 'Fruits', categoryId: 45 },
     { id: 'vegetables', label: 'Vegetables', categoryId: 46 },
+    { id: 'offers', label: 'Offers', categoryId: null },
   ];
 
   const allowedOfferCategories = [45, 46];
@@ -106,6 +110,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
       behavior: 'smooth'
     });
     setCurrentSlide(slideIndex);
+    setCurrentPage(slideIndex + 1);
   };
 
   const nextSlide = () => {
@@ -144,6 +149,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     
     if (newSlide !== currentSlide) {
       setCurrentSlide(Math.max(0, newSlide));
+      setCurrentPage(Math.max(0, newSlide) + 1);
     }
   };
 
@@ -163,6 +169,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
   // Reset carousel when tab changes
   useEffect(() => {
     setCurrentSlide(0);
+    setCurrentPage(1);
     setIsAutoPlaying(true);
   }, [activeTab]);
 
@@ -280,6 +287,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
     setActiveTab(tabId);
     setError(null);
     setCurrentSlide(0);
+    setCurrentPage(1);
   };
 
   // Split products into rows (3 rows)
@@ -301,6 +309,11 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
   const rows = getRows();
   const totalSlides = rows.length;
 
+  // Update total pages whenever totalSlides changes
+  useEffect(() => {
+    setTotalPages(totalSlides);
+  }, [totalSlides]);
+
   if (loading && products.length === 0) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -312,11 +325,61 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
   return (
     <div className="min-h-screen bg-white">
       <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
-        {/* Header */}
+        {/* Header with title and horizontal scroll controls */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900">
             {title}
           </h1>
+          
+          {/* Horizontal Scroll Controls - Top Right */}
+          {products.length > itemsPerView * 3 && (
+            <div className="hidden sm:flex items-center gap-2">
+              <button
+                onClick={prevSlide}
+                className="p-2 rounded-full bg-white border border-gray-300 hover:bg-gray-50 hover:border-[#004E9A] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Previous slide"
+              >
+                <ChevronLeft size={20} className="text-gray-700" />
+              </button>
+              
+              {/* Pagination Dots */}
+              <div className="flex items-center gap-1.5 mx-2">
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  let pageNumber;
+                  if (totalPages <= 5) {
+                    pageNumber = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNumber = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNumber = totalPages - 4 + i;
+                  } else {
+                    pageNumber = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNumber}
+                      onClick={() => scrollToSlide(pageNumber - 1)}
+                      className={`h-2 rounded-full transition-all duration-200 ${
+                        currentPage === pageNumber
+                          ? 'bg-[#004E9A] w-6'
+                          : 'bg-gray-300 hover:bg-gray-400 w-2'
+                      }`}
+                      aria-label={`Go to page ${pageNumber}`}
+                    />
+                  );
+                })}
+              </div>
+              
+              <button
+                onClick={nextSlide}
+                className="p-2 rounded-full bg-white border border-gray-300 hover:bg-gray-50 hover:border-[#004E9A] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Next slide"
+              >
+                <ChevronRight size={20} className="text-gray-700" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Pill Tabs */}
@@ -394,7 +457,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
             </div>
           ) : (
             <>
-              {/* 3-Row Horizontal Scrollable Products Carousel - No Controls Visible */}
+              {/* 3-Row Horizontal Scrollable Products Carousel */}
               <div
                 ref={scrollContainerRef}
                 className="overflow-x-auto hide-scrollbar snap-x snap-mandatory"
@@ -466,6 +529,55 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
                   ))}
                 </div>
               </div>
+
+              {/* Mobile Pagination - Bottom Center */}
+              {products.length > itemsPerView * 3 && (
+                <div className="flex sm:hidden items-center justify-center gap-3 mt-6">
+                  <button
+                    onClick={prevSlide}
+                    className="p-2 rounded-full bg-white border border-gray-300 hover:bg-gray-50"
+                    aria-label="Previous slide"
+                  >
+                    <ChevronLeft size={18} className="text-gray-700" />
+                  </button>
+                  
+                  <div className="flex items-center gap-1.5">
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                      let pageNumber;
+                      if (totalPages <= 5) {
+                        pageNumber = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNumber = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNumber = totalPages - 4 + i;
+                      } else {
+                        pageNumber = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNumber}
+                          onClick={() => scrollToSlide(pageNumber - 1)}
+                          className={`h-1.5 rounded-full transition-all duration-200 ${
+                            currentPage === pageNumber
+                              ? 'bg-[#004E9A] w-5'
+                              : 'bg-gray-300 hover:bg-gray-400 w-1.5'
+                          }`}
+                          aria-label={`Go to page ${pageNumber}`}
+                        />
+                      );
+                    })}
+                  </div>
+                  
+                  <button
+                    onClick={nextSlide}
+                    className="p-2 rounded-full bg-white border border-gray-300 hover:bg-gray-50"
+                    aria-label="Next slide"
+                  >
+                    <ChevronRight size={18} className="text-gray-700" />
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>

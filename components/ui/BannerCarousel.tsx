@@ -281,7 +281,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
         {banners.length > 1 && (
           <>
             {/* Dots Indicator */}
-            <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 flex space-x-2 md:space-x-3 z-30">
+            {/* <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 flex space-x-2 md:space-x-3 z-30">
               {banners.map((_, index) => (
                 <button
                   key={index}
@@ -302,7 +302,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
                   }`} />
                 </button>
               ))}
-            </div>
+            </div> */}
           </>
         )}
       </div>
@@ -361,13 +361,14 @@ const BannerSlide: React.FC<{
               {banner.title}
             </span>
           </h2>
-          
+
           {/* Subtitle */}
           {banner.subtitle && (
             <p className="text-xs md:text-sm text-white/90 mb-3 md:mb-4 max-w-lg">
               {banner.subtitle}
             </p>
           )}
+          
           
           {/* Button - Warm Orange */}
           {banner.button_text && (
