@@ -14,7 +14,7 @@ import OffersTickerStrip from '@/components/ui/OffersTickerStrip';
 import { api } from '@/lib/api';
 
 import {
-  ArrowUp, HelpCircle, Phone, Gift, MessageSquare, ArrowRight
+  ArrowUp, MessageCircle, MessageSquare, X
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -27,7 +27,7 @@ interface OfferItem {
 
 const HomePage: React.FC = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [showCustomerSupport, setShowCustomerSupport] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
   const [offers, setOffers] = useState<OfferItem[]>([]);
 
   const whatsappNumber = '+254716354589';
@@ -46,7 +46,7 @@ const HomePage: React.FC = () => {
         const mapped: OfferItem[] = data
           .filter((p: any) => p.is_active && p.is_featured)
           .map((p: any) => ({
-            id: p.id,                                              // ← product id for the link
+            id: p.id,
             name: p.name,
             price: `KES ${Number(p.final_price).toLocaleString()}`,
             badge: p.discounted_price ? 'SALE' : 'FEATURED',
@@ -102,16 +102,10 @@ const HomePage: React.FC = () => {
         <TopCategories limit={15} showHeader={true} />
       </div>
 
-      {/* ── Promotional Banners ── */}
-      {/* <div className="reveal-section section-hidden">
-        <PromoBanners limit={3} heading="Special Offers" />
-      </div> */}
-
-       {/* ── New Arrivals ── */}
+      {/* ── New Arrivals ── */}
       <div className="reveal-section section-hidden">
         <NewArrivals limit={48} showHeader={true} />
       </div>
-
 
       {/* ── All Products ── */}
       <div className="reveal-section section-hidden mt-2">
@@ -143,7 +137,6 @@ const HomePage: React.FC = () => {
         <WoodenUtensilsPage />
       </div>
 
-     
       {/* ── Promotional Banner ── */}
       <section className="py-8 sm:py-10 md:py-12 reveal-section section-hidden">
         <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
@@ -157,7 +150,7 @@ const HomePage: React.FC = () => {
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="text-white">
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/15 rounded-full mb-4 backdrop-blur-sm border border-white/20 text-sm font-medium">
-                    <Gift size={14} />
+                    <MessageCircle size={14} />
                     Weekend Special
                   </div>
                   <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 leading-tight">
@@ -171,7 +164,7 @@ const HomePage: React.FC = () => {
                     className="inline-flex items-center gap-2 bg-white text-emerald-700 px-5 py-2.5 rounded-xl font-semibold hover:bg-emerald-50 transition-all duration-200 shadow-lg hover:shadow-xl text-sm md:text-base group"
                   >
                     Shop Now
-                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform duration-200" />
+                    <ArrowUp size={16} className="group-hover:translate-x-1 transition-transform duration-200" />
                   </Link>
                 </div>
 
@@ -189,110 +182,149 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* ── Floating Action Buttons ── */}
-      <div className="fixed bottom-20 right-4 z-40 flex flex-col items-end gap-3">
-        {/* WhatsApp */}
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="fab w-12 h-12 flex items-center justify-center rounded-full shadow-xl"
+      {/* ── Floating Action Buttons (Only 2) ── */}
+      <div className="fixed bottom-2 right-4 z-40 flex flex-col items-end gap-3">
+        {/* Chat Button - Blue Color */}
+        <button
+          onClick={() => setShowChatModal(!showChatModal)}
+          className="group relative w-14 h-14 flex items-center justify-center rounded-full shadow-xl transition-all duration-300 hover:scale-110 active:scale-95"
           style={{
-            background: 'linear-gradient(135deg, #004E9A, #004E9A)',
-            boxShadow: '0 4px 20px rgba(49, 37, 211, 0.45)'
+            background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+            boxShadow: '0 8px 24px rgba(59, 130, 246, 0.4)'
           }}
-          aria-label="Chat on WhatsApp"
+          aria-label="Chat with us"
         >
-          <MessageSquare className="text-white" size={20} />
-        </a>
+          {/* Ripple effect */}
+          <span className="absolute inset-0 rounded-full animate-ping bg-blue-400 opacity-40"></span>
+          <MessageCircle className="text-white" size={24} fill="white" />
+        </button>
 
-        {/* Scroll to Top */}
+        {/* Scroll to Top Button */}
         <button
           onClick={scrollToTop}
-          className={`fab w-12 h-12 flex items-center justify-center rounded-full shadow-xl transition-all duration-300 ${
+          className={`w-14 h-14 flex items-center justify-center rounded-full shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 ${
             showScrollTop ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
           }`}
           style={{
-            background: 'linear-gradient(135deg, #004E9A, #004E9A)',
-            boxShadow: '0 4px 20px rgba(58, 23, 214, 0.45)'
+            background: 'linear-gradient(135deg, #004E9A, #003B6F)',
+            boxShadow: '0 8px 24px rgba(0, 78, 154, 0.4)'
           }}
           aria-label="Scroll to top"
         >
-          <ArrowUp className="text-white" size={20} />
+          <ArrowUp className="text-white" size={24} />
         </button>
+      </div>
 
-        {/* Support */}
-        <button
-          onClick={() => setShowCustomerSupport(!showCustomerSupport)}
-          className="fab w-12 h-12 flex items-center justify-center rounded-full shadow-xl"
-          style={{
-            background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-            boxShadow: '0 4px 20px rgba(99, 102, 241, 0.45)'
-          }}
-          aria-label="Customer Support"
-        >
-          <HelpCircle className="text-white" size={20} />
-        </button>
-
-        {/* Support Dropdown */}
-        {showCustomerSupport && (
-          <div className="absolute right-0 bottom-full mb-3 bg-white rounded-2xl shadow-2xl border border-gray-100 w-60 overflow-hidden toast-enter">
-            <div className="p-4 bg-gradient-to-r from-indigo-500 to-purple-600">
-              <h3 className="font-bold text-sm text-white">Need Help?</h3>
-              <p className="text-xs text-white/80 mt-0.5">We&apos;re here 24/7 for you</p>
+      {/* Chat Modal */}
+      {showChatModal && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-300"
+            onClick={() => setShowChatModal(false)}
+          />
+          
+          {/* Chat Modal Content */}
+          <div className="fixed bottom-32 right-4 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <MessageCircle className="text-white" size={20} fill="white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">Chat with us</h3>
+                  <p className="text-xs text-blue-100">We typically reply within minutes</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowChatModal(false)}
+                className="p-1 hover:bg-white/10 rounded-full transition-colors"
+              >
+                <X size={20} className="text-white" />
+              </button>
             </div>
-            <div className="p-2 space-y-1">
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4">
+              <p className="text-gray-600 text-sm leading-relaxed">
+                👋 Hello! How can we help you today? Choose your preferred way to connect with us:
+              </p>
+              
+              {/* WhatsApp Option */}
               <a
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors group"
+                className="flex items-center gap-4 p-3 rounded-xl bg-green-50 hover:bg-green-100 transition-all duration-200 group border border-green-200"
+                onClick={() => setShowChatModal(false)}
               >
-                <div className="p-2 rounded-lg bg-green-100 group-hover:bg-green-200 transition-colors">
-                  <MessageSquare size={15} className="text-green-600" />
+                <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                  <MessageSquare size={22} className="text-white" />
                 </div>
-                <div>
-                  <div className="font-semibold text-gray-900 text-sm">WhatsApp</div>
-                  <div className="text-xs text-gray-500">Instant reply</div>
+                <div className="flex-1">
+                  <div className="font-semibold text-gray-900">WhatsApp Chat</div>
+                  <div className="text-xs text-gray-500">Fastest response • Available 24/7</div>
                 </div>
+                <ArrowUp size={16} className="text-green-600 opacity-0 group-hover:opacity-100 transition-opacity rotate-45" />
               </a>
 
+              {/* Phone Call Option */}
               <a
                 href="tel:+254716354589"
-                className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors group"
+                className="flex items-center gap-4 p-3 rounded-xl bg-blue-50 hover:bg-blue-100 transition-all duration-200 group border border-blue-200"
+                onClick={() => setShowChatModal(false)}
               >
-                <div className="p-2 rounded-lg bg-blue-100 group-hover:bg-blue-200 transition-colors">
-                  <Phone size={15} className="text-blue-600" />
+                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                  <MessageCircle size={22} className="text-white" />
                 </div>
-                <div>
-                  <div className="font-semibold text-gray-900 text-sm">Call Us</div>
-                  <div className="text-xs text-gray-500">+254 716 354 589</div>
+                <div className="flex-1">
+                  <div className="font-semibold text-gray-900">Call Support</div>
+                  <div className="text-xs text-gray-500">Speak directly with our team</div>
                 </div>
+                <ArrowUp size={16} className="text-blue-600 opacity-0 group-hover:opacity-100 transition-transform rotate-45" />
               </a>
 
-              <Link
-                href="/support"
-                onClick={() => setShowCustomerSupport(false)}
-                className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors group"
+              {/* Email Option */}
+              <a
+                href="mailto:support@example.com"
+                className="flex items-center gap-4 p-3 rounded-xl bg-purple-50 hover:bg-purple-100 transition-all duration-200 group border border-purple-200"
+                onClick={() => setShowChatModal(false)}
               >
-                <div className="p-2 rounded-lg bg-purple-100 group-hover:bg-purple-200 transition-colors">
-                  <HelpCircle size={15} className="text-purple-600" />
+                <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                  <MessageCircle size={22} className="text-white" />
                 </div>
-                <div>
-                  <div className="font-semibold text-gray-900 text-sm">Help Center</div>
-                  <div className="text-xs text-gray-500">FAQs &amp; guides</div>
+                <div className="flex-1">
+                  <div className="font-semibold text-gray-900">Email Us</div>
+                  <div className="text-xs text-gray-500">We'll respond within 24 hours</div>
                 </div>
-              </Link>
+                <ArrowUp size={16} className="text-purple-600 opacity-0 group-hover:opacity-100 transition-transform rotate-45" />
+              </a>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-gray-50 border-t border-gray-100">
+              <p className="text-xs text-gray-500 text-center">
+                Our support team is available 24/7 to assist you
+              </p>
             </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       <style jsx global>{`
         .section-hidden { opacity: 0; transform: translateY(22px); }
         .animate-fade-up { animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(22px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-slide-up {
+          animation: slideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
           to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>

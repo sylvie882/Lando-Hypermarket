@@ -15,10 +15,11 @@ interface ProductsPageProps {
 const ProductsPage: React.FC<ProductsPageProps> = ({
   title = 'Shop your Favourites'
 }) => {
+  // Changed initial active tab to 'fruits'
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('offers');
+  const [activeTab, setActiveTab] = useState('fruits'); // Changed from 'offers' to 'fruits'
   
   // Store discounted products for offers tab (only from fruits & vegetables)
   const [allDiscountedProducts, setAllDiscountedProducts] = useState<Product[]>([]);
@@ -40,7 +41,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({
   const resizeTimerRef = useRef<NodeJS.Timeout | null>(null);
   const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Define tabs - only Fruits and Vegetables categories
+  // Define tabs - Fruits first, then Vegetables, then Offers
   const tabs = [
     { id: 'fruits', label: 'Fruits', categoryId: 45 },
     { id: 'vegetables', label: 'Vegetables', categoryId: 46 },
