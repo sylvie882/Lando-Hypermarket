@@ -12,42 +12,44 @@ export default function DeliveryLoginPage() {
   const [showPw, setShowPw] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true); 
-  setError('');
+    e.preventDefault();
+    setLoading(true); 
+    setError('');
 
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-staff/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json', // ✅ IMPORTANT
-      },
-      body: JSON.stringify(formData),
-    });
+    try {
+      // FIXED: Changed from '/delivery-staff/login' to '/login'
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (res.ok) {
-      const token = data.token;
-      const user  = data.user;
-
-      localStorage.setItem('delivery_token', token);
-      localStorage.setItem('delivery_user', JSON.stringify(user));
-
-      router.push('/delivery/dashboard');
-    } else {
-      setError(data.message || 'Invalid credentials');
+      if (res.ok) {
+        // Handle both possible response formats
+        const token = data.token || data.data?.token;
+        const user = data.user || data.data?.staff || data.data?.user;
+        
+        if (token && user) {
+          localStorage.setItem('delivery_token', token);
+          localStorage.setItem('delivery_user', JSON.stringify(user));
+          router.push('/delivery/dashboard');
+        } else {
+          setError('Invalid response format from server');
+        }
+      } else {
+        setError(data.message || 'Invalid credentials');
+      }
+    } catch {
+      setError('Connection failed.');
+    } finally {
+      setLoading(false);
     }
-
-  } catch {
-    setError('Connection failed.');
-  } finally {
-    setLoading(false);
-  }
-};
-
-
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{background:'#080808'}}>
