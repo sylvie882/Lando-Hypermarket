@@ -174,8 +174,20 @@ const ProductDetailPage: React.FC = () => {
       };
 
       setProduct(p);
-      setReviews(reviewsRes.data?.data || reviewsRes.data || []);
-      setRelatedProducts(relatedRes.data?.data || relatedRes.data || []);
+      
+      // FIX: Ensure reviews is always an array
+      let reviewsData = reviewsRes.data?.data || reviewsRes.data;
+      if (!Array.isArray(reviewsData)) {
+        reviewsData = [];
+      }
+      setReviews(reviewsData);
+      
+      // FIX: Ensure related products is always an array
+      let relatedData = relatedRes.data?.data || relatedRes.data;
+      if (!Array.isArray(relatedData)) {
+        relatedData = [];
+      }
+      setRelatedProducts(relatedData);
 
       if (isAuthenticated) {
         try {
@@ -186,6 +198,9 @@ const ProductDetailPage: React.FC = () => {
     } catch (err) {
       console.error('Product fetch error:', err);
       toast.error('Failed to load product details');
+      // Set empty arrays on error to prevent the filter error
+      setReviews([]);
+      setRelatedProducts([]);
     } finally {
       setIsLoading(false);
     }
@@ -236,7 +251,8 @@ const ProductDetailPage: React.FC = () => {
     finally { setAddingToWishlist(false); }
   };
 
-  const avgRating = reviews.length
+  // FIX: Safe avgRating calculation
+  const avgRating = Array.isArray(reviews) && reviews.length
     ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
     : 0;
 
@@ -515,7 +531,7 @@ const ProductDetailPage: React.FC = () => {
                       : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50'
                   }`}
                 >
-                  {tab === 'reviews' ? `Reviews (${reviews.length})` : 'Description'}
+                  {tab === 'reviews' ? `Reviews (${Array.isArray(reviews) ? reviews.length : 0})` : 'Description'}
                 </button>
               ))}
             </nav>
@@ -544,12 +560,13 @@ const ProductDetailPage: React.FC = () => {
                   <div className="text-center flex-shrink-0">
                     <div className="text-5xl font-bold text-gray-900">{avgRating.toFixed(1)}</div>
                     <div className="flex justify-center my-2"><StarRating rating={avgRating} size={20} /></div>
-                    <p className="text-sm text-gray-500">{reviews.length} reviews</p>
+                    <p className="text-sm text-gray-500">{Array.isArray(reviews) ? reviews.length : 0} reviews</p>
                   </div>
                   <div className="flex-1 space-y-2">
+                    {/* FIX: Safety check for reviews array */}
                     {[5, 4, 3, 2, 1].map(star => {
-                      const count = reviews.filter(r => r.rating === star).length;
-                      const pct = reviews.length ? (count / reviews.length) * 100 : 0;
+                      const count = Array.isArray(reviews) ? reviews.filter(r => r.rating === star).length : 0;
+                      const pct = Array.isArray(reviews) && reviews.length ? (count / reviews.length) * 100 : 0;
                       return (
                         <div key={star} className="flex items-center gap-3">
                           <span className="text-xs text-gray-500 w-10 text-right">{star} ★</span>
@@ -564,7 +581,7 @@ const ProductDetailPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-5">
-                  {reviews.length > 0 ? reviews.map(review => (
+                  {Array.isArray(reviews) && reviews.length > 0 ? reviews.map(review => (
                     <div key={review.id} className="border-b border-gray-100 pb-5 last:border-0 last:pb-0">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
@@ -595,7 +612,7 @@ const ProductDetailPage: React.FC = () => {
         </div>
 
         {/* ── Related Products ── */}
-        {relatedProducts.length > 0 && (
+        {Array.isArray(relatedProducts) && relatedProducts.length > 0 && (
           <div className="mt-14">
             <div className="flex items-center gap-3 mb-6">
               <div className="section-accent-bar" />
