@@ -544,11 +544,14 @@ class ApiService {
       this.api.put(`/admin/support/tickets/${id}/status`, data),
     getSupportStats: () => this.api.get('/admin/support/stats'),
 
-    // DELIVERY MANAGEMENT - CORRECTED: Using this.api instead of api
+    // DELIVERY MANAGEMENT
     getDeliveries: (params?: any) => this.api.get('/admin/deliveries', { params }),
     getDeliveryStats: () => this.api.get('/admin/deliveries/stats'),
     assignDelivery: (data: any) => this.api.post('/admin/deliveries/assign', data),
-    
+    // FIX: was missing — caused 404 on the status dropdown in admin deliveries page
+    updateDeliveryStatus: (id: number, data: { status: string; notes?: string }) =>
+      this.api.put(`/admin/deliveries/${id}/status`, data),
+
     // Delivery Staff Management
     getDeliveryStaff: (params?: any) => this.api.get('/admin/delivery-staff', { params }),
     addDeliveryStaff: (data: any) => this.api.post('/admin/delivery-staff', data),

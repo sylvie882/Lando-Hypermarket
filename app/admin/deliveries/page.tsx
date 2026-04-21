@@ -257,13 +257,19 @@ export default function AdminDeliveriesPage() {
 
   const handleUpdateStatus = async (deliveryId: number, status: string) => {
     try {
-      const res = await authFetch(`/admin/deliveries/${deliveryId}/status`, {
+      const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+      const res = await fetch(`${API}/admin/deliveries/${deliveryId}/status`, {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ status }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(`Status updated to ${status}`);
+        showToast(`Status updated to ${status.replace(/_/g, ' ')}`);
         load(true);
       } else {
         showToast(data.message || 'Failed to update status');
