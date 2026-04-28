@@ -35,7 +35,7 @@ class MpesaService {
         },
         body: JSON.stringify({
           // 'mpesa' matches the updated PaymentController switch + OrderController validation
-          payment_method: 'mpesa',
+          payment_method: 'mpesa_till',
           payment_details: {
             phone_number: formattedPhone,
             till_number: data.tillNumber || '',
