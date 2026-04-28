@@ -385,17 +385,13 @@ const handlePlaceOrder = async () => {
     const orderId = orderResponse.data.order.id;
     console.log('Order created:', orderResponse.data);
 
-    // If M-Pesa, we'll handle payment through the component
+    // If M-Pesa: store the real orderId then send user back to Step 2
+    // so PaymentMethodDetails has orderId when they click "Pay with M-Pesa"
     if (selectedPaymentMethod === 'mpesa' || selectedPaymentMethod === 'mpesa_till') {
-      // The payment will be handled by the PaymentMethodDetails component
-      // We just need to pass the orderId
-      toast.success('Order created! Please complete M-Pesa payment.');
-      
-      // You might want to store the orderId in state to pass to the component
-      // and let the user complete payment from there
       setCurrentOrderId(orderId);
-      
-      // Don't redirect yet - let user complete payment
+      setShowPaymentForm(true);
+      setStep(2);
+      toast.success('Order created! Now complete your M-Pesa payment below.');
       return;
     }
 
