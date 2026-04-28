@@ -913,6 +913,7 @@ const handlePlaceOrder = async () => {
                           paymentIntent={paymentIntent}
                           userCountry={user?.country}
                           onSubmit={() => setStep(3)}
+                          orderId={currentOrderId ?? undefined}
                         />
                       </div>
                     )}
