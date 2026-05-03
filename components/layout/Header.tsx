@@ -19,17 +19,16 @@ interface Category {
   is_active: boolean;
   parent_id: number | null;
   order: number;
-  children?: Category[];  // Already coming from API!
+  children?: Category[];
 }
 
 interface UserProfile { id: number; name: string; email: string; phone: string; avatar: string | null; avatar_url?: string | null; role: string; }
-interface SearchSuggestion { id: number; name: string; price: string | number; thumbnail: string | null; }
 
 const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [categories, setCategories] = useState<Category[]>([]); // Already nested from API!
+  const [categories, setCategories] = useState<Category[]>([]);
   const [location, setLocation] = useState<string>('Detecting...');
   const [isLocating, setIsLocating] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -38,7 +37,7 @@ const Header: React.FC = () => {
   const [mobileAccountMenuOpen, setMobileAccountMenuOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -46,10 +45,39 @@ const Header: React.FC = () => {
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const mobileScrollContainerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
+
+  // Add a refresh trigger that updates when auth state changes
+  const [authRefreshKey, setAuthRefreshKey] = useState(0);
+
+  // Listen for auth changes and storage events
+  useEffect(() => {
+    const handleAuthChange = () => {
+      setAuthRefreshKey(prev => prev + 1);
+      // Immediately refetch profile when auth changes
+      if (isAuthenticated && user) {
+        fetchUserProfile();
+        fetchCartCount();
+      } else {
+        setProfile(null);
+        setCartCount(0);
+      }
+    };
+
+    // Listen for custom auth event (you can dispatch this from your login component)
+    window.addEventListener('auth-state-changed', handleAuthChange);
+    // Also listen for storage events (in case of multi-tab)
+    window.addEventListener('storage', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('auth-state-changed', handleAuthChange);
+      window.removeEventListener('storage', handleAuthChange);
+    };
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -57,21 +85,63 @@ const Header: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Fetch user profile with immediate update
   const fetchUserProfile = useCallback(async () => {
-    if (!isAuthenticated || !user) return;
+    if (!isAuthenticated || !user) {
+      setProfile(null);
+      return;
+    }
+    
     try {
       const response = await api.user.getProfile();
-      if (response.data?.user) setProfile(response.data.user);
-      else setProfile({ id: user.id, name: user.name||'', email: user.email||'', phone: user.phone||'', avatar: user.avatar||null, role: user.role||'customer' });
-    } catch { setProfile({ id: user.id, name: user.name||'', email: user.email||'', phone: user.phone||'', avatar: user.avatar||null, role: user.role||'customer' }); }
+      if (response.data?.user) {
+        setProfile(response.data.user);
+      } else {
+        setProfile({ 
+          id: user.id, 
+          name: user.name || '', 
+          email: user.email || '', 
+          phone: user.phone || '', 
+          avatar: user.avatar || null, 
+          role: user.role || 'customer' 
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile:', error);
+      setProfile({ 
+        id: user.id, 
+        name: user.name || '', 
+        email: user.email || '', 
+        phone: user.phone || '', 
+        avatar: user.avatar || null, 
+        role: user.role || 'customer' 
+      });
+    }
   }, [isAuthenticated, user]);
 
   const fetchCartCount = useCallback(async () => {
-    if (!isAuthenticated) { setCartCount(0); return; }
-    try { const r = await api.cart.getCount(); setCartCount(Number(r.data?.count || r.data || 0)); } catch { setCartCount(0); }
+    if (!isAuthenticated) { 
+      setCartCount(0); 
+      return; 
+    }
+    try { 
+      const response = await api.cart.getCount(); 
+      setCartCount(Number(response.data?.count || response.data || 0)); 
+    } catch { 
+      setCartCount(0); 
+    }
   }, [isAuthenticated]);
 
-  useEffect(() => { fetchCartCount(); fetchUserProfile(); }, [fetchCartCount, fetchUserProfile]);
+  // Fetch profile and cart whenever auth state changes
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchUserProfile();
+      fetchCartCount();
+    } else {
+      setProfile(null);
+      setCartCount(0);
+    }
+  }, [isAuthenticated, user, authRefreshKey, fetchUserProfile, fetchCartCount]);
 
   const getLocation = () => {
     setIsLocating(true);
@@ -89,24 +159,17 @@ const Header: React.FC = () => {
 
   useEffect(() => { getLocation(); }, []);
 
-  // Use the API's built-in tree endpoint - NO manual tree building needed!
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        // Using the tree endpoint which already returns nested categories!
         const response = await api.categories.getTree();
         const categoriesData = response.data || [];
-        
-        // Sort main categories by order (API already does this, but just to be safe)
         const sortedCategories = categoriesData.sort((a: Category, b: Category) => (a.order || 0) - (b.order || 0));
-        
-        // Also sort children by order for each category
         sortedCategories.forEach((category: Category) => {
           if (category.children && category.children.length > 0) {
             category.children.sort((a: Category, b: Category) => (a.order || 0) - (b.order || 0));
           }
         });
-        
         setCategories(sortedCategories);
       } catch (error) { 
         console.error('Failed to fetch categories:', error);
@@ -118,6 +181,9 @@ const Header: React.FC = () => {
 
   const scrollLeft = () => scrollContainerRef.current?.scrollBy({ left: -200, behavior: 'smooth' });
   const scrollRight = () => scrollContainerRef.current?.scrollBy({ left: 200, behavior: 'smooth' });
+  
+  const mobileScrollLeft = () => mobileScrollContainerRef.current?.scrollBy({ left: -150, behavior: 'smooth' });
+  const mobileScrollRight = () => mobileScrollContainerRef.current?.scrollBy({ left: 150, behavior: 'smooth' });
 
   const fetchSuggestions = async (query: string) => {
     if (!query.trim() || query.length < 2) { setSuggestions([]); return; }
@@ -145,7 +211,7 @@ const Header: React.FC = () => {
     if (searchQuery.trim()) { router.push(`/products?search=${encodeURIComponent(searchQuery)}`); setSearchQuery(''); setShowSuggestions(false); }
   };
 
-  const handleSuggestionClick = (product: SearchSuggestion) => {
+  const handleSuggestionClick = (product: any) => {
     if (isNavigating) return; setIsNavigating(true);
     setShowSuggestions(false); setSearchQuery('');
     router.push(`/products/${product.id}`);
@@ -158,7 +224,6 @@ const Header: React.FC = () => {
     return () => document.removeEventListener('mousedown', fn);
   }, []);
 
-  // Handle hover with delay for better UX
   const handleCategoryHover = (categoryId: number) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setHoveredCategory(categoryId);
@@ -172,7 +237,26 @@ const Header: React.FC = () => {
 
   const getProductImageUrl = (t: string | null) => t ? api.getImageUrl(t, '/images/placeholder.jpg') : '/images/placeholder.jpg';
   const formatPrice = (p: string | number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 0 }).format(typeof p === 'string' ? parseFloat(p) : p);
-  const handleLogout = async () => { try { await logout(); router.push('/'); setAccountMenuOpen(false); setMobileAccountMenuOpen(false); setProfile(null); } catch {} };
+  
+  // UPDATED: Sign out redirects to homepage instead of login page
+  const handleLogout = async () => { 
+    try { 
+      await logout(); 
+      // Redirect to homepage after successful logout
+      router.push('/'); 
+      setAccountMenuOpen(false); 
+      setMobileAccountMenuOpen(false); 
+      setProfile(null);
+      setAuthRefreshKey(prev => prev + 1);
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('auth-state-changed'));
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if there's an error, try to redirect to homepage
+      router.push('/');
+    } 
+  };
+  
   const getAvatarUrl = () => {
     if (avatarError) return '/images/avatar.jpeg';
     const a = profile?.avatar_url || profile?.avatar || user?.avatar;
@@ -180,31 +264,29 @@ const Header: React.FC = () => {
     if (a.startsWith('http')||a.startsWith('data:')) return a;
     return `https://api.hypermarket.co.ke/storage/${a}`;
   };
-  const getDisplayName = () => (profile?.name || user?.name || 'Account').split(' ')[0];
+  
+  const getDisplayName = () => {
+    // Use profile name first, fallback to user name
+    const name = profile?.name || user?.name || 'Account';
+    return name.split(' ')[0];
+  };
+  
   const getFullName = () => profile?.name || user?.name || 'User';
   const getEmail = () => profile?.email || user?.email || '';
-
-  // Helper to check if a category has children
-  const hasChildren = (category: Category): boolean => {
-    return !!category.children && category.children.length > 0;
-  };
+  const hasChildren = (category: Category): boolean => !!category.children && category.children.length > 0;
 
   return (
     <>
-      {/* ============================================================
-          HEADER — White, clean, uniform. Exactly like Carrefour Kenya.
-          carrefour.ke: white bg, delivery switcher top, logo+search+cart middle, categories bottom
-      ============================================================ */}
       <header className={`sticky top-0 z-50 bg-white transition-shadow duration-300 ${isScrolled ? 'shadow-md' : ''}`} role="banner">
 
-        {/* TOP STRIP — Scheduled / Express switcher, white bg, very subtle border */}
+        {/* TOP STRIP */}
         <div className="hidden md:block bg-white border-b border-gray-100">
           <div className="w-full px-4 sm:px-6 lg:px-12 flex items-center justify-between py-1.5">
             <div className="flex items-center gap-1">
-              <button className="flex items-center gap-2 px-4 py-1.5  text-xs font-bold transition-all" style={{ background: '#004E9A', color: '#fff' }}>
+              <button className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold transition-all" style={{ background: '#004E9A', color: '#fff' }}>
                 <img src="/images/schedule.png" alt="" className="w-3.5 h-3.5 object-contain" aria-hidden="true"/> Scheduled
               </button>
-              <button className="flex items-center gap-2 px-4 py-1.5  text-xs font-bold text-gray-600 hover:bg-gray-100 transition-all">
+              <button className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-all">
                 <img src="/images/express.png" alt="" className="w-3.5 h-3.5 object-contain" aria-hidden="true"/> Express
               </button>
             </div>
@@ -214,17 +296,15 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* MAIN BAR — white, logo + location + search + account + cart */}
+        {/* MAIN BAR */}
         <div className="hidden md:block bg-white">
           <div className="w-full px-4 sm:px-6 lg:px-12">
             <div className="flex items-center gap-4 py-3">
 
-              {/* Logo */}
               <Link href="/" className="flex-shrink-0" aria-label="Home">
                 <Image src="/logo10.png" alt="Lando Ranch Hypermarket" width={200} height={70} className="object-cover w-[150px] h-[52px]" priority />
               </Link>
 
-              {/* Location */}
               <button onClick={getLocation} className="flex items-center gap-1.5 text-gray-700 hover:text-blue-700 transition-colors flex-shrink-0 py-2 px-2 rounded-lg hover:bg-blue-50" aria-label="Set delivery location">
                 <MapPin size={16} className="flex-shrink-0" style={{ color: '#004E9A' }} />
                 <div className="text-left">
@@ -236,7 +316,6 @@ const Header: React.FC = () => {
                 </div>
               </button>
 
-              {/* Search — grey pill like Carrefour */}
               <div className="flex-1 relative" ref={searchRef}>
                 <form onSubmit={handleSearchSubmit} role="search" aria-label="Search products">
                   <div className="flex items-center bg-gray-100 rounded-full overflow-hidden">
@@ -272,7 +351,7 @@ const Header: React.FC = () => {
                           <button onClick={handleSearchSubmit} className="text-xs font-bold hover:underline" style={{ color: '#004E9A' }}>View all</button>
                         </div>
                         <div className="max-h-72 overflow-y-auto">
-                          {suggestions.map(p => (
+                          {suggestions.map((p: any) => (
                             <button key={p.id} onClick={() => handleSuggestionClick(p)} disabled={isNavigating}
                               className="w-full px-4 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0 text-left" role="option">
                               <div className="w-11 h-11 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
@@ -295,7 +374,7 @@ const Header: React.FC = () => {
                 )}
               </div>
 
-              {/* Account */}
+              {/* Account - Now updates immediately after login */}
               {isAuthenticated && (user || profile) ? (
                 <div className="relative flex-shrink-0">
                   <button onClick={() => setAccountMenuOpen(!accountMenuOpen)}
@@ -343,7 +422,6 @@ const Header: React.FC = () => {
                 </div>
               )}
 
-              {/* Cart */}
               <Link href="/cart" className="relative flex-shrink-0 flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition-colors" aria-label={`Cart${cartCount > 0 ? ` (${cartCount})` : ''}`}>
                 <div className="relative">
                   <ShoppingCart size={26} style={{ color: '#004E9A' }} />
@@ -363,7 +441,7 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* CATEGORIES NAV — white with blue active indicator, exactly like Carrefour */}
+        {/* CATEGORIES NAV - Desktop */}
         <nav className="hidden md:block bg-white border-t border-gray-100" aria-label="Product categories">
           <div className="w-full px-4 sm:px-6 lg:px-12">
             <div className="flex items-center py-0 relative">
@@ -398,7 +476,7 @@ const Header: React.FC = () => {
           </div>
         </nav>
 
-        {/* MOBILE HEADER — white, clean */}
+        {/* MOBILE HEADER - WITH HORIZONTAL CATEGORIES */}
         <div className="md:hidden bg-white border-b border-gray-100">
           <div className="px-3 pt-2 pb-2">
             <div className="flex items-center justify-between mb-2.5">
@@ -432,7 +510,7 @@ const Header: React.FC = () => {
                     {searchLoading ? <div className="p-4 flex items-center justify-center gap-2"><div className="w-5 h-5 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin"/><p className="text-xs text-gray-500">Searching…</p></div>
                     : suggestions.length === 0 ? <div className="p-4 text-center text-xs text-gray-500">No results</div>
                     : <>
-                      {suggestions.slice(0,5).map(p=>(
+                      {suggestions.slice(0,5).map((p: any)=>(
                         <button key={p.id} onClick={() => handleSuggestionClick(p)} disabled={isNavigating}
                           className="w-full px-3 py-2.5 flex items-center gap-2 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0 text-left">
                           <div className="w-9 h-9 bg-gray-100 rounded overflow-hidden flex-shrink-0">
@@ -460,17 +538,75 @@ const Header: React.FC = () => {
               )}
             </div>
           </div>
-          {/* Mobile category strip — white with blue active */}
-          <div className="bg-white border-t border-gray-100 overflow-x-auto no-scrollbar">
-            <div className="flex items-center px-3 gap-0">
-              <Link href="/" className={`text-xs font-semibold px-3 py-2.5 whitespace-nowrap flex-shrink-0 border-b-2 transition-all ${pathname==='/'?'border-blue-700 text-blue-700':'border-transparent text-gray-700'}`}>Home</Link>
-              <Link href="/deals" className="text-xs font-bold px-3 py-2.5 whitespace-nowrap flex-shrink-0 border-b-2 border-transparent" style={{ color: '#E3000B' }}>🔥 Deals</Link>
-              {categories.slice(0,8).map(c=>(
-                <Link key={c.id} href={`/categories/${c.slug}`}
-                  className={`text-xs font-semibold px-3 py-2.5 whitespace-nowrap flex-shrink-0 border-b-2 transition-all ${pathname===`/categories/${c.slug}`?'border-blue-700 text-blue-700':'border-transparent text-gray-700'}`}>
-                  {c.name}
+          
+          {/* HORIZONTAL CATEGORIES ON MOBILE - WITH SCROLL BUTTONS */}
+          <div className="bg-white border-t border-gray-100 relative">
+            <div className="flex items-center relative">
+              <button 
+                onClick={mobileScrollLeft} 
+                className="absolute left-0 z-20 p-1.5 bg-white shadow-md rounded-full ml-1 text-gray-400 hover:text-gray-700 transition-colors border border-gray-200"
+                aria-label="Scroll categories left"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="w-6 flex-shrink-0"/>
+              <div 
+                ref={mobileScrollContainerRef} 
+                className="flex items-center overflow-x-auto scroll-smooth w-full py-2"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                <Link href="/" className={`text-xs font-semibold px-3 py-1.5 whitespace-nowrap flex-shrink-0 rounded-full transition-all mx-0.5 ${
+                  pathname==='/' 
+                    ? 'bg-[#004E9A] text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}>
+                  Home
                 </Link>
-              ))}
+                <Link href="/products" className={`text-xs font-semibold px-3 py-1.5 whitespace-nowrap flex-shrink-0 rounded-full transition-all mx-0.5 ${
+                  pathname==='/products' 
+                    ? 'bg-[#004E9A] text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}>
+                  All Products
+                </Link>
+                <Link href="/deals" className={`text-xs font-bold px-3 py-1.5 whitespace-nowrap flex-shrink-0 rounded-full transition-all mx-0.5 ${
+                  pathname==='/deals' 
+                    ? 'bg-[#E3000B] text-white' 
+                    : 'bg-red-50 text-red-600 hover:bg-red-100'
+                }`}>
+                  🔥 Hot Deals
+                </Link>
+                
+                {categories.length > 0 ? categories.map(category => (
+                  <Link 
+                    key={category.id} 
+                    href={`/categories/${category.slug}`}
+                    className={`text-xs font-semibold px-3 py-1.5 whitespace-nowrap flex-shrink-0 rounded-full transition-all mx-0.5 ${
+                      pathname === `/categories/${category.slug}`
+                        ? 'bg-[#004E9A] text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {category.name}
+                  </Link>
+                )) : (
+                  <>
+                    {[1,2,3,4,5].map(i => (
+                      <div key={i} className="w-16 h-7 bg-gray-100 rounded-full animate-pulse flex-shrink-0 mx-0.5"/>
+                    ))}
+                  </>
+                )}
+              </div>
+              <div className="w-6 flex-shrink-0"/>
+              <button 
+                onClick={mobileScrollRight} 
+                className="absolute right-0 z-20 p-1.5 bg-white shadow-md rounded-full mr-1 text-gray-400 hover:text-gray-700 transition-colors border border-gray-200"
+                aria-label="Scroll categories right"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <ChevronRight size={16} />
+              </button>
             </div>
           </div>
         </div>

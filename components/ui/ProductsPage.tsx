@@ -17,34 +17,34 @@ const tabs = [
   { id: 'offers',     label: '🏷️ Offers',     categoryId: null },
 ];
 
-/** Returns how many columns (= items per row) to show based on viewport */
 function getColCount(width: number): number {
-  if (width < 480) return 2;   // xs phones  → 2 cols
-  if (width < 768) return 2;   // sm phones   → 2 cols
-  if (width < 1024) return 3;  // tablets     → 3 cols
-  return 4;                    // desktops    → 4 cols
+  if (width < 640)  return 2;
+  if (width < 768)  return 3;
+  if (width < 1024) return 4;
+  if (width < 1280) return 5;
+  return 6;
 }
 
 const ROWS_PER_SLIDE = 3;
 
 const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourites' }) => {
-  const [products, setProducts]                         = useState<Product[]>([]);
-  const [loading, setLoading]                           = useState(true);
-  const [error, setError]                               = useState<string | null>(null);
-  const [activeTab, setActiveTab]                       = useState('fruits');
+  const [products, setProducts]                 = useState<Product[]>([]);
+  const [loading, setLoading]                   = useState(true);
+  const [error, setError]                       = useState<string | null>(null);
+  const [activeTab, setActiveTab]               = useState('fruits');
 
-  const [allDiscounted, setAllDiscounted]               = useState<Product[]>([]);
-  const [discountedLoaded, setDiscountedLoaded]         = useState(false);
+  const [allDiscounted, setAllDiscounted]       = useState<Product[]>([]);
+  const [discountedLoaded, setDiscountedLoaded] = useState(false);
 
-  const [currentSlide, setCurrentSlide]                 = useState(0);
-  const [cols, setCols]                                 = useState(4);
-  const [isHovering, setIsHovering]                     = useState(false);
+  const [currentSlide, setCurrentSlide]         = useState(0);
+  const [cols, setCols]                         = useState(6);
+  const [isHovering, setIsHovering]             = useState(false);
 
-  const scrollRef      = useRef<HTMLDivElement>(null);
-  const resizeTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const autoPlayTimer  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const scrollRef     = useRef<HTMLDivElement>(null);
+  const resizeTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoPlayTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Responsive column tracking ──────────────────────────────────────────
+  // ── Responsive column tracking ───────────────────────────────────────────
   useEffect(() => {
     const update = () => {
       if (resizeTimer.current) clearTimeout(resizeTimer.current);
@@ -58,7 +58,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
     };
   }, []);
 
-  // ── Slide helpers ────────────────────────────────────────────────────────
+  // ── Slide helpers ─────────────────────────────────────────────────────────
   const itemsPerSlide = cols * ROWS_PER_SLIDE;
   const totalSlides   = Math.max(1, Math.ceil(products.length / itemsPerSlide));
 
@@ -75,7 +75,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
   const nextSlide = useCallback(() => scrollToSlide((currentSlide + 1) % totalSlides), [currentSlide, scrollToSlide, totalSlides]);
   const prevSlide = useCallback(() => scrollToSlide((currentSlide - 1 + totalSlides) % totalSlides), [currentSlide, scrollToSlide, totalSlides]);
 
-  // ── Auto-play ────────────────────────────────────────────────────────────
+  // ── Auto-play ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (autoPlayTimer.current) clearInterval(autoPlayTimer.current);
     if (totalSlides > 1 && !isHovering) {
@@ -84,13 +84,13 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
     return () => { if (autoPlayTimer.current) clearInterval(autoPlayTimer.current); };
   }, [totalSlides, isHovering, nextSlide]);
 
-  // ── Reset on tab change ──────────────────────────────────────────────────
+  // ── Reset on tab change ───────────────────────────────────────────────────
   useEffect(() => {
     setCurrentSlide(0);
     scrollRef.current?.scrollTo({ left: 0, behavior: 'instant' as ScrollBehavior });
   }, [activeTab]);
 
-  // ── Data fetching ────────────────────────────────────────────────────────
+  // ── Data fetching ─────────────────────────────────────────────────────────
   const isDiscounted = (p: Product) =>
     (p.discounted_price && +p.discounted_price > 0 && +p.discounted_price < +p.price) ||
     (p.sale_price       && +p.sale_price > 0       && +p.sale_price       < +p.price) ||
@@ -100,7 +100,6 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
   const fetchCategoryProducts = useCallback(async () => {
     const tab = tabs.find((t) => t.id === activeTab);
     if (!tab?.categoryId) { setProducts([]); setLoading(false); return; }
-
     setLoading(true);
     setError(null);
     try {
@@ -147,14 +146,14 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
     }
   }, [activeTab, discountedLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Scroll listener (sync indicator) ────────────────────────────────────
+  // ── Scroll listener ───────────────────────────────────────────────────────
   const handleScroll = () => {
     if (!scrollRef.current) return;
     const idx = Math.round(scrollRef.current.scrollLeft / scrollRef.current.clientWidth);
     if (idx !== currentSlide) setCurrentSlide(Math.max(0, idx));
   };
 
-  // ── Build slides ─────────────────────────────────────────────────────────
+  // ── Build slides ──────────────────────────────────────────────────────────
   const slides: Product[][][] = [];
   for (let s = 0; s < products.length; s += itemsPerSlide) {
     const slideItems = products.slice(s, s + itemsPerSlide);
@@ -165,10 +164,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
     slides.push(rows);
   }
 
-  // ── Skeleton ─────────────────────────────────────────────────────────────
-  const gridClass = `grid gap-3 sm:gap-4 ${
-    cols === 2 ? 'grid-cols-2' : cols === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
-  }`;
+  const gridClass = 'grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6';
 
   if (loading && products.length === 0) {
     return (
@@ -183,61 +179,59 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
       <div className="mx-auto px-3 sm:px-4 lg:px-12 w-full">
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 leading-tight">{title}</h1>
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 leading-tight mb-4">
+            {title}
+          </h1>
 
-          {/* Desktop prev / dots / next */}
-          {totalSlides > 1 && (
-            <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-              <button onClick={prevSlide} className="p-1.5 sm:p-2 rounded-full bg-white border border-gray-300 hover:border-[#004E9A] transition-all" aria-label="Previous">
-                <ChevronLeft size={18} className="text-gray-700" />
-              </button>
-
-              <div className="flex items-center gap-1.5">
-                {Array.from({ length: Math.min(totalSlides, 5) }).map((_, i) => {
-                  let page = i;
-                  if (totalSlides > 5) {
-                    if (currentSlide <= 2) page = i;
-                    else if (currentSlide >= totalSlides - 3) page = totalSlides - 5 + i;
-                    else page = currentSlide - 2 + i;
-                  }
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => scrollToSlide(page)}
-                      className={`h-2 rounded-full transition-all duration-200 ${currentSlide === page ? 'bg-[#004E9A] w-5' : 'bg-gray-300 hover:bg-gray-400 w-2'}`}
-                      aria-label={`Slide ${page + 1}`}
-                    />
-                  );
-                })}
-              </div>
-
-              <button onClick={nextSlide} className="p-1.5 sm:p-2 rounded-full bg-white border border-gray-300 hover:border-[#004E9A] transition-all" aria-label="Next">
-                <ChevronRight size={18} className="text-gray-700" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* ── Tabs ── */}
-        <div className="flex gap-2 sm:gap-3 mb-5 sm:mb-8 overflow-x-auto pb-1" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => { setActiveTab(tab.id); setError(null); }}
-              disabled={loading}
-              className={`px-3 sm:px-5 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-medium border transition-all whitespace-nowrap flex-shrink-0
-                ${activeTab === tab.id ? 'bg-[#004E9A] text-white border-[#004E9A]' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}
-                ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          {/* ── Tabs + Nav Buttons on same row ── */}
+          <div className="flex items-center justify-between gap-3">
+            
+            {/* Tabs */}
+            <div
+              className="flex gap-2 sm:gap-3 overflow-x-auto pb-1 flex-1"
+              style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
             >
-              {tab.label}
-            </button>
-          ))}
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => { setActiveTab(tab.id); setError(null); }}
+                  disabled={loading}
+                  className={`px-3 sm:px-5 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-medium border transition-all whitespace-nowrap flex-shrink-0
+                    ${activeTab === tab.id
+                      ? 'bg-[#004E9A] text-white border-[#004E9A]'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}
+                    ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Prev / Next Buttons */}
+            {totalSlides > 1 && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={prevSlide}
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white border border-gray-300 hover:border-[#004E9A] hover:text-[#004E9A] transition-all"
+                  aria-label="Previous"
+                >
+                  <ChevronLeft size={16} className="text-gray-700" />
+                </button>
+                <button
+                  onClick={nextSlide}
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white border border-gray-300 hover:border-[#004E9A] hover:text-[#004E9A] transition-all"
+                  aria-label="Next"
+                >
+                  <ChevronRight size={16} className="text-gray-700" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Content ── */}
         {loading ? (
-          // Loading skeleton: 3 rows × cols cards
           <div className="space-y-3 sm:space-y-4">
             {[1, 2, 3].map((r) => (
               <div key={r} className={gridClass}>
@@ -290,7 +284,12 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
             <div
               ref={scrollRef}
               className="overflow-x-auto snap-x snap-mandatory"
-              style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}
+              style={{
+                scrollBehavior: 'smooth',
+                WebkitOverflowScrolling: 'touch',
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none',
+              }}
               onScroll={handleScroll}
               onMouseEnter={() => setIsHovering(true)}
               onMouseLeave={() => setIsHovering(false)}
@@ -306,10 +305,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
                       row.length > 0 ? (
                         <div key={ri} className={gridClass}>
                           {row.map((product) => (
-                            <div
-                              key={product.id}
-                              className="bg-white rounded-lg sm:rounded-xl shadow-sm hover:shadow-md border border-gray-100 hover:border-[#004E9A]/20 overflow-hidden transition-all duration-300"
-                            >
+                            <div key={product.id} className="flex flex-col h-full">
                               <ProductCard
                                 product={product}
                                 onViewTrack={(id) => console.log('Viewing:', id)}
@@ -324,35 +320,27 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
               </div>
             </div>
 
-            {/* ── Mobile prev / dots / next ── */}
+            {/* ── Mobile dots ── */}
             {totalSlides > 1 && (
-              <div className="flex sm:hidden items-center justify-center gap-3 mt-5">
-                <button onClick={prevSlide} className="p-1.5 rounded-full bg-white border border-gray-300" aria-label="Previous">
-                  <ChevronLeft size={16} className="text-gray-700" />
-                </button>
-
-                <div className="flex items-center gap-1.5">
-                  {Array.from({ length: Math.min(totalSlides, 5) }).map((_, i) => {
-                    let page = i;
-                    if (totalSlides > 5) {
-                      if (currentSlide <= 2) page = i;
-                      else if (currentSlide >= totalSlides - 3) page = totalSlides - 5 + i;
-                      else page = currentSlide - 2 + i;
-                    }
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => scrollToSlide(page)}
-                        className={`h-1.5 rounded-full transition-all duration-200 ${currentSlide === page ? 'bg-[#004E9A] w-4' : 'bg-gray-300 w-1.5'}`}
-                        aria-label={`Slide ${page + 1}`}
-                      />
-                    );
-                  })}
-                </div>
-
-                <button onClick={nextSlide} className="p-1.5 rounded-full bg-white border border-gray-300" aria-label="Next">
-                  <ChevronRight size={16} className="text-gray-700" />
-                </button>
+              <div className="flex items-center justify-center gap-2 mt-5">
+                {Array.from({ length: Math.min(totalSlides, 5) }).map((_, i) => {
+                  let page = i;
+                  if (totalSlides > 5) {
+                    if (currentSlide <= 2) page = i;
+                    else if (currentSlide >= totalSlides - 3) page = totalSlides - 5 + i;
+                    else page = currentSlide - 2 + i;
+                  }
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => scrollToSlide(page)}
+                      className={`h-1.5 rounded-full transition-all duration-200 ${
+                        currentSlide === page ? 'bg-[#004E9A] w-5' : 'bg-gray-300 w-1.5 hover:bg-gray-400'
+                      }`}
+                      aria-label={`Slide ${page + 1}`}
+                    />
+                  );
+                })}
               </div>
             )}
           </>

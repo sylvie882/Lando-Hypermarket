@@ -145,31 +145,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      const response = await api.auth.login({ email, password });
-      const { token, user } = response.data;
-      
-      setToken(token);
-      setUser(user);
-      
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      
-      // Sync to cookies for middleware
-      syncAuthToCookies(token, user);
-      
-      showToast.success('Login successful!');
-      return true;
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
-      showToast.error(errorMessage);
-      return false;
-    } finally {
-      setIsLoading(false);
+ const login = async (email: string, password: string): Promise<boolean> => {
+  try {
+    setIsLoading(true);
+    const response = await api.auth.login({ email, password });
+    const { token, user } = response.data;
+    
+    setToken(token);
+    setUser(user);
+    
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    
+    // Sync to cookies for middleware
+    syncAuthToCookies(token, user);
+    
+    showToast.success('Login successful!');
+    
+    // Redirect to homepage after successful login
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('auth-state-changed'));
+      window.location.href = '/';
     }
-  };
+    
+    return true;
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
+    showToast.error(errorMessage);
+    return false;
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const adminLogin = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -243,23 +250,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+
   const logout = async (): Promise<void> => {
-    try {
-      await api.auth.logout();
-    } catch (error) {
-      console.error('Logout API error:', error);
-    } finally {
-      clearAuthData();
-      showToast.success('Logged out successfully');
-      // Redirect based on current path
-      const currentPath = window.location.pathname;
-      if (currentPath.includes('/admin')) {
-        window.location.href = '/admin/login';
-      } else {
-        window.location.href = '/auth/login';
-      }
+  try {
+    await api.auth.logout();
+  } catch (error) {
+    console.error('Logout API error:', error);
+  } finally {
+    clearAuthData();
+    showToast.success('Logged out successfully');
+    
+    // Dispatch event to notify other components about auth state change
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('auth-state-changed'));
     }
-  };
+    
+    // Redirect to homepage
+    window.location.href = '/';
+  }
+};
+
+  // const logout = async (): Promise<void> => {
+  //   try {
+  //     await api.auth.logout();
+  //   } catch (error) {
+  //     console.error('Logout API error:', error);
+  //   } finally {
+  //     clearAuthData();
+  //     showToast.success('Logged out successfully');
+  //     // Redirect based on current path
+  //     const currentPath = window.location.pathname;
+  //     if (currentPath.includes('/admin')) {
+  //       window.location.href = '/admin/login';
+  //     } else {
+  //       window.location.href = '/auth/login';
+  //     }
+  //   }
+  // };
 
   const updateProfile = async (data: any): Promise<boolean> => {
     try {

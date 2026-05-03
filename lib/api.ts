@@ -149,7 +149,7 @@ class ApiService {
       (error) => Promise.reject(error)
     );
 
-    // Response interceptor
+    // Response interceptor - UPDATED to redirect to homepage instead of login pages
     this.api.interceptors.response.use(
       (response) => response,
       (error) => {
@@ -162,25 +162,39 @@ class ApiService {
         const isAdminLoginPage = typeof window !== 'undefined' && 
           window.location.pathname.includes('/admin/login');
         
+        // Handle 401 Unauthorized - redirect to homepage
         if (error.response?.status === 401 && !isAuthRequest && !isAdminLoginPage) {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            // Check if we're in an admin route
-            if (window.location.pathname.includes('/admin')) {
-              window.location.href = '/admin/login';
-            } else {
-              window.location.href = '/auth/login';
-            }
+            
+            // Clear cookies
+            document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+            document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+            
+            // Dispatch auth state change event
+            window.dispatchEvent(new CustomEvent('auth-state-changed'));
+            
+            // Redirect to homepage
+            window.location.href = '/';
           }
         }
         
-        // Handle 403 Forbidden (admin access denied)
+        // Handle 403 Forbidden (admin access denied) - redirect to homepage
         if (error.config?.url?.includes('/admin/') && error.response?.status === 403) {
           if (typeof window !== 'undefined' && !isAdminLoginPage) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/admin/login';
+            
+            // Clear cookies
+            document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+            document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+            
+            // Dispatch auth state change event
+            window.dispatchEvent(new CustomEvent('auth-state-changed'));
+            
+            // Redirect to homepage
+            window.location.href = '/';
           }
         }
         
@@ -293,7 +307,16 @@ class ApiService {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/admin/login';
+            
+            // Clear cookies
+            document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+            document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+            
+            // Dispatch auth state change event
+            window.dispatchEvent(new CustomEvent('auth-state-changed'));
+            
+            // Redirect to homepage
+            window.location.href = '/';
           }
         }
         return false;

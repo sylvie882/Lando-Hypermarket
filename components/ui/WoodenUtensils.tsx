@@ -24,9 +24,7 @@ const WoodenUtensils: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
-  const [itemsPerRow, setItemsPerRow] = useState(4);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isTablet, setIsTablet] = useState(false);
+  const [itemsPerRow, setItemsPerRow] = useState(6);
   
   const resizeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -40,17 +38,11 @@ const WoodenUtensils: React.FC = () => {
       
       resizeTimerRef.current = setTimeout(() => {
         const width = window.innerWidth;
-        setIsMobile(width < 640);
-        setIsTablet(width >= 640 && width < 1024);
         
         if (width < 640) {
           setItemsPerRow(2);
-        } else if (width < 768) {
-          setItemsPerRow(2);
-        } else if (width < 1024) {
-          setItemsPerRow(3);
         } else {
-          setItemsPerRow(4);
+          setItemsPerRow(6);
         }
       }, 150);
     };
@@ -150,6 +142,15 @@ const WoodenUtensils: React.FC = () => {
     }
   };
 
+  // Dynamic grid class based on items per row
+  const getGridClass = () => {
+    if (itemsPerRow === 2) {
+      return "grid grid-cols-2 gap-4";
+    } else {
+      return "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4";
+    }
+  };
+
   // Loading Skeleton
   if (isLoading && !category) {
     return (
@@ -170,7 +171,7 @@ const WoodenUtensils: React.FC = () => {
               {/* Two rows of skeleton loaders */}
               <div className="space-y-4">
                 {[1, 2].map((row) => (
-                  <div key={row} className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div key={row} className={getGridClass()}>
                     {[...Array(itemsPerRow)].map((_, i) => (
                       <div 
                         key={i} 
@@ -239,7 +240,7 @@ const WoodenUtensils: React.FC = () => {
           <div className="space-y-4">
             {/* First Row */}
             {firstRowProducts.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className={getGridClass()}>
                 {firstRowProducts.map((product) => (
                   <div
                     key={product.id}
@@ -257,7 +258,7 @@ const WoodenUtensils: React.FC = () => {
             
             {/* Second Row */}
             {secondRowProducts.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className={getGridClass()}>
                 {secondRowProducts.map((product) => (
                   <div
                     key={product.id}

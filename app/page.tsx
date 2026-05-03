@@ -123,14 +123,14 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* ── Personalized Recommendations ── */}
-      <div className="reveal-section section-hidden">
+      {/* <div className="reveal-section section-hidden">
         <PersonalizedRecommendations
           title="Recommended For You"
           limit={12}
           showHeader={true}
           showStrategy={false}
         />
-      </div>
+      </div> */}
 
       {/* ── Wooden Utensils ── */}
       <div className="reveal-section section-hidden">

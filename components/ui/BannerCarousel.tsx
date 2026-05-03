@@ -54,6 +54,21 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
   const [isHovering, setIsHovering] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [direction, setDirection] = useState<'left' | 'right'>('right');
+  const [mounted, setMounted] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(0);
+
+  // Fix hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setMounted(true);
+    setWindowWidth(window.innerWidth);
+    
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Fetch banners from the correct API endpoint
   const fetchBanners = useCallback(async () => {
@@ -148,12 +163,19 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
     return () => clearInterval(intervalId);
   }, [banners.length, autoPlay, isHovering, interval, nextSlide, isAnimating]);
 
-  // Loading skeleton
+  // Get current height based on window width (only on client side)
+  const getCurrentHeight = () => {
+    if (!mounted) return '400px'; // Default for SSR
+    const isMobile = windowWidth < 768;
+    return isMobile ? height.mobile : height.desktop;
+  };
+
+  // Loading skeleton - use fixed height to prevent mismatch
   if (isLoading) {
     return (
       <div 
         className={`relative overflow-hidden bg-gradient-to-r from-[#E67E22]/20 via-[#F8FAF5] to-[#E67E22]/20 animate-pulse ${rounded ? 'rounded-xl md:rounded-2xl' : ''}`}
-        style={{ height: typeof window !== 'undefined' && window.innerWidth < 768 ? height.mobile : height.desktop }}
+        style={{ height: '400px' }}
       />
     );
   }
@@ -162,6 +184,18 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
   if (banners.length === 0) {
     return null;
   }
+
+  // Don't render carousel content until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <div 
+        className={`relative overflow-hidden bg-gradient-to-r from-[#E67E22]/20 via-[#F8FAF5] to-[#E67E22]/20 ${rounded ? 'rounded-xl md:rounded-2xl' : ''}`}
+        style={{ height: '400px' }}
+      />
+    );
+  }
+
+  const isMobile = windowWidth < 768;
 
   return (
     <div 
@@ -172,8 +206,8 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
       {/* Main Carousel Container */}
       <div className={`relative overflow-hidden shadow-xl ${rounded ? 'rounded-xl md:rounded-2xl' : ''}`}>
         
-        {/* Desktop View - Infinite Carousel */}
-        <div className="hidden md:block" style={{ height: height.desktop }}>
+        {/* All Banners - Single container with dynamic height */}
+        <div style={{ height: getCurrentHeight() }}>
           {banners.map((banner, index) => {
             const isActive = index === activeIndex;
             
@@ -215,8 +249,9 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
               >
                 <BannerSlide 
                   banner={banner}
-                  imageUrl={getImageUrl(banner, false)}
+                  imageUrl={getImageUrl(banner, isMobile)}
                   isActive={isActive}
+                  isMobile={isMobile}
                   onTrackClick={handleBannerClick}
                 />
               </div>
@@ -224,86 +259,52 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
           })}
         </div>
 
-        {/* Mobile View - Infinite Carousel */}
-        <div className="md:hidden" style={{ height: height.mobile }}>
-          {banners.map((banner, index) => {
-            const isActive = index === activeIndex;
-            
-            let transform = '';
-            let zIndex = 0;
-            let opacity = 0;
-            
-            if (isActive) {
-              transform = 'translateX(0)';
-              zIndex = 20;
-              opacity = 1;
-            } else if (direction === 'right') {
-              if (index === (activeIndex - 1 + banners.length) % banners.length) {
-                transform = 'translateX(-100%)';
-                zIndex = 10;
-                opacity = 1;
-              } else {
-                transform = 'translateX(100%)';
-                zIndex = 0;
-                opacity = 0;
-              }
-            } else {
-              if (index === (activeIndex + 1) % banners.length) {
-                transform = 'translateX(100%)';
-                zIndex = 10;
-                opacity = 1;
-              } else {
-                transform = 'translateX(-100%)';
-                zIndex = 0;
-                opacity = 0;
-              }
-            }
-            
-            return (
-              <div
-                key={banner.id}
-                className="absolute inset-0 transition-all duration-700 ease-in-out"
-                style={{ transform, zIndex, opacity }}
-              >
-                <BannerSlide 
-                  banner={banner}
-                  imageUrl={getImageUrl(banner, true)}
-                  isActive={isActive}
-                  isMobile={true}
-                  onTrackClick={handleBannerClick}
-                />
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Only Dots Indicator - Navigation buttons and counter removed */}
+        {/* Navigation Arrows - Only show on hover and if more than 1 banner */}
         {banners.length > 1 && (
           <>
-            {/* Dots Indicator */}
-            {/* <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 flex space-x-2 md:space-x-3 z-30">
-              {banners.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    if (isAnimating) return;
-                    setIsAnimating(true);
-                    setDirection(index > activeIndex ? 'right' : 'left');
-                    setActiveIndex(index);
-                    setTimeout(() => setIsAnimating(false), 700);
-                  }}
-                  className="transition-all duration-300 flex items-center"
-                  aria-label={`Go to slide ${index + 1}`}
-                >
-                  <div className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full transition-all duration-300 ${
-                    index === activeIndex 
-                      ? 'bg-[#E67E22] scale-125 ring-4 ring-[#E67E22]/30' 
-                      : 'bg-white/70 hover:bg-white'
-                  }`} />
-                </button>
-              ))}
-            </div> */}
+            <button
+              onClick={prevSlide}
+              disabled={isAnimating}
+              className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-30 p-1.5 md:p-2 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/40 transition-all duration-300 opacity-0 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Previous slide"
+            >
+              <ChevronLeft size={20} className="md:w-6 md:h-6" />
+            </button>
+            <button
+              onClick={nextSlide}
+              disabled={isAnimating}
+              className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-30 p-1.5 md:p-2 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/40 transition-all duration-300 opacity-0 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Next slide"
+            >
+              <ChevronRight size={20} className="md:w-6 md:h-6" />
+            </button>
           </>
+        )}
+
+        {/* Dots Indicator */}
+        {banners.length > 1 && (
+          <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 flex space-x-2 md:space-x-3 z-30">
+            {banners.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  if (isAnimating) return;
+                  setIsAnimating(true);
+                  setDirection(index > activeIndex ? 'right' : 'left');
+                  setActiveIndex(index);
+                  setTimeout(() => setIsAnimating(false), 700);
+                }}
+                className="transition-all duration-300 flex items-center"
+                aria-label={`Go to slide ${index + 1}`}
+              >
+                <div className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full transition-all duration-300 ${
+                  index === activeIndex 
+                    ? 'bg-[#E67E22] scale-125 ring-4 ring-[#E67E22]/30' 
+                    : 'bg-white/70 hover:bg-white'
+                }`} />
+              </button>
+            ))}
+          </div>
         )}
       </div>
     </div>
@@ -329,23 +330,30 @@ const BannerSlide: React.FC<{
     return '/products';
   };
 
+  // Use next/image with proper priority for active slide
+  const imagePriority = isActive;
+
   return (
     <Link
       href={getBannerLink()}
       onClick={() => onTrackClick(banner.id)}
       className="absolute inset-0 w-full h-full block group/slide"
     >
-      <Image
-        src={imageUrl}
-        alt={banner.title}
-        fill
-        className="object-cover transition-transform duration-700 group-hover/slide:scale-105"
-        priority={isActive}
-        sizes="100vw"
-      />
+      {/* Use img for better reliability or next/image with fill */}
+      <div className="relative w-full h-full">
+        <Image
+          src={imageUrl}
+          alt={banner.title}
+          fill
+          className="object-cover transition-transform duration-700 group-hover/slide:scale-105"
+          priority={imagePriority}
+          sizes="100vw"
+          quality={90}
+        />
+      </div>
       
       {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-transparent rounded-xl md:rounded-2xl" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-transparent" />
       
       {/* Content */}
       <div className="absolute inset-0 flex items-center justify-center md:justify-start">
@@ -368,7 +376,6 @@ const BannerSlide: React.FC<{
               {banner.subtitle}
             </p>
           )}
-          
           
           {/* Button - Warm Orange */}
           {banner.button_text && (

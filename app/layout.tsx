@@ -6,7 +6,6 @@ import { AuthProvider } from '@/lib/auth';
 import { QueryProvider } from '@/lib/query';
 import { Toaster } from 'react-hot-toast';
 import AuthSync from '@/components/auth/AuthSync';
-import OpeningSoonSuspense from '@/components/suspense/OpeningSoonSuspense';
 import Script from 'next/script';
 
 const SITE_URL = 'https://hypermarket.co.ke';
@@ -465,7 +464,7 @@ export const metadata: Metadata = {
     site: '@landohypermarket_ke',
     creator: '@landohypermarket_ke',
     title: 'Lando Hypermarket | Fresh Farm Produce & Groceries Delivered',
-    description: 'Farm fresh vegetables, pasture raised meat, kienyeji eggs, baby products & more. Free delivery Nairobi over KES 2000.',
+    description: 'Farm fresh vegetables, pasture raised meat, kienyeji eggs, baby products & more. Free delivery for all orders',
     images: [`${SITE_URL}/twitter-image.jpg`],
   },
   alternates: {
@@ -1197,7 +1196,6 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <ClientLayout>
-              <OpeningSoonSuspense />
               {children}
             </ClientLayout>
             <AuthSync />
