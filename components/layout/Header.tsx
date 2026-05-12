@@ -454,9 +454,9 @@ const Header: React.FC = () => {
                 <Link href="/products" className={`flex items-center gap-1.5 px-3.5 py-3 text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-all border-b-2 ${pathname==='/products'?'border-blue-700 text-blue-700':'border-transparent text-gray-700 hover:text-blue-700 hover:border-blue-200'}`}>
                   All Products
                 </Link>
-                <Link href="/deals" className={`flex items-center gap-1.5 px-3.5 py-3 text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-all border-b-2 border-transparent hover:border-red-300`} style={{ color: '#E3000B' }}>
+                {/* <Link href="/deals" className={`flex items-center gap-1.5 px-3.5 py-3 text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-all border-b-2 border-transparent hover:border-red-300`} style={{ color: '#E3000B' }}>
                   🔥 Hot Deals
-                </Link>
+                </Link> */}
                 <div className="w-px h-5 bg-gray-200 flex-shrink-0 mx-1"/>
                 
                 {categories.length > 0 ? categories.map(category => (
@@ -570,13 +570,13 @@ const Header: React.FC = () => {
                 }`}>
                   All Products
                 </Link>
-                <Link href="/deals" className={`text-xs font-bold px-3 py-1.5 whitespace-nowrap flex-shrink-0 rounded-full transition-all mx-0.5 ${
+                {/* <Link href="/deals" className={`text-xs font-bold px-3 py-1.5 whitespace-nowrap flex-shrink-0 rounded-full transition-all mx-0.5 ${
                   pathname==='/deals' 
                     ? 'bg-[#E3000B] text-white' 
                     : 'bg-red-50 text-red-600 hover:bg-red-100'
                 }`}>
                   🔥 Hot Deals
-                </Link>
+                </Link> */}
                 
                 {categories.length > 0 ? categories.map(category => (
                   <Link 

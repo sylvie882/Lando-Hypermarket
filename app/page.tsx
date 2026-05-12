@@ -83,7 +83,7 @@ const HomePage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pb-20 md:pb-0">
       {/* ── Banner ── */}
       <section className="-mt-2 pt-0 sm:pt-2 md:pt-4 pb-0 overflow-hidden">
         <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
@@ -182,12 +182,12 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* ── Floating Action Buttons (Only 2) ── */}
-      <div className="fixed bottom-2 right-4 z-40 flex flex-col items-end gap-3">
+      {/* ── Floating Action Buttons (Adjusted for mobile bottom nav) ── */}
+      <div className="fixed bottom-20 md:bottom-6 right-4 z-40 flex flex-col items-end gap-3">
         {/* Chat Button - Blue Color */}
         <button
           onClick={() => setShowChatModal(!showChatModal)}
-          className="group relative w-14 h-14 flex items-center justify-center rounded-full shadow-xl transition-all duration-300 hover:scale-110 active:scale-95"
+          className="group relative w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-full shadow-xl transition-all duration-300 hover:scale-110 active:scale-95"
           style={{
             background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
             boxShadow: '0 8px 24px rgba(59, 130, 246, 0.4)'
@@ -196,13 +196,13 @@ const HomePage: React.FC = () => {
         >
           {/* Ripple effect */}
           <span className="absolute inset-0 rounded-full animate-ping bg-blue-400 opacity-40"></span>
-          <MessageCircle className="text-white" size={24} fill="white" />
+          <MessageCircle className="text-white" size={20} fill="white" />
         </button>
 
         {/* Scroll to Top Button */}
         <button
           onClick={scrollToTop}
-          className={`w-14 h-14 flex items-center justify-center rounded-full shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 ${
+          className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-full shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 ${
             showScrollTop ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
           }`}
           style={{
@@ -211,11 +211,11 @@ const HomePage: React.FC = () => {
           }}
           aria-label="Scroll to top"
         >
-          <ArrowUp className="text-white" size={24} />
+          <ArrowUp className="text-white" size={20} />
         </button>
       </div>
 
-      {/* Chat Modal */}
+      {/* Chat Modal - Adjusted position for mobile */}
       {showChatModal && (
         <>
           {/* Backdrop */}
@@ -224,8 +224,8 @@ const HomePage: React.FC = () => {
             onClick={() => setShowChatModal(false)}
           />
           
-          {/* Chat Modal Content */}
-          <div className="fixed bottom-32 right-4 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+          {/* Chat Modal Content - Positioned higher on mobile */}
+          <div className="fixed bottom-28 md:bottom-32 right-4 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">

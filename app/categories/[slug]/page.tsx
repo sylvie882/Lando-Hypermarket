@@ -331,10 +331,10 @@ const CategoryPage = () => {
       </div>
 
       {/* Category Header */}
-      <div className="bg-gradient-to-r  border-b border-gray-100">
+      {/* <div className="bg-gradient-to-r  border-b border-gray-100">
         <div className="mx-auto px-4 sm:px-6 lg:px-12 py-8">
           <div className="flex flex-col md:flex-row items-start gap-8">
-            <div className="md:w-1/5">
+            {/* <div className="md:w-1/5">
               <div className="bg-white rounded-2xl overflow-hidden border border-emerald-200 shadow-md">
                 <div className="aspect-square flex items-center justify-center p-6">
                   {category.image_url || category.image ? (
@@ -347,19 +347,19 @@ const CategoryPage = () => {
                   )}
                 </div>
               </div>
-            </div>
+            </div> 
 
             <div className="md:w-4/5">
-              <div className="flex items-center gap-2 mb-3">
-                {/* {!category.parent_id && (
+               <div className="flex items-center gap-2 mb-3">
+                {!category.parent_id && (
                   <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Main Category</span>
-                )} */}
+                )} 
                 {hasSubcategories && (
                   <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
                     {category.children?.length} Subcategories
                   </span>
                 )}
-              </div>
+              </div> 
               
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 {category.name}
@@ -379,7 +379,7 @@ const CategoryPage = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Products Section */}
       <div className="py-8">
@@ -414,9 +414,9 @@ const CategoryPage = () => {
                   <h2 className="text-xl font-bold text-gray-900">Products in {category.name}</h2>
                   <p className="text-gray-600 text-sm mt-1">Discover our curated selection</p>
                 </div>
-                <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg">
+                {/* <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg">
                   {products.length} products
-                </div>
+                </div> */}
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">

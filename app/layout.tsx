@@ -20,7 +20,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  themeColor: '#1d2ae7ff',
+  themeColor: '#004E9A',
 };
 
 export const metadata: Metadata = {
@@ -422,7 +422,12 @@ export const metadata: Metadata = {
     'unga delivery',
     'mafuta ya kupikia',
     'samli',
-    'bidii products'
+    'bidii products',
+    'kienyeji chicken',
+    'nyama ya mbuzi',
+    'nyama ya kondoo',
+    'samaki fresh',
+    'mayai kienyeji'
   ],
   authors: [{ name: 'Lando Hypermarket', url: 'https://hypermarket.co.ke/about' }],
   creator: 'Lando Hypermarket',
@@ -515,6 +520,372 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const jsonLdOrganization = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
+    "name": SITE_NAME,
+    "url": SITE_URL,
+    "logo": `${SITE_URL}/logo10.png`,
+    "image": `${SITE_URL}/og-image.jpg`,
+    "description": "Kenya's premier online supermarket offering fresh vegetables, pasture raised meat, kienyeji eggs, baby products, stationery, cleaning supplies, wooden utensils, samosas, handicrafts, and household essentials with express delivery in Nairobi.",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Nairobi",
+      "addressRegion": "Nairobi",
+      "addressCountry": "KE"
+    },
+    "contactPoint": [
+      {
+        "@type": "ContactPoint",
+        "telephone": BUSINESS_PHONE,
+        "contactType": "customer service",
+        "availableLanguage": ["English", "Swahili"],
+        "hoursAvailable": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          "opens": "08:00",
+          "closes": "20:00"
+        }
+      },
+      {
+        "@type": "ContactPoint",
+        "telephone": BUSINESS_PHONE,
+        "contactType": "sales",
+        "availableLanguage": ["English", "Swahili"]
+      },
+      {
+        "@type": "ContactPoint",
+        "telephone": BUSINESS_WHATSAPP,
+        "contactType": "whatsapp",
+        "availableLanguage": ["English", "Swahili"]
+      }
+    ],
+    "sameAs": [
+      `https://www.facebook.com/${BUSINESS_FACEBOOK}`,
+      `https://www.instagram.com/${BUSINESS_INSTAGRAM}`,
+      `https://twitter.com/${BUSINESS_INSTAGRAM}`
+    ]
+  };
+
+  const jsonLdGroceryStore = {
+    "@context": "https://schema.org",
+    "@type": "GroceryStore",
+    "@id": `${SITE_URL}/#store`,
+    "name": "Lando Hypermarket",
+    "image": `${SITE_URL}/store-image.jpg`,
+    "url": SITE_URL,
+    "telephone": BUSINESS_PHONE,
+    "email": BUSINESS_EMAIL,
+    "priceRange": "KES 20 - KES 5000",
+    "menu": `${SITE_URL}/products`,
+    "acceptsReservations": "False",
+    "servesCuisine": "Groceries, Fresh Produce, Meat, Dairy, Traditional Foods",
+    "areaServed": {
+      "@type": "GeoCircle",
+      "geoMidpoint": {
+        "@type": "GeoCoordinates",
+        "latitude": -1.286389,
+        "longitude": 36.817223
+      },
+      "geoRadius": "30000"
+    },
+    "openingHoursSpecification": [
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        "opens": "08:00",
+        "closes": "20:00"
+      },
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": "Sunday",
+        "opens": "09:00",
+        "closes": "18:00"
+      }
+    ],
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Product Categories",
+      "itemListElement": [
+        {
+          "@type": "OfferCatalog",
+          "name": "Fresh Vegetables",
+          "itemListElement": [
+            { "@type": "Product", "name": "Leafy Greens (Sukuma Wiki, Managu, Terere, Kunde)" },
+            { "@type": "Product", "name": "Root Vegetables (Potatoes, Carrots, Onions, Arrow Roots)" },
+            { "@type": "Product", "name": "Pre-Cut Vegetables" },
+            { "@type": "Product", "name": "Traditional Vegetables" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Fresh Fruits",
+          "itemListElement": [
+            { "@type": "Product", "name": "Mangoes (Apple, Ngowe, Kent)" },
+            { "@type": "Product", "name": "Tropical Fruits" },
+            { "@type": "Product", "name": "Citrus Fruits" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Pasture Raised Meat",
+          "itemListElement": [
+            { "@type": "Product", "name": "Goat Meat" },
+            { "@type": "Product", "name": "Sheep Meat (Mutton)" },
+            { "@type": "Product", "name": "Rabbit Meat" },
+            { "@type": "Product", "name": "Grass Fed Meat" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Poultry & Eggs",
+          "itemListElement": [
+            { "@type": "Product", "name": "Kienyeji Eggs (Pasture Raised)" },
+            { "@type": "Product", "name": "Free Range Eggs" },
+            { "@type": "Product", "name": "Fresh Chicken" },
+            { "@type": "Product", "name": "Turkey & Duck" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Dairy Products",
+          "itemListElement": [
+            { "@type": "Product", "name": "Fresh Cow Milk" },
+            { "@type": "Product", "name": "Goat Milk" },
+            { "@type": "Product", "name": "Camel Milk" },
+            { "@type": "Product", "name": "Yogurt & Mursik" },
+            { "@type": "Product", "name": "Cheese & Butter" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Fish & Seafood",
+          "itemListElement": [
+            { "@type": "Product", "name": "Fresh Tilapia" },
+            { "@type": "Product", "name": "Omena" },
+            { "@type": "Product", "name": "Fish Fillets" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Cereals & Grains",
+          "itemListElement": [
+            { "@type": "Product", "name": "Maize Flour" },
+            { "@type": "Product", "name": "Rice" },
+            { "@type": "Product", "name": "Wheat Flour" },
+            { "@type": "Product", "name": "Breakfast Cereals" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Legumes & Beans",
+          "itemListElement": [
+            { "@type": "Product", "name": "Beans (Various Types)" },
+            { "@type": "Product", "name": "Lentils" },
+            { "@type": "Product", "name": "Green Grams (Ndengu)" },
+            { "@type": "Product", "name": "Peas" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Nuts, Seeds & Dried Fruits",
+          "itemListElement": [
+            { "@type": "Product", "name": "Groundnuts" },
+            { "@type": "Product", "name": "Cashew Nuts" },
+            { "@type": "Product", "name": "Macadamia" },
+            { "@type": "Product", "name": "Pumpkin Seeds" },
+            { "@type": "Product", "name": "Dates & Raisins" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Herbs, Spices & Seasonings",
+          "itemListElement": [
+            { "@type": "Product", "name": "Fresh Herbs" },
+            { "@type": "Product", "name": "Masala Spices" },
+            { "@type": "Product", "name": "Mixed Spices" },
+            { "@type": "Product", "name": "Seasonings" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Baby Products",
+          "itemListElement": [
+            { "@type": "Product", "name": "Baby Diapers" },
+            { "@type": "Product", "name": "Baby Formula" },
+            { "@type": "Product", "name": "Baby Food" },
+            { "@type": "Product", "name": "Baby Wipes" },
+            { "@type": "Product", "name": "Baby Care Essentials" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Cleaning Supplies & Equipment",
+          "itemListElement": [
+            { "@type": "Product", "name": "Detergents" },
+            { "@type": "Product", "name": "Disinfectants" },
+            { "@type": "Product", "name": "Cleaning Tools" },
+            { "@type": "Product", "name": "Professional Cleaning Supplies" },
+            { "@type": "Product", "name": "Hygiene Products" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Handicrafts & Artisans",
+          "itemListElement": [
+            { "@type": "Product", "name": "Wooden Utensils" },
+            { "@type": "Product", "name": "Eating & Cooking Utensils" },
+            { "@type": "Product", "name": "Serving Ware" },
+            { "@type": "Product", "name": "Traditional Crafts" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Stationery",
+          "itemListElement": [
+            { "@type": "Product", "name": "Office Supplies" },
+            { "@type": "Product", "name": "School Supplies" },
+            { "@type": "Product", "name": "Art Materials" },
+            { "@type": "Product", "name": "Pens & Notebooks" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Samosas & Snacks",
+          "itemListElement": [
+            { "@type": "Product", "name": "Beef Samosas" },
+            { "@type": "Product", "name": "Chicken Samosas" },
+            { "@type": "Product", "name": "Vegetable Samosas" },
+            { "@type": "Product", "name": "Fresh Pastries" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Beverages",
+          "itemListElement": [
+            { "@type": "Product", "name": "Fresh Juices" },
+            { "@type": "Product", "name": "Soft Drinks" },
+            { "@type": "Product", "name": "Drinking Water" },
+            { "@type": "Product", "name": "Energy Drinks" }
+          ]
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Fresh Flowers & Plants",
+          "itemListElement": [
+            { "@type": "Product", "name": "Fresh Flowers" },
+            { "@type": "Product", "name": "Decorative Plants" },
+            { "@type": "Product", "name": "Bouquets" }
+          ]
+        }
+      ]
+    }
+  };
+
+  const jsonLdWebsite = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${SITE_URL}/#website`,
+    "url": SITE_URL,
+    "name": SITE_NAME,
+    "description": "Online supermarket in Nairobi offering fresh vegetables, pasture raised meat, kienyeji eggs, dairy, baby products, stationery, cleaning supplies, wooden utensils, samosas, handicrafts, and household essentials with express delivery.",
+    "publisher": {
+      "@id": `${SITE_URL}/#organization`
+    },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": `${SITE_URL}/search?q={search_term_string}`
+      },
+      "query-input": "required name=search_term_string"
+    }
+  };
+
+  const jsonLdLocalBusiness = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "@id": `${SITE_URL}/#localbusiness`,
+    "name": "Lando Hypermarket",
+    "image": `${SITE_URL}/store-front.jpg`,
+    "url": SITE_URL,
+    "telephone": BUSINESS_PHONE,
+    "priceRange": "KES 20 - 5000",
+    "openingHours": "Mo-Sa 08:00-20:00, Su 09:00-18:00",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Nairobi",
+      "addressCountry": "KE"
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": -1.286389,
+      "longitude": 36.817223
+    },
+    "areaServed": "Nairobi, Kenya",
+    "makesOffer": [
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Grocery Delivery",
+          "description": "Express grocery delivery in 45-99 minutes"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Product",
+          "name": "Fresh Vegetables",
+          "description": "Locally sourced fresh vegetables including leafy greens and root vegetables"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Product",
+          "name": "Pasture Raised Meat",
+          "description": "Goat, sheep, and rabbit meat from grass-fed animals"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Product",
+          "name": "Kienyeji Eggs",
+          "description": "Fresh pasture raised eggs from free-range chickens"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Product",
+          "name": "Fresh Fruits",
+          "description": "Farm fresh fruits including mango varieties and tropical fruits"
+        }
+      }
+    ]
+  };
+
+  const jsonLdBreadcrumb = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL },
+      { "@type": "ListItem", "position": 2, "name": "Fresh Vegetables", "item": `${SITE_URL}/category/vegetables` },
+      { "@type": "ListItem", "position": 3, "name": "Pasture Raised Meat", "item": `${SITE_URL}/category/livestock-1` },
+      { "@type": "ListItem", "position": 4, "name": "Kienyeji Eggs", "item": `${SITE_URL}/category/egg` },
+      { "@type": "ListItem", "position": 5, "name": "Fresh Fruits", "item": `${SITE_URL}/category/fruits` },
+      { "@type": "ListItem", "position": 6, "name": "Dairy Products", "item": `${SITE_URL}/category/dairy-products` },
+      { "@type": "ListItem", "position": 7, "name": "Baby Products", "item": `${SITE_URL}/category/baby-products` },
+      { "@type": "ListItem", "position": 8, "name": "Cleaning Supplies", "item": `${SITE_URL}/category/cleaning-materials-equipment` },
+      { "@type": "ListItem", "position": 9, "name": "Handicrafts", "item": `${SITE_URL}/category/handicrafts-1` },
+      { "@type": "ListItem", "position": 10, "name": "Stationery", "item": `${SITE_URL}/category/stationery` },
+      { "@type": "ListItem", "position": 11, "name": "Samosas", "item": `${SITE_URL}/category/samosas` }
+    ]
+  };
+
   return (
     <html lang="en-KE">
       <head>
@@ -541,7 +912,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-        <link rel="preconnect" href="https://api.lando.co.ke" />
+        <link rel="preconnect" href="https://api.hypermarket.co.ke" />
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
         
         {/* Favicon & Icons */}
@@ -575,622 +946,78 @@ export default function RootLayout({
           id="schema-organization"
           type="application/ld+json"
           strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              "@id": `${SITE_URL}/#organization`,
-              "name": SITE_NAME,
-              "url": SITE_URL,
-              "logo": `${SITE_URL}/logo10.png`,
-              "image": `${SITE_URL}/og-image.jpg`,
-              "description": "Kenya's premier online supermarket offering fresh vegetables, pasture raised meat, kienyeji eggs, baby products, stationery, cleaning supplies, wooden utensils, samosas, handicrafts, and household essentials with express delivery in Nairobi.",
-              "address": {
-                "@type": "PostalAddress",
-                "addressLocality": "Nairobi",
-                "addressRegion": "Nairobi",
-                "addressCountry": "KE"
-              },
-              "contactPoint": [
-                {
-                  "@type": "ContactPoint",
-                  "telephone": BUSINESS_PHONE,
-                  "contactType": "customer service",
-                  "availableLanguage": ["English", "Swahili"],
-                  "hoursAvailable": {
-                    "@type": "OpeningHoursSpecification",
-                    "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                    "opens": "08:00",
-                    "closes": "20:00"
-                  }
-                },
-                {
-                  "@type": "ContactPoint",
-                  "telephone": BUSINESS_PHONE,
-                  "contactType": "sales",
-                  "availableLanguage": ["English", "Swahili"]
-                },
-                {
-                  "@type": "ContactPoint",
-                  "telephone": BUSINESS_WHATSAPP,
-                  "contactType": "whatsapp",
-                  "availableLanguage": ["English", "Swahili"]
-                }
-              ],
-              "sameAs": [
-                `https://www.facebook.com/${BUSINESS_FACEBOOK}`,
-                `https://www.instagram.com/${BUSINESS_INSTAGRAM}`,
-                `https://twitter.com/${BUSINESS_INSTAGRAM}`
-              ]
-            })
-          }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdOrganization) }}
         />
         
         <Script
           id="schema-grocery-store"
           type="application/ld+json"
           strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "GroceryStore",
-              "@id": `${SITE_URL}/#store`,
-              "name": "Lando Hypermarket",
-              "image": `${SITE_URL}/store-image.jpg`,
-              "url": SITE_URL,
-              "telephone": BUSINESS_PHONE,
-              "email": BUSINESS_EMAIL,
-              "priceRange": "KES 20 - KES 5000",
-              "menu": `${SITE_URL}/products`,
-              "acceptsReservations": "False",
-              "servesCuisine": "Groceries, Fresh Produce, Meat, Dairy, Traditional Foods",
-              "areaServed": {
-                "@type": "GeoCircle",
-                "geoMidpoint": {
-                  "@type": "GeoCoordinates",
-                  "latitude": -1.286389,
-                  "longitude": 36.817223
-                },
-                "geoRadius": "30000"
-              },
-              "openingHoursSpecification": [
-                {
-                  "@type": "OpeningHoursSpecification",
-                  "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-                  "opens": "08:00",
-                  "closes": "20:00"
-                },
-                {
-                  "@type": "OpeningHoursSpecification",
-                  "dayOfWeek": "Sunday",
-                  "opens": "09:00",
-                  "closes": "18:00"
-                }
-              ],
-              "hasOfferCatalog": {
-                "@type": "OfferCatalog",
-                "name": "Product Categories",
-                "itemListElement": [
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Fresh Vegetables",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Leafy Greens (Sukuma Wiki, Managu, Terere, Kunde)"},
-                      {"@type": "Product", "name": "Root Vegetables (Potatoes, Carrots, Onions, Arrow Roots)"},
-                      {"@type": "Product", "name": "Pre-Cut Vegetables"},
-                      {"@type": "Product", "name": "Traditional Vegetables"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Fresh Fruits",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Mangoes (Apple, Ngowe, Kent)"},
-                      {"@type": "Product", "name": "Tropical Fruits"},
-                      {"@type": "Product", "name": "Citrus Fruits"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Pasture Raised Meat",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Goat Meat"},
-                      {"@type": "Product", "name": "Sheep Meat (Mutton)"},
-                      {"@type": "Product", "name": "Rabbit Meat"},
-                      {"@type": "Product", "name": "Grass Fed Meat"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Poultry & Eggs",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Kienyeji Eggs (Pasture Raised)"},
-                      {"@type": "Product", "name": "Free Range Eggs"},
-                      {"@type": "Product", "name": "Fresh Chicken"},
-                      {"@type": "Product", "name": "Turkey & Duck"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Dairy Products",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Fresh Cow Milk"},
-                      {"@type": "Product", "name": "Goat Milk"},
-                      {"@type": "Product", "name": "Camel Milk"},
-                      {"@type": "Product", "name": "Yogurt & Mursik"},
-                      {"@type": "Product", "name": "Cheese & Butter"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Fish & Seafood",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Fresh Tilapia"},
-                      {"@type": "Product", "name": "Omena"},
-                      {"@type": "Product", "name": "Fish Fillets"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Cereals & Grains",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Maize Flour"},
-                      {"@type": "Product", "name": "Rice"},
-                      {"@type": "Product", "name": "Wheat Flour"},
-                      {"@type": "Product", "name": "Breakfast Cereals"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Legumes & Beans",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Beans (Various Types)"},
-                      {"@type": "Product", "name": "Lentils"},
-                      {"@type": "Product", "name": "Green Grams (Ndengu)"},
-                      {"@type": "Product", "name": "Peas"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Nuts, Seeds & Dried Fruits",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Groundnuts"},
-                      {"@type": "Product", "name": "Cashew Nuts"},
-                      {"@type": "Product", "name": "Macadamia"},
-                      {"@type": "Product", "name": "Pumpkin Seeds"},
-                      {"@type": "Product", "name": "Dates & Raisins"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Herbs, Spices & Seasonings",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Fresh Herbs"},
-                      {"@type": "Product", "name": "Masala Spices"},
-                      {"@type": "Product", "name": "Mixed Spices"},
-                      {"@type": "Product", "name": "Seasonings"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Baby Products",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Baby Diapers"},
-                      {"@type": "Product", "name": "Baby Formula"},
-                      {"@type": "Product", "name": "Baby Food"},
-                      {"@type": "Product", "name": "Baby Wipes"},
-                      {"@type": "Product", "name": "Baby Care Essentials"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Cleaning Supplies & Equipment",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Detergents"},
-                      {"@type": "Product", "name": "Disinfectants"},
-                      {"@type": "Product", "name": "Cleaning Tools"},
-                      {"@type": "Product", "name": "Professional Cleaning Supplies"},
-                      {"@type": "Product", "name": "Hygiene Products"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Handicrafts & Artisans",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Wooden Utensils"},
-                      {"@type": "Product", "name": "Eating & Cooking Utensils"},
-                      {"@type": "Product", "name": "Serving Ware"},
-                      {"@type": "Product", "name": "Traditional Crafts"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Stationery",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Office Supplies"},
-                      {"@type": "Product", "name": "School Supplies"},
-                      {"@type": "Product", "name": "Art Materials"},
-                      {"@type": "Product", "name": "Pens & Notebooks"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Samosas & Snacks",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Beef Samosas"},
-                      {"@type": "Product", "name": "Chicken Samosas"},
-                      {"@type": "Product", "name": "Vegetable Samosas"},
-                      {"@type": "Product", "name": "Fresh Pastries"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Beverages",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Fresh Juices"},
-                      {"@type": "Product", "name": "Soft Drinks"},
-                      {"@type": "Product", "name": "Drinking Water"},
-                      {"@type": "Product", "name": "Energy Drinks"}
-                    ]
-                  },
-                  {
-                    "@type": "OfferCatalog",
-                    "name": "Fresh Flowers & Plants",
-                    "itemListElement": [
-                      {"@type": "Product", "name": "Fresh Flowers"},
-                      {"@type": "Product", "name": "Decorative Plants"},
-                      {"@type": "Product", "name": "Bouquets"}
-                    ]
-                  }
-                ]
-              }
-            })
-          }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdGroceryStore) }}
         />
         
         <Script
           id="schema-website"
           type="application/ld+json"
           strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              "@id": `${SITE_URL}/#website`,
-              "url": SITE_URL,
-              "name": SITE_NAME,
-              "description": "Online supermarket in Nairobi offering fresh vegetables, pasture raised meat, kienyeji eggs, dairy, baby products, stationery, cleaning supplies, wooden utensils, samosas, handicrafts, and household essentials with express delivery.",
-              "publisher": {
-                "@id": `${SITE_URL}/#organization`
-              },
-              "potentialAction": {
-                "@type": "SearchAction",
-                "target": {
-                  "@type": "EntryPoint",
-                  "urlTemplate": `${SITE_URL}/search?q={search_term_string}`
-                },
-                "query-input": "required name=search_term_string"
-              }
-            })
-          }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebsite) }}
         />
         
         <Script
           id="schema-local-business"
           type="application/ld+json"
           strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "LocalBusiness",
-              "@id": `${SITE_URL}/#localbusiness`,
-              "name": "Lando Hypermarket",
-              "image": `${SITE_URL}/store-front.jpg`,
-              "url": SITE_URL,
-              "telephone": BUSINESS_PHONE,
-              "priceRange": "KES 20 - 5000",
-              "openingHours": "Mo-Sa 08:00-20:00, Su 09:00-18:00",
-              "address": {
-                "@type": "PostalAddress",
-                "addressLocality": "Nairobi",
-                "addressCountry": "KE"
-              },
-              "geo": {
-                "@type": "GeoCoordinates",
-                "latitude": -1.286389,
-                "longitude": 36.817223
-              },
-              "areaServed": "Nairobi, Kenya",
-              "makesOffer": [
-                {
-                  "@type": "Offer",
-                  "itemOffered": {
-                    "@type": "Service",
-                    "name": "Grocery Delivery",
-                    "description": "Express grocery delivery in 45-99 minutes"
-                  }
-                },
-                {
-                  "@type": "Offer",
-                  "itemOffered": {
-                    "@type": "Product",
-                    "name": "Fresh Vegetables",
-                    "description": "Locally sourced fresh vegetables including leafy greens and root vegetables"
-                  }
-                },
-                {
-                  "@type": "Offer",
-                  "itemOffered": {
-                    "@type": "Product",
-                    "name": "Pasture Raised Meat",
-                    "description": "Goat, sheep, and rabbit meat from grass-fed animals"
-                  }
-                },
-                {
-                  "@type": "Offer",
-                  "itemOffered": {
-                    "@type": "Product",
-                    "name": "Kienyeji Eggs",
-                    "description": "Fresh pasture raised eggs from free-range chickens"
-                  }
-                },
-                {
-                  "@type": "Offer",
-                  "itemOffered": {
-                    "@type": "Product",
-                    "name": "Fresh Fruits",
-                    "description": "Farm fresh fruits including mango varieties and tropical fruits"
-                  }
-                }
-              ]
-            })
-          }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdLocalBusiness) }}
         />
         
         <Script
           id="schema-breadcrumb"
           type="application/ld+json"
           strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "BreadcrumbList",
-              "itemListElement": [
-                {
-                  "@type": "ListItem",
-                  "position": 1,
-                  "name": "Home",
-                  "item": SITE_URL
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 2,
-                  "name": "Fresh Vegetables",
-                  "item": `${SITE_URL}/category/vegetables`
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 3,
-                  "name": "Pasture Raised Meat",
-                  "item": `${SITE_URL}/category/livestock-1`
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 4,
-                  "name": "Kienyeji Eggs",
-                  "item": `${SITE_URL}/category/egg`
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 5,
-                  "name": "Fresh Fruits",
-                  "item": `${SITE_URL}/category/fruits`
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 6,
-                  "name": "Dairy Products",
-                  "item": `${SITE_URL}/category/dairy-products`
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 7,
-                  "name": "Baby Products",
-                  "item": `${SITE_URL}/category/baby-products`
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 8,
-                  "name": "Cleaning Supplies",
-                  "item": `${SITE_URL}/category/cleaning-materials-equipment`
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 9,
-                  "name": "Handicrafts",
-                  "item": `${SITE_URL}/category/handicrafts-1`
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 10,
-                  "name": "Stationery",
-                  "item": `${SITE_URL}/category/stationery`
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 11,
-                  "name": "Samosas",
-                  "item": `${SITE_URL}/category/samosas`
-                }
-              ]
-            })
-          }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBreadcrumb) }}
         />
         
-        {/* Product Category Schema */}
+        {/* Google Analytics 4 - Replace G-XXXXXXXXXX with your actual GA4 ID */}
         <Script
-          id="schema-itemlist"
-          type="application/ld+json"
+          src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
           strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "ItemList",
-              "itemListElement": [
-                {
-                  "@type": "ListItem",
-                  "position": 1,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Fresh Vegetables",
-                    "description": "Fresh vegetables including leafy greens, root vegetables, and traditional varieties",
-                    "url": `${SITE_URL}/category/vegetables`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 2,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Pasture Raised Meat",
-                    "description": "Goat, sheep, and rabbit meat from grass-fed animals",
-                    "url": `${SITE_URL}/category/livestock-1`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 3,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Kienyeji Eggs",
-                    "description": "Fresh pasture raised eggs from free-range chickens",
-                    "url": `${SITE_URL}/category/egg`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 4,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Fresh Fruits",
-                    "description": "Farm fresh fruits including mangoes and tropical varieties",
-                    "url": `${SITE_URL}/category/fruits`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 5,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Dairy Products",
-                    "description": "Fresh cow milk, goat milk, camel milk, yogurt, and cheese",
-                    "url": `${SITE_URL}/category/dairy-products`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 6,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Fish & Seafood",
-                    "description": "Fresh tilapia, omena, and seafood",
-                    "url": `${SITE_URL}/category/fish-seafood`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 7,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Cereals & Grains",
-                    "description": "Maize flour, rice, wheat flour, and breakfast cereals",
-                    "url": `${SITE_URL}/category/grains-flour-1`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 8,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Legumes & Beans",
-                    "description": "Beans, lentils, green grams, and peas",
-                    "url": `${SITE_URL}/category/legumes-beans`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 9,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Herbs & Spices",
-                    "description": "Fresh herbs, masala spices, and seasonings",
-                    "url": `${SITE_URL}/category/herbs-spices`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 10,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Baby Products",
-                    "description": "Diapers, formula, baby food, and care essentials",
-                    "url": `${SITE_URL}/category/baby-products`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 11,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Cleaning Supplies",
-                    "description": "Detergents, disinfectants, cleaning tools, and equipment",
-                    "url": `${SITE_URL}/category/cleaning-materials-equipment`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 12,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Wooden Utensils",
-                    "description": "Handcrafted wooden eating and cooking utensils",
-                    "url": `${SITE_URL}/category/wooden-utensils`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 13,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Stationery",
-                    "description": "Office and school supplies, art materials",
-                    "url": `${SITE_URL}/category/stationery`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 14,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Samosas",
-                    "description": "Fresh beef, chicken, and vegetable samosas",
-                    "url": `${SITE_URL}/category/samosas`
-                  }
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 15,
-                  "item": {
-                    "@type": "Product",
-                    "name": "Fresh Flowers",
-                    "description": "Fresh flowers and decorative plants",
-                    "url": `${SITE_URL}/category/flowers-1`
-                  }
-                }
-              ]
-            })
-          }}
         />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-XXXXXXXXXX', {
+              'send_page_view': true,
+              'transport_type': 'beacon',
+              'anonymize_ip': true
+            });
+          `}
+        </Script>
+        
+        {/* Facebook Pixel - Replace YOUR_PIXEL_ID with your actual pixel ID */}
+        <Script id="facebook-pixel" strategy="afterInteractive">
+          {`
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', 'YOUR_PIXEL_ID');
+            fbq('track', 'PageView');
+          `}
+        </Script>
+        
+        {/* Structured data for products - Dynamic */}
+        <Script id="structured-data-products" strategy="afterInteractive">
+          {`
+            // This can be enhanced to dynamically pull product data
+            window.productData = window.productData || [];
+          `}
+        </Script>
       </head>
       <body className="font-sans antialiased">
         <QueryProvider>
@@ -1210,56 +1037,13 @@ export default function RootLayout({
                 success: {
                   duration: 3000,
                   style: {
-                    background: '#2546dbff',
+                    background: '#004E9A',
                   },
                 },
               }}
             />
           </AuthProvider>
         </QueryProvider>
-        
-        {/* Google Analytics 4 */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-XXXXXXXXXX', {
-              'send_page_view': true,
-              'transport_type': 'beacon',
-              'anonymize_ip': true
-            });
-          `}
-        </Script>
-        
-        {/* Facebook Pixel */}
-        <Script id="facebook-pixel" strategy="afterInteractive">
-          {`
-            !function(f,b,e,v,n,t,s)
-            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            s.parentNode.insertBefore(t,s)}(window, document,'script',
-            'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', 'YOUR_PIXEL_ID');
-            fbq('track', 'PageView');
-          `}
-        </Script>
-        
-        {/* Structured data for products - This will help with rich snippets */}
-        <Script id="structured-data-products" strategy="afterInteractive">
-          {`
-            // This can be enhanced to dynamically pull product data
-            // For now, it's a template
-            window.productData = window.productData || [];
-          `}
-        </Script>
       </body>
     </html>
   );
