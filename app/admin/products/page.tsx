@@ -446,7 +446,7 @@ export default function ProductsPage() {
           {/* Image Container */}
           <div className="relative h-48 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
             <img
-              src={getImageUrl(product.main_image || product.thumbnail || (product.gallery?.[0]))}
+              src={getImageUrl(product.main_image || product.thumbnail || (product.gallery?.[0]) || '')}
               alt={product.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={(e) => {
@@ -796,7 +796,7 @@ export default function ProductsPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <img
-                          src={getImageUrl(product.main_image || product.thumbnail)}
+                          src={getImageUrl(product.main_image || product.thumbnail || '')}
                           alt={product.name}
                           className="h-12 w-12 rounded-lg object-cover border"
                           onError={(e) => {
