@@ -989,7 +989,6 @@ export default function ProductsPage() {
                 onClose={() => setShowBulkUpload(false)}
               />
             </div>
-            
           </div>
         </div>
       )}
