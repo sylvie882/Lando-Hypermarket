@@ -1,11 +1,10 @@
-// app/admin/layout.tsx - UPDATED WITH BANNERS AND FAVICON
+// app/admin/layout.tsx - FIXED VERSION
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import Head from 'next/head'; // Import Head for managing head tags
 import { 
   LayoutDashboard, 
   Package, 
@@ -22,7 +21,7 @@ import {
   X,
   LogOut,
   Shield,
-  Image  // ADDED: Icon for Banners
+  Image
 } from 'lucide-react';
 
 interface User {
@@ -45,16 +44,7 @@ export default function AdminLayout({
   const pathname = usePathname();
   const router = useRouter();
 
-  // ⚠️ CRITICAL FIX: Don't show admin layout on login page
-  if (pathname === '/admin/login') {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        {children}
-      </div>
-    );
-  }
-
-  // Only run auth check for non-login pages
+  // ✅ MOVED: All hooks must be called before any conditional returns
   useEffect(() => {
     if (pathname !== '/admin/login') {
       checkAuth();
@@ -65,11 +55,9 @@ export default function AdminLayout({
 
   const checkAuth = async () => {
     try {
-      // Get auth data
       const token = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
 
-      // If no token, redirect to login
       if (!token) {
         router.push('/admin/login');
         return;
@@ -78,7 +66,6 @@ export default function AdminLayout({
       if (storedUser) {
         const userData = JSON.parse(storedUser);
         
-        // FIXED: Handle both boolean true and number 1 for is_admin
         const isAdmin = userData.is_admin === true || 
                         userData.is_admin === 1 || 
                         userData.role === 'admin' ||
@@ -89,7 +76,6 @@ export default function AdminLayout({
           return;
         }
         
-        // Ensure user has proper structure
         const normalizedUser = {
           ...userData,
           id: userData.id || 1,
@@ -102,8 +88,6 @@ export default function AdminLayout({
         
         setUser(normalizedUser);
       } else {
-        // If we have token but no user, create admin user
-        // (This happens when login succeeds but user isn't stored properly)
         const dummyUser = {
           id: 1,
           name: 'Admin User',
@@ -134,7 +118,7 @@ export default function AdminLayout({
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Products', href: '/admin/products', icon: Package },
     { name: 'Categories', href: '/admin/categories', icon: Tag },
-    { name: 'Banners', href: '/admin/banners', icon: Image }, // ADDED: Banners link
+    { name: 'Banners', href: '/admin/banners', icon: Image },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
     { name: 'Customers', href: '/admin/customers', icon: Users },
     { name: 'Deliveries', href: '/admin/deliveries', icon: Truck },
@@ -147,15 +131,33 @@ export default function AdminLayout({
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 
+  // ✅ MOVED: Favicon links to a separate component to avoid hook issues
+  const FaviconLinks = () => (
+    <>
+      <link rel="icon" href="/favicon.ico" sizes="any" />
+      <link rel="icon" href="/logo.jpeg" type="image/jpeg" sizes="any" />
+      <link rel="apple-touch-icon" href="/logo.jpeg" />
+      <link rel="manifest" href="/site.webmanifest" />
+    </>
+  );
+
+  // ✅ HANDLED: Check for login page after all hooks
+  if (pathname === '/admin/login') {
+    return (
+      <>
+        <FaviconLinks />
+        <div className="min-h-screen bg-gray-50">
+          {children}
+        </div>
+      </>
+    );
+  }
+
+  // Loading state
   if (loading) {
     return (
       <>
-        {/* Favicon links for different browsers */}
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/logo.jpeg" type="image/jpeg" sizes="any" />
-        <link rel="apple-touch-icon" href="/logo.jpeg" />
-        <link rel="manifest" href="/site.webmanifest" />
-        
+        <FaviconLinks />
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -166,16 +168,11 @@ export default function AdminLayout({
     );
   }
 
-  // Check if user data is loaded
+  // No user data
   if (!user) {
     return (
       <>
-        {/* Favicon links for different browsers */}
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/logo.jpeg" type="image/jpeg" sizes="any" />
-        <link rel="apple-touch-icon" href="/logo.jpeg" />
-        <link rel="manifest" href="/site.webmanifest" />
-        
+        <FaviconLinks />
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -186,7 +183,7 @@ export default function AdminLayout({
     );
   }
 
-  // FIXED: Handle both boolean true and number 1 for is_admin
+  // Check admin status
   const isAdmin = user.is_admin === true || 
                   user.is_admin === 1 || 
                   user.role === 'admin' ||
@@ -195,12 +192,7 @@ export default function AdminLayout({
   if (!isAdmin) {
     return (
       <>
-        {/* Favicon links for different browsers */}
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/logo.jpeg" type="image/jpeg" sizes="any" />
-        <link rel="apple-touch-icon" href="/logo.jpeg" />
-        <link rel="manifest" href="/site.webmanifest" />
-        
+        <FaviconLinks />
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center max-w-md">
             <Shield className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -218,14 +210,10 @@ export default function AdminLayout({
     );
   }
 
+  // Main layout render
   return (
     <>
-      {/* Favicon links for different browsers */}
-      <link rel="icon" href="/favicon.ico" sizes="any" />
-      <link rel="icon" href="/logo.jpeg" type="image/jpeg" sizes="any" />
-      <link rel="apple-touch-icon" href="/logo.jpeg" />
-      <link rel="manifest" href="/site.webmanifest" />
-      
+      <FaviconLinks />
       <div className="min-h-screen bg-gray-50">
         {/* Sidebar for mobile */}
         <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
