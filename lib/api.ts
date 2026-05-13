@@ -781,13 +781,16 @@ class ApiService {
     updateSettings: (data: any) => this.api.put('/notifications/settings', data),
   };
 
-  payments = {
-    getMethods: () => this.api.get('/payment/methods'),
-    createPaymentIntent: (data: any) => this.api.post('/payment/intent', data),
-    processPayment: (orderId: number, data: any) => 
-      this.api.post(`/orders/${orderId}/pay`, data),
-    getHistory: () => this.api.get('/payment/history'),
-  };
+  
+payments = {
+  getMethods: () => this.api.get('/payment/methods'),
+  createPaymentIntent: (data: any) => this.api.post('/payment/intent', data),
+  processPayment: (orderId: number, data: any) => 
+    this.api.post(`/orders/${orderId}/pay`, data),
+  // Remove or comment out getHistory since it doesn't exist
+  // getHistory: () => this.api.get('/payment/history'),
+};
+
 
   // Generic methods
   get = <T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => 

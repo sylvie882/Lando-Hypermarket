@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Smartphone, AlertCircle, Loader, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
-import { mpesaService } from '@/lib/mpesa';
+import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 interface PaymentMethodDetailsProps {
@@ -37,7 +37,7 @@ const PaymentMethodDetails: React.FC<PaymentMethodDetailsProps> = ({
     if (user?.phone && !paymentDetails.mpesa_phone) {
       onPaymentDetailsChange({ ...paymentDetails, mpesa_phone: user.phone });
     }
-  }, [user]);
+  }, [user, paymentDetails, onPaymentDetailsChange]);
 
   // ─── Phone helpers ────────────────────────────────────────────────────────
 
@@ -58,7 +58,7 @@ const PaymentMethodDetails: React.FC<PaymentMethodDetailsProps> = ({
 
   const toE164 = (phone: string): string => {
     let n = phone.replace(/\D/g, '');
-    if (n.startsWith('0'))  n = '254' + n.slice(1);
+    if (n.startsWith('0')) n = '254' + n.slice(1);
     if (n.startsWith('7') || n.startsWith('1')) n = '254' + n;
     if (n.length > 12) n = n.slice(0, 12);
     return n;
@@ -80,6 +80,7 @@ const PaymentMethodDetails: React.FC<PaymentMethodDetailsProps> = ({
       ...paymentDetails,
       mpesa_phone: sanitizePhone(e.target.value),
     });
+    if (errorMessage) setErrorMessage('');
   };
 
   const handleMpesaPayment = async () => {
@@ -90,20 +91,16 @@ const PaymentMethodDetails: React.FC<PaymentMethodDetailsProps> = ({
       toast.error('Please enter your M-Pesa phone number');
       return;
     }
+    
     if (!validatePhone(paymentDetails.mpesa_phone)) {
       setErrorMessage('Enter a valid Safaricom number (e.g. 0712 345 678)');
       toast.error('Invalid phone number');
       return;
     }
+    
     if (!orderId) {
-      setErrorMessage('Order ID is missing. Please try again.');
+      setErrorMessage('Order ID is missing. Please refresh and try again.');
       toast.error('Order ID is missing');
-      return;
-    }
-
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-      toast.error('Please login to continue');
       return;
     }
 
@@ -112,24 +109,27 @@ const PaymentMethodDetails: React.FC<PaymentMethodDetailsProps> = ({
 
     try {
       const phoneNumber = toE164(paymentDetails.mpesa_phone);
-
-      const result = await mpesaService.initiateSTKPush(
-        {
-          phoneNumber,
-          amount: totalAmount,
-          orderId,
-          tillNumber: '174379',
+      
+      // Correct API endpoint matching your backend
+      const response = await api.post(`/orders/${orderId}/pay`, {
+        payment_method: 'mpesa',
+        payment_details: {
+          phone_number: phoneNumber
         },
-        token,
-      );
+        amount: totalAmount
+      });
 
-      if (result.success) {
+      console.log('Payment response:', response.data);
+
+      if (response.data && response.data.checkout_request_id) {
         setPaymentStatus('success');
+        
         onPaymentDetailsChange({
           ...paymentDetails,
-          transaction_id:  result.transaction_id,
-          mpesa_response:  result.response_data,
-          phone_number:    phoneNumber,
+          transaction_id: response.data.payment?.transaction_id,
+          checkout_request_id: response.data.checkout_request_id,
+          mpesa_response: response.data,
+          phone_number: phoneNumber,
         });
 
         toast.success(
@@ -140,21 +140,45 @@ const PaymentMethodDetails: React.FC<PaymentMethodDetailsProps> = ({
           { duration: 10000 },
         );
 
-        if (onSubmit) setTimeout(() => onSubmit(), 3000);
+        // Call onSubmit after successful payment initiation
+        if (onSubmit) {
+          setTimeout(() => onSubmit(), 3000);
+        }
       } else {
-        setPaymentStatus('error');
-        setErrorMessage(result.message || 'M-Pesa payment failed');
-        toast.error(result.message || 'M-Pesa payment failed');
+        throw new Error(response.data?.message || 'Payment initiation failed');
       }
     } catch (error: any) {
+      console.error('M-Pesa payment error:', error);
       setPaymentStatus('error');
-      const msg = error.message || 'Failed to process M-Pesa payment';
-      setErrorMessage(msg);
-      toast.error(msg);
+      
+      const errorMsg = error.response?.data?.message || 
+                       error.response?.data?.error ||
+                       error.message || 
+                       'Failed to process M-Pesa payment';
+      
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
   };
+
+  // Don't render payment button if no orderId
+  if (!orderId) {
+    return (
+      <div className="p-6 border-2 border-yellow-200 rounded-xl bg-yellow-50">
+        <div className="flex items-center gap-3">
+          <AlertCircle className="text-yellow-600" size={24} />
+          <div>
+            <h3 className="font-semibold text-yellow-800">Order Not Ready</h3>
+            <p className="text-sm text-yellow-700 mt-1">
+              Please create your order first before making payment.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -195,16 +219,9 @@ const PaymentMethodDetails: React.FC<PaymentMethodDetailsProps> = ({
           <p className="text-xs text-gray-500 mt-1">Safaricom number — e.g. 0712 345 678</p>
         </div>
 
-        {/* Till number (read-only) */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Till Number</label>
-          <input
-            type="text"
-            value="174379"
-            disabled
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
-          />
-          <p className="text-xs text-gray-500 mt-1">Lando Hypermarket till number</p>
+        {/* Order ID reference */}
+        <div className="text-xs text-gray-400 border-t pt-2">
+          Order ID: #{orderId}
         </div>
 
         {/* Amount */}
@@ -212,7 +229,7 @@ const PaymentMethodDetails: React.FC<PaymentMethodDetailsProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Amount to pay:</span>
             <span className="text-2xl font-bold text-green-600">
-              KSh {totalAmount.toLocaleString()}
+              {currency === 'KES' ? 'KSh' : currency} {totalAmount.toLocaleString()}
             </span>
           </div>
         </div>
@@ -247,7 +264,7 @@ const PaymentMethodDetails: React.FC<PaymentMethodDetailsProps> = ({
           ) : (
             <>
               <Smartphone size={20} />
-              <span>Pay KSh {totalAmount.toLocaleString()} with M-Pesa</span>
+              <span>Pay {currency === 'KES' ? 'KSh' : currency} {totalAmount.toLocaleString()} with M-Pesa</span>
             </>
           )}
         </button>

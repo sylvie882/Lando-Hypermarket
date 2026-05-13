@@ -35,7 +35,7 @@ const CheckoutPage: React.FC = () => {
   const [cart, setCart] = useState<Cart | null>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
 
   // Order fields
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
@@ -52,7 +52,6 @@ const CheckoutPage: React.FC = () => {
     mpesa_phone: '',
     mpesa_till: '174379',
   });
-  const [processingPayment, setProcessingPayment] = useState(false);
 
   // New address form
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
@@ -92,7 +91,8 @@ const CheckoutPage: React.FC = () => {
 
       const defaultAddress = addressesRes.data.find((a: Address) => a.is_default);
       if (defaultAddress) setSelectedAddressId(defaultAddress.id);
-    } catch {
+    } catch (error) {
+      console.error('Fetch error:', error);
       toast.error('Failed to load checkout data');
     } finally {
       setIsLoading(false);
@@ -159,47 +159,80 @@ const CheckoutPage: React.FC = () => {
     toast.success('Promo code removed');
   };
 
-  // ─── Place order ──────────────────────────────────────────────────────────
+  // ─── Create Order FIRST ─────────────────────────────────────────────────
 
-  const handlePlaceOrder = async () => {
-    if (!selectedAddressId) { toast.error('Please select a delivery address'); return; }
+  const createOrder = async (): Promise<number | null> => {
+    if (!selectedAddressId) { 
+      toast.error('Please select a delivery address'); 
+      return null;
+    }
 
-    setIsSubmitting(true);
-    setProcessingPayment(true);
-
+    setIsCreatingOrder(true);
+    
     try {
       const orderData = {
-        address_id:      selectedAddressId,
-        payment_method:  'mpesa',
+        address_id: selectedAddressId,
+        payment_method: 'mpesa',
         shipping_method: selectedShippingMethod,
-        notes:           deliveryNotes,
-        carrier:         'Lando Delivery',
+        notes: deliveryNotes,
+        carrier: 'Lando Delivery',
         ...(deliverySlot && { delivery_slot: deliverySlot }),
         ...(appliedPromo?.code && { promo_code: appliedPromo.code }),
       };
 
       const orderResponse = await api.orders.create(orderData);
-      const orderId = orderResponse.data.order.id;
-      setCurrentOrderId(orderId);
-
-      toast.success('Order created! Please complete M-Pesa payment.');
-      // PaymentMethodDetails will handle the STK Push from here.
-      // Move to review step so the payment component is rendered with the real orderId.
-      setStep(3);
-    } catch (error: any) {
-      if (error.response?.data?.errors) {
-        const msgs = Object.values(error.response.data.errors).flat().join(', ');
-        toast.error(`Validation error: ${msgs}`);
-      } else {
-        toast.error(
-          error.response?.data?.message ||
-          error.response?.data?.error ||
-          'Failed to place order. Please try again.',
-        );
+      const orderId = orderResponse.data.order?.id || orderResponse.data.id;
+      
+      if (!orderId) {
+        throw new Error('No order ID returned from server');
       }
+      
+      setCurrentOrderId(orderId);
+      toast.success('Order created successfully!');
+      return orderId;
+    } catch (error: any) {
+      console.error('Order creation error:', error);
+      
+      const errorMsg = error.response?.data?.message || 
+                       error.response?.data?.error ||
+                       'Failed to create order. Please try again.';
+      
+      toast.error(errorMsg);
+      return null;
     } finally {
-      setIsSubmitting(false);
-      setProcessingPayment(false);
+      setIsCreatingOrder(false);
+    }
+  };
+
+  // ─── Navigation handlers ─────────────────────────────────────────────────
+
+  const handleContinueToPayment = () => {
+    if (!selectedAddressId) {
+      toast.error('Please select a delivery address');
+      return;
+    }
+    setStep(2);
+  };
+
+  const handleProceedToPayment = async () => {
+    if (!paymentDetails.mpesa_phone) {
+      toast.error('Please enter your M-Pesa phone number');
+      return;
+    }
+
+    const orderId = await createOrder();
+    
+    if (orderId) {
+      setStep(3);
+    }
+  };
+
+  const handlePaymentComplete = () => {
+    if (currentOrderId) {
+      router.push(`/orders/${currentOrderId}`);
+    } else {
+      toast.error('Order ID not found');
+      router.push('/orders');
     }
   };
 
@@ -257,10 +290,8 @@ const CheckoutPage: React.FC = () => {
   const steps = [
     { number: 1, title: 'Address', icon: <Truck size={20} /> },
     { number: 2, title: 'Payment', icon: <Smartphone size={20} /> },
-    { number: 3, title: 'Review',  icon: <Check size={20} /> },
+    { number: 3, title: 'Pay', icon: <Lock size={20} /> },
   ];
-
-  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -518,7 +549,7 @@ const CheckoutPage: React.FC = () => {
 
                 <div className="mt-8 flex justify-end">
                   <button
-                    onClick={() => setStep(2)}
+                    onClick={handleContinueToPayment}
                     disabled={!selectedAddressId}
                     className="px-8 py-4 bg-orange-500 text-white rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg transition-all shadow-lg hover:shadow-xl"
                   >
@@ -528,13 +559,13 @@ const CheckoutPage: React.FC = () => {
               </div>
             )}
 
-            {/* STEP 2 — Payment (M-Pesa) */}
+            {/* STEP 2 — Payment Method (Collect phone number only) */}
             {step === 2 && (
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h2 className="text-2xl font-bold mb-2">Payment Method</h2>
                 <p className="text-gray-500 mb-6">We accept M-Pesa for all orders.</p>
 
-                {/* Single M-Pesa tile */}
+                {/* M-Pesa tile */}
                 <div className="p-6 border-2 border-green-500 bg-green-50 rounded-xl mb-6">
                   <div className="flex items-center">
                     <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
@@ -548,204 +579,94 @@ const CheckoutPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* M-Pesa details form */}
-                <PaymentMethodDetails
-                  methodId="mpesa"
-                  paymentDetails={paymentDetails}
-                  onPaymentDetailsChange={setPaymentDetails}
-                  totalAmount={total}
-                  currency="KES"
-                  userCountry={user?.country}
-                  onSubmit={() => setStep(3)}
-                  orderId={currentOrderId ?? undefined}
-                />
+                {/* Phone input only - NO PaymentMethodDetails here */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      M-Pesa Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        value={paymentDetails.mpesa_phone || ''}
+                        onChange={(e) => {
+                          const numeric = e.target.value.replace(/\D/g, '');
+                          setPaymentDetails({ ...paymentDetails, mpesa_phone: numeric.slice(0, 12) });
+                        }}
+                        placeholder="0712 345 678"
+                        className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                      />
+                      <Smartphone className="absolute left-3 top-3.5 text-gray-400" size={20} />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Safaricom number — e.g. 0712 345 678</p>
+                  </div>
+
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-700">
+                      Your order will be created and you'll complete payment in the next step.
+                    </p>
+                  </div>
+                </div>
 
                 <div className="mt-8 flex justify-between">
                   <button onClick={() => setStep(1)} className="px-6 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-medium">
                     ← Back
                   </button>
                   <button
-                    onClick={() => setStep(3)}
-                    disabled={!paymentDetails.mpesa_phone}
-                    className="px-8 py-4 bg-orange-500 text-white rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg transition-all shadow-lg hover:shadow-xl"
+                    onClick={handleProceedToPayment}
+                    disabled={!paymentDetails.mpesa_phone || isCreatingOrder}
+                    className="px-8 py-4 bg-orange-500 text-white rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg"
                   >
-                    Review Order →
+                    {isCreatingOrder ? (
+                      <span className="flex items-center">
+                        <LoadingSpinner size="sm" />&nbsp;Creating Order...
+                      </span>
+                    ) : (
+                      'Proceed to Payment →'
+                    )}
                   </button>
                 </div>
               </div>
             )}
 
-            {/* STEP 3 — Review */}
-            {step === 3 && (
+            {/* STEP 3 — Payment with valid orderId */}
+            {step === 3 && currentOrderId && (
               <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="text-2xl font-bold mb-6">Review Your Order</h2>
-
+                <h2 className="text-2xl font-bold mb-6">Complete Payment</h2>
+                
                 <div className="space-y-6">
-                  {/* Address */}
-                  <div>
-                    <h3 className="font-bold text-lg mb-4">Delivery Address</h3>
-                    {addresses.find(a => a.id === selectedAddressId) && (() => {
-                      const addr = addresses.find(a => a.id === selectedAddressId)!;
-                      return (
-                        <div className="p-6 border-2 border-gray-200 rounded-xl">
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-2">
-                              <p className="font-bold text-lg">{addr.label}</p>
-                              <p className="font-medium text-gray-700">{addr.contact_name}</p>
-                              <p className="text-gray-600">{addr.address_line_1}</p>
-                              {addr.address_line_2 && <p className="text-gray-600">{addr.address_line_2}</p>}
-                              <p className="text-gray-600">{addr.city}, {addr.state} {addr.postal_code}</p>
-                              <p className="text-gray-600">{addr.country}</p>
-                              <p className="text-gray-700 font-medium">📱 {addr.contact_phone}</p>
-                            </div>
-                            <button onClick={() => setStep(1)} className="text-orange-500 hover:text-orange-600 font-medium">Change</button>
-                          </div>
-                        </div>
-                      );
-                    })()}
+                  {/* Order summary preview */}
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <h3 className="font-semibold mb-2">Order #{currentOrderId}</h3>
+                    <p className="text-sm text-gray-600">Total amount: {formatKSH(total)}</p>
                   </div>
 
-                  {/* Payment */}
-                  <div>
-                    <h3 className="font-bold text-lg mb-4">Payment Method</h3>
-                    <div className="p-6 border-2 border-gray-200 rounded-xl">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <Smartphone size={24} className="text-green-600" />
-                          <div className="ml-3">
-                            <p className="font-bold text-lg">M-Pesa</p>
-                            <p className="text-gray-600">Pay via M-Pesa mobile money</p>
-                          </div>
-                        </div>
-                        <button onClick={() => setStep(2)} className="text-orange-500 hover:text-orange-600 font-medium">Change</button>
-                      </div>
-                      {paymentDetails.mpesa_phone && (
-                        <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                          <p className="text-sm text-green-800">
-                            <span className="font-semibold">M-Pesa Phone:</span> {paymentDetails.mpesa_phone}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Shipping */}
-                  <div>
-                    <h3 className="font-bold text-lg mb-4">Shipping Method</h3>
-                    <div className="p-6 border-2 border-gray-200 rounded-xl">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-lg">{shippingDetails.name}</p>
-                          <p className="text-gray-600">{shippingDetails.days}</p>
-                          <p className="text-sm text-green-600 font-medium">🎉 Free shipping on all orders!</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-lg text-green-600">FREE</p>
-                          <button onClick={() => setStep(1)} className="text-sm text-orange-500 hover:text-orange-600 font-medium">Change</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Items */}
-                  <div>
-                    <h3 className="font-bold text-lg mb-4">Order Items</h3>
-                    <div className="border-2 border-gray-200 rounded-xl divide-y">
-                      {cart.items.map((item) => {
-                        const itemPrice = typeof item.price === 'number' ? item.price : parseFloat(item.price);
-                        return (
-                          <div key={item.id} className="p-6 flex items-center justify-between hover:bg-gray-50">
-                            <div className="flex-1">
-                              <p className="font-bold text-lg">{item.product?.name || 'Product'}</p>
-                              <p className="text-gray-600">{item.quantity} × {formatKSH(itemPrice)}</p>
-                            </div>
-                            <p className="font-bold text-lg">{formatKSH(item.quantity * itemPrice)}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {deliveryNotes && (
-                    <div>
-                      <h3 className="font-bold text-lg mb-2">Delivery Instructions</h3>
-                      <div className="p-4 bg-gray-50 rounded-lg border">
-                        <p className="text-gray-700">{deliveryNotes}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Promo code */}
-                  <div className="mt-8">
-                    <h3 className="font-bold text-lg mb-4">Promo Code</h3>
-                    {!appliedPromo ? (
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={promoCode}
-                          onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                          placeholder="Enter promo code"
-                          className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                        />
-                        <button onClick={handleApplyPromo} className="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium">
-                          Apply
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <Tag size={20} className="mr-2 text-green-600" />
-                            <div>
-                              <p className="font-bold text-green-800">{appliedPromo.code} applied!</p>
-                              {appliedPromo.name && <p className="text-sm text-green-600">{appliedPromo.name}</p>}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <span className="font-bold text-lg text-green-800">-{formatKSH(appliedDiscount)}</span>
-                            <button onClick={removePromoCode} className="text-sm text-red-600 hover:text-red-700 font-medium">Remove</button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* M-Pesa STK push (shown after order created) */}
-                  {currentOrderId && (
-                    <div className="mt-4">
-                      <h3 className="font-bold text-lg mb-4">Complete M-Pesa Payment</h3>
-                      <PaymentMethodDetails
-                        methodId="mpesa"
-                        paymentDetails={paymentDetails}
-                        onPaymentDetailsChange={setPaymentDetails}
-                        totalAmount={total}
-                        currency="KES"
-                        userCountry={user?.country}
-                        orderId={currentOrderId}
-                        onSubmit={() => router.push(`/orders/${currentOrderId}`)}
-                      />
-                    </div>
-                  )}
+                  {/* Payment Method Details - NOW with valid orderId */}
+                  <PaymentMethodDetails
+                    methodId="mpesa"
+                    paymentDetails={paymentDetails}
+                    onPaymentDetailsChange={setPaymentDetails}
+                    totalAmount={total}
+                    currency="KES"
+                    userCountry={user?.country}
+                    orderId={currentOrderId}
+                    onSubmit={handlePaymentComplete}
+                  />
                 </div>
 
-                {/* Navigation */}
-                <div className="mt-8 flex justify-between">
+                <div className="mt-6 flex justify-between">
                   <button onClick={() => setStep(2)} className="px-6 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-medium">
                     ← Back
                   </button>
-                  {!currentOrderId && (
-                    <button
-                      onClick={handlePlaceOrder}
-                      disabled={isSubmitting || !selectedAddressId || processingPayment}
-                      className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg transition-all shadow-lg hover:shadow-xl flex items-center"
-                    >
-                      <Lock size={20} className="mr-2" />
-                      {isSubmitting || processingPayment
-                        ? <span className="flex items-center"><LoadingSpinner size="sm" />&nbsp;Placing Order…</span>
-                        : 'Place Order & Pay with M-Pesa'}
-                    </button>
-                  )}
                 </div>
+              </div>
+            )}
+
+            {/* Loading state while order is being created */}
+            {step === 3 && !currentOrderId && (
+              <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+                <LoadingSpinner size="lg" />
+                <p className="mt-4 text-gray-600">Preparing your order...</p>
               </div>
             )}
           </div>
