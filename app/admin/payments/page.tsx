@@ -1,4 +1,3 @@
-// app/admin/payments/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -13,10 +12,13 @@ interface Payment {
   status: string;
   transaction_id: string;
   created_at: string;
+  provider_reference?: string;
+  error_message?: string;
   order?: {
     order_number: string;
     user: {
       name: string;
+      email: string;
     };
   };
 }
@@ -37,12 +39,38 @@ export default function PaymentsPage() {
   const fetchPayments = async () => {
     try {
       setLoading(true);
-      // This would be an admin endpoint for payments
-      // For now, we'll use the regular payment history
-      const response = await api.payments.getHistory();
-      setPayments(response.data);
+      // Use the admin endpoint for payments
+      const response = await api.admin.getPayments({ params: filters });
+      setPayments(response.data.data || response.data);
     } catch (error) {
       console.error('Failed to fetch payments:', error);
+      // Fallback: try to get from orders if admin endpoint fails
+      try {
+        const ordersResponse = await api.orders.getAll({ per_page: 50 });
+        const orders = ordersResponse.data.data || ordersResponse.data;
+        // Extract payments from orders
+        const extractedPayments: Payment[] = [];
+        orders.forEach((order: any) => {
+          if (order.payment) {
+            extractedPayments.push({
+              id: order.payment.id,
+              order_id: order.id,
+              payment_method: order.payment.method || 'mpesa',
+              amount: parseFloat(order.payment.amount || order.total),
+              status: order.payment.status || order.payment_status,
+              transaction_id: order.payment.transaction_id || `ORD-${order.order_number}`,
+              created_at: order.payment.created_at || order.created_at,
+              order: {
+                order_number: order.order_number,
+                user: order.user || { name: 'Unknown', email: '' }
+              }
+            });
+          }
+        });
+        setPayments(extractedPayments);
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
     } finally {
       setLoading(false);
     }
@@ -55,38 +83,58 @@ export default function PaymentsPage() {
       await api.admin.refundPayment(paymentId, {});
       alert('Refund processed successfully');
       fetchPayments();
-    } catch (error) {
-      alert('Failed to process refund');
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to process refund');
     }
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'paid': return <CheckCircle className="text-green-500" />;
-      case 'pending': return <Clock className="text-yellow-500" />;
-      case 'failed': return <XCircle className="text-red-500" />;
-      case 'refunded': return <RefreshCw className="text-blue-500" />;
-      default: return <CreditCard className="text-gray-500" />;
+    switch (status?.toLowerCase()) {
+      case 'paid':
+      case 'completed':
+        return <CheckCircle className="text-green-500" />;
+      case 'pending':
+        return <Clock className="text-yellow-500" />;
+      case 'failed':
+        return <XCircle className="text-red-500" />;
+      case 'refunded':
+        return <RefreshCw className="text-blue-500" />;
+      default:
+        return <CreditCard className="text-gray-500" />;
     }
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'failed': return 'bg-red-100 text-red-800';
-      case 'refunded': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+    switch (status?.toLowerCase()) {
+      case 'paid':
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'failed':
+        return 'bg-red-100 text-red-800';
+      case 'refunded':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getPaymentMethodIcon = (method: string) => {
-    switch (method.toLowerCase()) {
-      case 'card': return <CreditCard size={16} />;
-      case 'mpesa': return <DollarSign size={16} />;
-      case 'paypal': return <CreditCard size={16} />;
-      default: return <CreditCard size={16} />;
+    switch (method?.toLowerCase()) {
+      case 'card':
+        return <CreditCard size={16} />;
+      case 'mpesa':
+        return <DollarSign size={16} />;
+      case 'paypal':
+        return <CreditCard size={16} />;
+      default:
+        return <CreditCard size={16} />;
     }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return `KSh ${amount.toLocaleString()}`;
   };
 
   return (
@@ -121,7 +169,7 @@ export default function PaymentsPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Status</option>
-              <option value="paid">Paid</option>
+              <option value="completed">Paid</option>
               <option value="pending">Pending</option>
               <option value="failed">Failed</option>
               <option value="refunded">Refunded</option>
@@ -136,10 +184,9 @@ export default function PaymentsPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Methods</option>
-              <option value="card">Credit Card</option>
               <option value="mpesa">M-Pesa</option>
+              <option value="card">Credit Card</option>
               <option value="paypal">PayPal</option>
-              <option value="cash">Cash on Delivery</option>
             </select>
           </div>
 
@@ -181,35 +228,41 @@ export default function PaymentsPage() {
                   <tr key={payment.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-gray-900">{payment.transaction_id}</div>
+                      {payment.provider_reference && (
+                        <div className="text-xs text-gray-400">Ref: {payment.provider_reference}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-gray-900">
-                        Order #{payment.order?.order_number || payment.order_id}
+                        #{payment.order?.order_number || payment.order_id}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-gray-900">
                         {payment.order?.user?.name || 'Unknown'}
                       </div>
+                      {payment.order?.user?.email && (
+                        <div className="text-xs text-gray-500">{payment.order.user.email}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         {getPaymentMethodIcon(payment.payment_method)}
-                        <span className="ml-2 text-sm text-gray-900">
-                          {payment.payment_method.charAt(0).toUpperCase() + payment.payment_method.slice(1)}
+                        <span className="ml-2 text-sm text-gray-900 capitalize">
+                          {payment.payment_method || 'M-Pesa'}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-gray-900">
-                        ${payment.amount.toFixed(2)}
+                        {formatCurrency(payment.amount)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         {getStatusIcon(payment.status)}
                         <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(payment.status)}`}>
-                          {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                          {payment.status?.charAt(0).toUpperCase() + payment.status?.slice(1) || 'Pending'}
                         </span>
                       </div>
                     </td>
@@ -218,7 +271,7 @@ export default function PaymentsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex space-x-2">
-                        {payment.status === 'paid' && (
+                        {(payment.status === 'completed' || payment.status === 'paid') && (
                           <button
                             onClick={() => handleRefund(payment.id)}
                             className="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200"
@@ -235,7 +288,9 @@ export default function PaymentsPage() {
             
             {payments.length === 0 && (
               <div className="py-12 text-center">
+                <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500">No payments found</p>
+                <p className="text-sm text-gray-400 mt-1">Try adjusting your filters</p>
               </div>
             )}
           </div>
