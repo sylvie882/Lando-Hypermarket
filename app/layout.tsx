@@ -31,412 +31,77 @@ export const metadata: Metadata = {
   },
   description: 'Shop Lando Hypermarket for fresh farm produce: pasture raised meat (goat, sheep, rabbit), kienyeji eggs, fresh vegetables, tropical fruits, dairy products, baby essentials, stationery, cleaning supplies, wooden utensils, samosas, and traditional handicrafts. Everything you need and love. Amazing products, quickly delivered in 99 minutes at every day prices. Free delivery Nairobi. Order now!',
   keywords: [
-    // ============================================
-    // FRESH PRODUCE CATEGORIES
-    // ============================================
-    
-    // Fresh Vegetables (Category ID: 46, 62)
-    'fresh vegetables Nairobi',
-    'organic vegetables Kenya',
-    'traditional vegetables online',
-    'leafy greens delivery',
-    'fresh vegetables delivery',
-    'farm fresh vegetables',
-    'vegetable delivery Nairobi',
-    'green groceries online',
-    
-    // Leafy Greens (Category ID: 54)
-    'sukuma wiki delivery',
-    'managu online',
-    'terere vegetables',
-    'kunde leaves',
-    'cassava leaves',
-    'saget delivery',
-    'pumpkin leaves',
-    'osuga vegetable',
-    'mrenda Kenya',
-    'spinach delivery',
-    'kale Nairobi',
-    'cabbage online',
-    
-    // Root Vegetables (Category ID: 53)
-    'root vegetables Nairobi',
-    'potatoes delivery',
-    'carrots online',
-    'onions delivery',
-    'garlic Kenya',
-    'ginger online',
-    'arrow roots delivery',
-    'sweet potatoes Nairobi',
-    'cassava fresh',
-    'yams Kenya',
-    
-    // Pre-Cut Vegetables (Category ID: 40)
-    'chopped vegetables delivery',
-    'pre-cut vegetables Nairobi',
-    'prepared vegetables online',
-    'ready to cook vegetables',
-    'mixed vegetables chopped',
-    
-    // Fresh Fruits (Category ID: 27, 45)
-    'fresh fruits Nairobi',
-    'tropical fruits Kenya',
-    'mangoes delivery',
-    'oranges online',
-    'bananas delivery',
-    'avocados Nairobi',
-    'passion fruit Kenya',
-    'pineapple fresh',
-    'watermelon delivery',
-    
-    // Tropical Fruits (Category ID: 55)
-    'exotic fruits Kenya',
-    'local fruits Nairobi',
-    'tree tomatoes',
-    'loquats',
-    'soursop',
-    
-    // Mango Varieties (Category ID: 27)
-    'apple mangoes',
-    'ngowe mangoes',
-    'kent mangoes',
-    'fresh mango delivery',
-    
-    // ============================================
-    // MEAT & ANIMAL PRODUCTS
-    // ============================================
-    
-    // Pasture Raised Meat (Category ID: 31)
-    'pasture raised meat Kenya',
-    'goat meat Nairobi',
-    'sheep meat delivery',
-    'rabbit meat Kenya',
-    'grass fed meat',
-    'organic meat Nairobi',
-    'fresh goat meat',
-    'mutton delivery',
-    'rabbit meat online',
-    
-    // Meat & Animal Products (Category ID: 48)
-    'fresh meat delivery',
-    'animal products Kenya',
-    'farm fresh meat',
-    'quality meat Nairobi',
-    
-    // Poultry & Eggs (Category ID: 57)
-    'fresh chicken delivery',
-    'turkey meat Nairobi',
-    'duck meat Kenya',
-    'whole chicken',
-    'chicken parts',
-    'poultry products',
-    
-    // Pasture Raised Eggs (Kienyeji) (Category ID: 71)
-    'kienyeji eggs Nairobi',
-    'pasture raised eggs',
-    'free range eggs Kenya',
-    'brown eggs delivery',
-    'farm fresh eggs',
-    'eggs kienyeji near me',
-    'organic eggs Nairobi',
-    'traditional eggs',
-    'village eggs',
-    
-    // ============================================
-    // FISH & SEAFOOD (Category ID: 32, 52)
-    // ============================================
-    
-    'fresh fish delivery Nairobi',
-    'tilapia online',
-    'omena delivery',
-    'seafood Kenya',
-    'freshwater fish',
-    'fried fish',
-    'fish fillets',
-    
-    // ============================================
-    // DAIRY PRODUCTS
-    // ============================================
-    
-    // Dairy Products (Category ID: 56)
-    'fresh milk delivery',
-    'yogurt Nairobi',
-    'cheese Kenya',
-    'butter delivery',
-    'fermented milk',
-    'mursik online',
-    'fresh cream',
-    
-    // Milk Products (Category ID: 66, 67, 68, 69)
-    'cow milk delivery',
-    'fresh cow milk',
-    'goat milk Nairobi',
-    'camel milk Kenya',
-    'raw milk delivery',
-    'pasteurized milk',
-    'premium milk',
-    
-    // ============================================
-    // CEREALS, GRAINS & LEGUMES
-    // ============================================
-    
-    // Cereals & Grains (Category ID: 34)
-    'cereals Kenya',
-    'grains online',
-    'flour delivery Nairobi',
-    'breakfast cereals',
-    
-    // Grains & Flours (Category ID: 50)
-    'maize flour',
-    'wheat flour',
-    'rice delivery',
-    'cooking flour',
-    'baking supplies',
-    
-    // Legumes & Beans (Category ID: 47)
-    'beans Kenya',
-    'lentils online',
-    'green grams',
-    'ndengu delivery',
-    'peas Nairobi',
-    'legumes online',
-    'kidney beans',
-    'black beans',
-    
-    // ============================================
-    // NUTS, SEEDS & DRIED FRUITS (Category ID: 49)
-    // ============================================
-    
-    'nuts Kenya',
-    'seeds online',
-    'dried fruits Nairobi',
-    'groundnuts delivery',
-    'cashew nuts',
-    'macadamia Kenya',
-    'pumpkin seeds',
-    'sunflower seeds',
-    'raisins online',
-    'dates delivery',
-    
-    // ============================================
-    // HERBS, SPICES & SEASONINGS
-    // ============================================
-    
-    // Herbs & Spices (Category ID: 51)
-    'fresh herbs Nairobi',
-    'spices Kenya',
-    'coriander delivery',
-    'mint leaves',
-    'rosemary fresh',
-    'thyme online',
-    'bay leaves',
-    'curry powder',
-    'turmeric fresh',
-    
-    // Masala Spices (Category ID: 58)
-    'masala online',
-    'garam masala',
-    'spice mix Kenya',
-    'traditional spices',
-    
-    // Mixed Spices (Category ID: 59)
-    'mixed spices Nairobi',
-    'all purpose seasoning',
-    'blended spices',
-    
-    // Seasonings (Category ID: 60)
-    'seasoning Kenya',
-    'salt online',
-    'pepper delivery',
-    'seasoning mixes',
-    
-    // ============================================
-    // BABY PRODUCTS (Category ID: 70)
-    // ============================================
-    
-    'baby products Kenya',
-    'baby diapers delivery',
-    'baby formula Nairobi',
-    'baby food online',
-    'baby wipes Kenya',
-    'baby care essentials',
-    'newborn items',
-    'baby lotion',
-    'baby shampoo',
-    'feeding bottles',
-    'baby accessories',
-    
-    // ============================================
-    // HOUSEHOLD & CLEANING
-    // ============================================
-    
-    // Cleaning Supplies & Equipment (Category ID: 73)
-    'cleaning supplies Nairobi',
-    'professional cleaning products',
-    'detergent delivery',
-    'cleaning equipment Kenya',
-    'hygiene products',
-    'disinfectants online',
-    'floor cleaner',
-    'glass cleaner',
-    'cleaning tools',
-    'mops and brooms',
-    'cleaning chemicals',
-    'commercial cleaning supplies',
-    
-    // ============================================
-    // HANDICRAFTS & ARTISANS (Category ID: 42)
-    // ============================================
-    
-    'handicrafts Kenya',
-    'traditional crafts',
-    'kenyan artisans',
-    'traditional utensils',
-    'african crafts',
-    'decorative items',
-    'cultural items',
-    'handmade Kenya',
-    'local crafts',
-    
-    // Wooden Utensils (Category ID: 63, 64, 65)
-    'wooden utensils Kenya',
-    'wooden spoons',
-    'cooking utensils wooden',
-    'eating utensils',
-    'serving ware Kenya',
-    'wooden bowls',
-    'wooden plates',
-    'traditional wooden items',
-    'hand carved wood',
-    'sustainable kitchenware',
-    
-    // ============================================
-    // STATIONERY (Category ID: 72)
-    // ============================================
-    
-    'stationery Kenya',
-    'office supplies Nairobi',
-    'school supplies',
-    'pens online',
-    'exercise books',
-    'printing paper',
-    'envelopes delivery',
-    'art supplies',
-    'craft materials',
-    'notebooks',
-    'folders and files',
-    
-    // ============================================
-    // BEVERAGES (Category ID: 39)
-    // ============================================
-    
-    'beverages Kenya',
-    'juices delivery Nairobi',
-    'soft drinks online',
-    'water delivery',
-    'energy drinks',
-    'fresh juice',
-    'traditional drinks',
-    'healthy beverages',
-    
-    // ============================================
-    // SNACKS & READY TO EAT
-    // ============================================
-    
-    // Samosas (Category ID: 74)
-    'samosas Nairobi',
-    'fresh samosas delivery',
-    'beef samosas',
-    'chicken samosas',
-    'vegetable samosas',
-    'kenyan snacks',
-    'pastries online',
-    'ready to eat snacks',
-    
-    // ============================================
-    // FRESH FLOWERS & PLANTS (Category ID: 43)
-    // ============================================
-    
-    'fresh flowers Nairobi',
-    'flower delivery Kenya',
-    'decorative plants',
-    'bouquets online',
-    'indoor plants',
-    'garden plants',
-    
-    // ============================================
-    // LOCATION-BASED SEARCHES
-    // ============================================
-    
-    'supermarket in Nairobi',
-    'grocery delivery Westlands',
-    'shop online Kilimani',
-    'groceries Lavington',
-    'delivery Kileleshwa',
-    'supermarket Karen',
-    'online shopping Langata',
-    'grocery store Parklands',
-    'food delivery Nairobi CBD',
-    'groceries South B',
-    'supermarket South C',
-    'delivery Buruburu',
-    'online grocery Donholm',
-    'shop Umoja',
-    'delivery Eastlands',
-    
-    // ============================================
-    // SERVICE KEYWORDS
-    // ============================================
-    
-    'same day delivery Nairobi',
-    'express grocery delivery',
-    'free delivery Nairobi',
-    'cash on delivery Kenya',
-    'M-Pesa payment online',
-    'order groceries online',
-    'home delivery Kenya',
-    '24 hour delivery Nairobi',
-    'grocery app Kenya',
-    
-    // ============================================
-    // GENERAL GROCERY TERMS
-    // ============================================
-    
-    'online supermarket Kenya',
-    'grocery delivery Nairobi',
-    'buy food online Kenya',
-    'shop for groceries',
-    'daily essentials',
-    'household items',
-    'kitchen essentials',
-    'pantry staples',
-    'bulk groceries',
-    
-    // ============================================
-    // KENYAN MARKET TERMS
-    // ============================================
-    
-    'mboga online',
-    'nyama delivery',
-    'maharagwe online',
-    'unga delivery',
-    'mafuta ya kupikia',
-    'samli',
-    'bidii products',
-    'kienyeji chicken',
-    'nyama ya mbuzi',
-    'nyama ya kondoo',
-    'samaki fresh',
-    'mayai kienyeji'
+    'fresh vegetables Nairobi', 'organic vegetables Kenya', 'traditional vegetables online',
+    'leafy greens delivery', 'fresh vegetables delivery', 'farm fresh vegetables',
+    'vegetable delivery Nairobi', 'green groceries online', 'sukuma wiki delivery',
+    'managu online', 'terere vegetables', 'kunde leaves', 'cassava leaves', 'saget delivery',
+    'pumpkin leaves', 'osuga vegetable', 'mrenda Kenya', 'spinach delivery', 'kale Nairobi',
+    'cabbage online', 'root vegetables Nairobi', 'potatoes delivery', 'carrots online',
+    'onions delivery', 'garlic Kenya', 'ginger online', 'arrow roots delivery',
+    'sweet potatoes Nairobi', 'cassava fresh', 'yams Kenya', 'chopped vegetables delivery',
+    'pre-cut vegetables Nairobi', 'prepared vegetables online', 'ready to cook vegetables',
+    'mixed vegetables chopped', 'fresh fruits Nairobi', 'tropical fruits Kenya',
+    'mangoes delivery', 'oranges online', 'bananas delivery', 'avocados Nairobi',
+    'passion fruit Kenya', 'pineapple fresh', 'watermelon delivery', 'exotic fruits Kenya',
+    'local fruits Nairobi', 'tree tomatoes', 'loquats', 'soursop', 'apple mangoes',
+    'ngowe mangoes', 'kent mangoes', 'fresh mango delivery', 'pasture raised meat Kenya',
+    'goat meat Nairobi', 'sheep meat delivery', 'rabbit meat Kenya', 'grass fed meat',
+    'organic meat Nairobi', 'fresh goat meat', 'mutton delivery', 'rabbit meat online',
+    'fresh meat delivery', 'animal products Kenya', 'farm fresh meat', 'quality meat Nairobi',
+    'fresh chicken delivery', 'turkey meat Nairobi', 'duck meat Kenya', 'whole chicken',
+    'chicken parts', 'poultry products', 'kienyeji eggs Nairobi', 'pasture raised eggs',
+    'free range eggs Kenya', 'brown eggs delivery', 'farm fresh eggs', 'eggs kienyeji near me',
+    'organic eggs Nairobi', 'traditional eggs', 'village eggs', 'fresh fish delivery Nairobi',
+    'tilapia online', 'omena delivery', 'seafood Kenya', 'freshwater fish', 'fried fish',
+    'fish fillets', 'fresh milk delivery', 'yogurt Nairobi', 'cheese Kenya', 'butter delivery',
+    'fermented milk', 'mursik online', 'fresh cream', 'cow milk delivery', 'fresh cow milk',
+    'goat milk Nairobi', 'camel milk Kenya', 'raw milk delivery', 'pasteurized milk',
+    'premium milk', 'cereals Kenya', 'grains online', 'flour delivery Nairobi',
+    'breakfast cereals', 'maize flour', 'wheat flour', 'rice delivery', 'cooking flour',
+    'baking supplies', 'beans Kenya', 'lentils online', 'green grams', 'ndengu delivery',
+    'peas Nairobi', 'legumes online', 'kidney beans', 'black beans', 'nuts Kenya',
+    'seeds online', 'dried fruits Nairobi', 'groundnuts delivery', 'cashew nuts',
+    'macadamia Kenya', 'pumpkin seeds', 'sunflower seeds', 'raisins online', 'dates delivery',
+    'fresh herbs Nairobi', 'spices Kenya', 'coriander delivery', 'mint leaves',
+    'rosemary fresh', 'thyme online', 'bay leaves', 'curry powder', 'turmeric fresh',
+    'masala online', 'garam masala', 'spice mix Kenya', 'traditional spices',
+    'mixed spices Nairobi', 'all purpose seasoning', 'blended spices', 'seasoning Kenya',
+    'salt online', 'pepper delivery', 'seasoning mixes', 'baby products Kenya',
+    'baby diapers delivery', 'baby formula Nairobi', 'baby food online', 'baby wipes Kenya',
+    'baby care essentials', 'newborn items', 'baby lotion', 'baby shampoo', 'feeding bottles',
+    'baby accessories', 'cleaning supplies Nairobi', 'professional cleaning products',
+    'detergent delivery', 'cleaning equipment Kenya', 'hygiene products', 'disinfectants online',
+    'floor cleaner', 'glass cleaner', 'cleaning tools', 'mops and brooms', 'cleaning chemicals',
+    'commercial cleaning supplies', 'handicrafts Kenya', 'traditional crafts', 'kenyan artisans',
+    'traditional utensils', 'african crafts', 'decorative items', 'cultural items',
+    'handmade Kenya', 'local crafts', 'wooden utensils Kenya', 'wooden spoons',
+    'cooking utensils wooden', 'eating utensils', 'serving ware Kenya', 'wooden bowls',
+    'wooden plates', 'traditional wooden items', 'hand carved wood', 'sustainable kitchenware',
+    'stationery Kenya', 'office supplies Nairobi', 'school supplies', 'pens online',
+    'exercise books', 'printing paper', 'envelopes delivery', 'art supplies', 'craft materials',
+    'notebooks', 'folders and files', 'beverages Kenya', 'juices delivery Nairobi',
+    'soft drinks online', 'water delivery', 'energy drinks', 'fresh juice', 'traditional drinks',
+    'healthy beverages', 'samosas Nairobi', 'fresh samosas delivery', 'beef samosas',
+    'chicken samosas', 'vegetable samosas', 'kenyan snacks', 'pastries online',
+    'ready to eat snacks', 'fresh flowers Nairobi', 'flower delivery Kenya',
+    'decorative plants', 'bouquets online', 'indoor plants', 'garden plants',
+    'supermarket in Nairobi', 'grocery delivery Westlands', 'shop online Kilimani',
+    'groceries Lavington', 'delivery Kileleshwa', 'supermarket Karen', 'online shopping Langata',
+    'grocery store Parklands', 'food delivery Nairobi CBD', 'groceries South B',
+    'supermarket South C', 'delivery Buruburu', 'online grocery Donholm', 'shop Umoja',
+    'delivery Eastlands', 'same day delivery Nairobi', 'express grocery delivery',
+    'free delivery Nairobi', 'cash on delivery Kenya', 'M-Pesa payment online',
+    'order groceries online', 'home delivery Kenya', '24 hour delivery Nairobi',
+    'grocery app Kenya', 'online supermarket Kenya', 'grocery delivery Nairobi',
+    'buy food online Kenya', 'shop for groceries', 'daily essentials', 'household items',
+    'kitchen essentials', 'pantry staples', 'bulk groceries', 'mboga online', 'nyama delivery',
+    'maharagwe online', 'unga delivery', 'mafuta ya kupikia', 'samli', 'bidii products',
+    'kienyeji chicken', 'nyama ya mbuzi', 'nyama ya kondoo', 'samaki fresh', 'mayai kienyeji'
   ],
   authors: [{ name: 'Lando Hypermarket', url: 'https://hypermarket.co.ke/about' }],
   creator: 'Lando Hypermarket',
   publisher: 'Lando Hypermarket',
-  formatDetection: {
-    email: true,
-    address: true,
-    telephone: true,
-  },
+  formatDetection: { email: true, address: true, telephone: true },
   robots: {
     index: true,
     follow: true,
@@ -483,9 +148,7 @@ export const metadata: Metadata = {
   classification: 'Online Supermarket',
   verification: {
     google: '5696457e6978be87',
-    other: {
-      'facebook-domain-verification': ['your-fb-verification-code'],
-    },
+    other: { 'facebook-domain-verification': ['your-fb-verification-code'] },
   },
   other: {
     'geo.region': 'KE-30',
@@ -511,438 +174,182 @@ export const metadata: Metadata = {
     'category:stationery': 'Office Supplies, School Supplies, Art Materials',
     'category:snacks': 'Samosas, Pastries, Ready to Eat',
     'category:beverages': 'Juices, Drinks, Water',
-    'category:flowers': 'Fresh Flowers, Plants'
+    'category:flowers': 'Fresh Flowers, Plants',
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+
+  // ─── JSON-LD objects ──────────────────────────────────────────────────────
+
   const jsonLdOrganization = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "@id": `${SITE_URL}/#organization`,
-    "name": SITE_NAME,
-    "url": SITE_URL,
-    "logo": `${SITE_URL}/logo10.png`,
-    "image": `${SITE_URL}/og-image.jpg`,
-    "description": "Kenya's premier online supermarket offering fresh vegetables, pasture raised meat, kienyeji eggs, baby products, stationery, cleaning supplies, wooden utensils, samosas, handicrafts, and household essentials with express delivery in Nairobi.",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "Nairobi",
-      "addressRegion": "Nairobi",
-      "addressCountry": "KE"
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    '@id': `${SITE_URL}/#organization`,
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo10.png`,
+    image: `${SITE_URL}/og-image.jpg`,
+    description: "Kenya's premier online supermarket offering fresh vegetables, pasture raised meat, kienyeji eggs, baby products, stationery, cleaning supplies, wooden utensils, samosas, handicrafts, and household essentials with express delivery in Nairobi.",
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Nairobi',
+      addressRegion: 'Nairobi',
+      addressCountry: 'KE',
     },
-    "contactPoint": [
+    contactPoint: [
       {
-        "@type": "ContactPoint",
-        "telephone": BUSINESS_PHONE,
-        "contactType": "customer service",
-        "availableLanguage": ["English", "Swahili"],
-        "hoursAvailable": {
-          "@type": "OpeningHoursSpecification",
-          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-          "opens": "08:00",
-          "closes": "20:00"
-        }
+        '@type': 'ContactPoint',
+        telephone: BUSINESS_PHONE,
+        contactType: 'customer service',
+        availableLanguage: ['English', 'Swahili'],
+        hoursAvailable: {
+          '@type': 'OpeningHoursSpecification',
+          dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+          opens: '08:00',
+          closes: '20:00',
+        },
       },
-      {
-        "@type": "ContactPoint",
-        "telephone": BUSINESS_PHONE,
-        "contactType": "sales",
-        "availableLanguage": ["English", "Swahili"]
-      },
-      {
-        "@type": "ContactPoint",
-        "telephone": BUSINESS_WHATSAPP,
-        "contactType": "whatsapp",
-        "availableLanguage": ["English", "Swahili"]
-      }
+      { '@type': 'ContactPoint', telephone: BUSINESS_PHONE,    contactType: 'sales',     availableLanguage: ['English','Swahili'] },
+      { '@type': 'ContactPoint', telephone: BUSINESS_WHATSAPP, contactType: 'whatsapp',  availableLanguage: ['English','Swahili'] },
     ],
-    "sameAs": [
+    sameAs: [
       `https://www.facebook.com/${BUSINESS_FACEBOOK}`,
       `https://www.instagram.com/${BUSINESS_INSTAGRAM}`,
-      `https://twitter.com/${BUSINESS_INSTAGRAM}`
-    ]
+      `https://twitter.com/${BUSINESS_INSTAGRAM}`,
+    ],
   };
 
   const jsonLdGroceryStore = {
-    "@context": "https://schema.org",
-    "@type": "GroceryStore",
-    "@id": `${SITE_URL}/#store`,
-    "name": "Lando Hypermarket",
-    "image": `${SITE_URL}/store-image.jpg`,
-    "url": SITE_URL,
-    "telephone": BUSINESS_PHONE,
-    "email": BUSINESS_EMAIL,
-    "priceRange": "KES 20 - KES 5000",
-    "menu": `${SITE_URL}/products`,
-    "acceptsReservations": "False",
-    "servesCuisine": "Groceries, Fresh Produce, Meat, Dairy, Traditional Foods",
-    "areaServed": {
-      "@type": "GeoCircle",
-      "geoMidpoint": {
-        "@type": "GeoCoordinates",
-        "latitude": -1.286389,
-        "longitude": 36.817223
-      },
-      "geoRadius": "30000"
+    '@context': 'https://schema.org',
+    '@type': 'GroceryStore',
+    '@id': `${SITE_URL}/#store`,
+    name: 'Lando Hypermarket',
+    image: `${SITE_URL}/store-image.jpg`,
+    url: SITE_URL,
+    telephone: BUSINESS_PHONE,
+    email: BUSINESS_EMAIL,
+    priceRange: 'KES 20 - KES 5000',
+    menu: `${SITE_URL}/products`,
+    acceptsReservations: 'False',
+    servesCuisine: 'Groceries, Fresh Produce, Meat, Dairy, Traditional Foods',
+    areaServed: {
+      '@type': 'GeoCircle',
+      geoMidpoint: { '@type': 'GeoCoordinates', latitude: -1.286389, longitude: 36.817223 },
+      geoRadius: '30000',
     },
-    "openingHoursSpecification": [
-      {
-        "@type": "OpeningHoursSpecification",
-        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-        "opens": "08:00",
-        "closes": "20:00"
-      },
-      {
-        "@type": "OpeningHoursSpecification",
-        "dayOfWeek": "Sunday",
-        "opens": "09:00",
-        "closes": "18:00"
-      }
+    openingHoursSpecification: [
+      { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], opens: '08:00', closes: '20:00' },
+      { '@type': 'OpeningHoursSpecification', dayOfWeek: 'Sunday', opens: '09:00', closes: '18:00' },
     ],
-    "hasOfferCatalog": {
-      "@type": "OfferCatalog",
-      "name": "Product Categories",
-      "itemListElement": [
-        {
-          "@type": "OfferCatalog",
-          "name": "Fresh Vegetables",
-          "url": `${SITE_URL}/categories/fresh-vegetables`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Leafy Greens (Sukuma Wiki, Managu, Terere, Kunde)", "url": `${SITE_URL}/categories/leafy-greens` },
-            { "@type": "Product", "name": "Root Vegetables (Potatoes, Carrots, Onions, Arrow Roots)", "url": `${SITE_URL}/categories/root-vegetables` },
-            { "@type": "Product", "name": "Pre-Cut Vegetables" },
-            { "@type": "Product", "name": "Traditional Vegetables" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Fresh Fruits",
-          "url": `${SITE_URL}/categories/fresh-fruits`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Mangoes (Apple, Ngowe, Kent)" },
-            { "@type": "Product", "name": "Tropical Fruits", "url": `${SITE_URL}/categories/tropical-fruits` },
-            { "@type": "Product", "name": "Citrus Fruits" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Pasture Raised Meat (Goat, Sheep, Rabbit)",
-          "url": `${SITE_URL}/categories/livestock-1`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Goat Meat" },
-            { "@type": "Product", "name": "Sheep Meat (Mutton)" },
-            { "@type": "Product", "name": "Rabbit Meat" },
-            { "@type": "Product", "name": "Grass Fed Meat" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Poultry",
-          "url": `${SITE_URL}/categories/poultry`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Kienyeji Eggs (Pasture Raised)", "url": `${SITE_URL}/categories/egg` },
-            { "@type": "Product", "name": "Free Range Eggs" },
-            { "@type": "Product", "name": "Fresh Chicken" },
-            { "@type": "Product", "name": "Turkey & Duck" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Kienyeji Eggs",
-          "url": `${SITE_URL}/categories/egg`
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Dairy Products",
-          "url": `${SITE_URL}/categories/dairy-products`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Fresh Cow Milk", "url": `${SITE_URL}/categories/cow-milk` },
-            { "@type": "Product", "name": "Goat Milk", "url": `${SITE_URL}/categories/goat-milk` },
-            { "@type": "Product", "name": "Camel Milk", "url": `${SITE_URL}/categories/camel-milk` },
-            { "@type": "Product", "name": "Yogurt & Mursik" },
-            { "@type": "Product", "name": "Cheese & Butter" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Fish & Seafood",
-          "url": `${SITE_URL}/categories/fish-seafood`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Fresh Tilapia" },
-            { "@type": "Product", "name": "Omena" },
-            { "@type": "Product", "name": "Fish Fillets" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Cereals & Organic Flour",
-          "url": `${SITE_URL}/categories/grains-flours`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Maize Flour" },
-            { "@type": "Product", "name": "Rice" },
-            { "@type": "Product", "name": "Wheat Flour" },
-            { "@type": "Product", "name": "Breakfast Cereals" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Legumes & Beans",
-          "url": `${SITE_URL}/categories/legumes-beans`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Beans (Various Types)" },
-            { "@type": "Product", "name": "Lentils" },
-            { "@type": "Product", "name": "Green Grams (Ndengu)" },
-            { "@type": "Product", "name": "Peas" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Nuts, Seeds & Dried Fruits",
-          "url": `${SITE_URL}/categories/nuts-seeds`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Groundnuts" },
-            { "@type": "Product", "name": "Cashew Nuts" },
-            { "@type": "Product", "name": "Macadamia" },
-            { "@type": "Product", "name": "Pumpkin Seeds" },
-            { "@type": "Product", "name": "Dates & Raisins" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Herbs, Spices & Seasonings",
-          "url": `${SITE_URL}/categories/herbs-spices`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Fresh Herbs" },
-            { "@type": "Product", "name": "Masala Spices", "url": `${SITE_URL}/categories/masala-species` },
-            { "@type": "Product", "name": "Mixed Spices", "url": `${SITE_URL}/categories/mixed-spices` },
-            { "@type": "Product", "name": "Seasonings", "url": `${SITE_URL}/categories/salad-seasoning` }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Baby Products",
-          "url": `${SITE_URL}/categories/baby-products`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Baby Diapers" },
-            { "@type": "Product", "name": "Baby Formula" },
-            { "@type": "Product", "name": "Baby Food" },
-            { "@type": "Product", "name": "Baby Wipes" },
-            { "@type": "Product", "name": "Baby Care Essentials" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Cleaning Supplies & Equipment",
-          "url": `${SITE_URL}/categories/cleaning-materials-equipment`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Detergents" },
-            { "@type": "Product", "name": "Disinfectants" },
-            { "@type": "Product", "name": "Cleaning Tools" },
-            { "@type": "Product", "name": "Professional Cleaning Supplies" },
-            { "@type": "Product", "name": "Hygiene Products" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Handicrafts & Artisans",
-          "url": `${SITE_URL}/categories/handicrafts-1`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Wooden Utensils", "url": `${SITE_URL}/categories/wooden-utensils` },
-            { "@type": "Product", "name": "Eating & Cooking Utensils", "url": `${SITE_URL}/categories/eating-utensils` },
-            { "@type": "Product", "name": "Serving Ware", "url": `${SITE_URL}/categories/serving-wire` },
-            { "@type": "Product", "name": "Traditional Crafts" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Stationery",
-          "url": `${SITE_URL}/categories/stationery`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Office Supplies" },
-            { "@type": "Product", "name": "School Supplies" },
-            { "@type": "Product", "name": "Art Materials" },
-            { "@type": "Product", "name": "Pens & Notebooks" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Samosas & Snacks",
-          "url": `${SITE_URL}/categories/samosas`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Beef Samosas" },
-            { "@type": "Product", "name": "Chicken Samosas" },
-            { "@type": "Product", "name": "Vegetable Samosas" },
-            { "@type": "Product", "name": "Fresh Pastries" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Beverages",
-          "url": `${SITE_URL}/categories/beverages-1`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Fresh Juices" },
-            { "@type": "Product", "name": "Soft Drinks" },
-            { "@type": "Product", "name": "Drinking Water" },
-            { "@type": "Product", "name": "Energy Drinks" }
-          ]
-        },
-        {
-          "@type": "OfferCatalog",
-          "name": "Fresh Flowers & Plants",
-          "url": `${SITE_URL}/categories/flowers-1`,
-          "itemListElement": [
-            { "@type": "Product", "name": "Fresh Flowers" },
-            { "@type": "Product", "name": "Decorative Plants" },
-            { "@type": "Product", "name": "Bouquets" }
-          ]
-        }
-      ]
-    }
+    hasOfferCatalog: {
+      '@type': 'OfferCatalog',
+      name: 'Product Categories',
+      itemListElement: [
+        { '@type': 'OfferCatalog', name: 'Fresh Vegetables',             url: `${SITE_URL}/categories/fresh-vegetables` },
+        { '@type': 'OfferCatalog', name: 'Fresh Fruits',                 url: `${SITE_URL}/categories/fresh-fruits` },
+        { '@type': 'OfferCatalog', name: 'Pasture Raised Meat',          url: `${SITE_URL}/categories/livestock-1` },
+        { '@type': 'OfferCatalog', name: 'Kienyeji Eggs',                url: `${SITE_URL}/categories/egg` },
+        { '@type': 'OfferCatalog', name: 'Dairy Products',               url: `${SITE_URL}/categories/dairy-products` },
+        { '@type': 'OfferCatalog', name: 'Fish & Seafood',               url: `${SITE_URL}/categories/fish-seafood` },
+        { '@type': 'OfferCatalog', name: 'Cereals & Organic Flour',      url: `${SITE_URL}/categories/grains-flours` },
+        { '@type': 'OfferCatalog', name: 'Legumes & Beans',              url: `${SITE_URL}/categories/legumes-beans` },
+        { '@type': 'OfferCatalog', name: 'Nuts, Seeds & Dried Fruits',   url: `${SITE_URL}/categories/nuts-seeds` },
+        { '@type': 'OfferCatalog', name: 'Herbs, Spices & Seasonings',   url: `${SITE_URL}/categories/herbs-spices` },
+        { '@type': 'OfferCatalog', name: 'Baby Products',                url: `${SITE_URL}/categories/baby-products` },
+        { '@type': 'OfferCatalog', name: 'Cleaning Supplies',            url: `${SITE_URL}/categories/cleaning-materials-equipment` },
+        { '@type': 'OfferCatalog', name: 'Handicrafts & Artisans',       url: `${SITE_URL}/categories/handicrafts-1` },
+        { '@type': 'OfferCatalog', name: 'Wooden Utensils',              url: `${SITE_URL}/categories/wooden-utensils` },
+        { '@type': 'OfferCatalog', name: 'Stationery',                   url: `${SITE_URL}/categories/stationery` },
+        { '@type': 'OfferCatalog', name: 'Samosas & Snacks',             url: `${SITE_URL}/categories/samosas` },
+        { '@type': 'OfferCatalog', name: 'Beverages',                    url: `${SITE_URL}/categories/beverages-1` },
+        { '@type': 'OfferCatalog', name: 'Fresh Flowers & Plants',       url: `${SITE_URL}/categories/flowers-1` },
+      ],
+    },
   };
 
   const jsonLdWebsite = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "@id": `${SITE_URL}/#website`,
-    "url": SITE_URL,
-    "name": SITE_NAME,
-    "description": "Online supermarket in Nairobi offering fresh vegetables, pasture raised meat, kienyeji eggs, dairy, baby products, stationery, cleaning supplies, wooden utensils, samosas, handicrafts, and household essentials with express delivery.",
-    "publisher": {
-      "@id": `${SITE_URL}/#organization`
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${SITE_URL}/#website`,
+    url: SITE_URL,
+    name: SITE_NAME,
+    description: 'Online supermarket in Nairobi offering fresh vegetables, pasture raised meat, kienyeji eggs, dairy, baby products, stationery, cleaning supplies, wooden utensils, samosas, handicrafts, and household essentials with express delivery.',
+    publisher: { '@id': `${SITE_URL}/#organization` },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/search?q={search_term_string}` },
+      'query-input': 'required name=search_term_string',
     },
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": {
-        "@type": "EntryPoint",
-        "urlTemplate": `${SITE_URL}/search?q={search_term_string}`
-      },
-      "query-input": "required name=search_term_string"
-    }
   };
 
   const jsonLdLocalBusiness = {
-    "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    "@id": `${SITE_URL}/#localbusiness`,
-    "name": "Lando Hypermarket",
-    "image": `${SITE_URL}/store-front.jpg`,
-    "url": SITE_URL,
-    "telephone": BUSINESS_PHONE,
-    "priceRange": "KES 20 - 5000",
-    "openingHours": "Mo-Sa 08:00-20:00, Su 09:00-18:00",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "Nairobi",
-      "addressCountry": "KE"
-    },
-    "geo": {
-      "@type": "GeoCoordinates",
-      "latitude": -1.286389,
-      "longitude": 36.817223
-    },
-    "areaServed": "Nairobi, Kenya",
-    "makesOffer": [
-      {
-        "@type": "Offer",
-        "itemOffered": {
-          "@type": "Service",
-          "name": "Grocery Delivery",
-          "description": "Express grocery delivery in 45-99 minutes"
-        }
-      },
-      {
-        "@type": "Offer",
-        "itemOffered": {
-          "@type": "Product",
-          "name": "Fresh Vegetables",
-          "description": "Locally sourced fresh vegetables including leafy greens and root vegetables"
-        }
-      },
-      {
-        "@type": "Offer",
-        "itemOffered": {
-          "@type": "Product",
-          "name": "Pasture Raised Meat",
-          "description": "Goat, sheep, and rabbit meat from grass-fed animals"
-        }
-      },
-      {
-        "@type": "Offer",
-        "itemOffered": {
-          "@type": "Product",
-          "name": "Kienyeji Eggs",
-          "description": "Fresh pasture raised eggs from free-range chickens"
-        }
-      },
-      {
-        "@type": "Offer",
-        "itemOffered": {
-          "@type": "Product",
-          "name": "Fresh Fruits",
-          "description": "Farm fresh fruits including mango varieties and tropical fruits"
-        }
-      }
-    ]
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    '@id': `${SITE_URL}/#localbusiness`,
+    name: 'Lando Hypermarket',
+    image: `${SITE_URL}/store-front.jpg`,
+    url: SITE_URL,
+    telephone: BUSINESS_PHONE,
+    priceRange: 'KES 20 - 5000',
+    openingHours: 'Mo-Sa 08:00-20:00, Su 09:00-18:00',
+    address: { '@type': 'PostalAddress', addressLocality: 'Nairobi', addressCountry: 'KE' },
+    geo: { '@type': 'GeoCoordinates', latitude: -1.286389, longitude: 36.817223 },
+    areaServed: 'Nairobi, Kenya',
+    makesOffer: [
+      { '@type': 'Offer', itemOffered: { '@type': 'Service',  name: 'Grocery Delivery',    description: 'Express grocery delivery in 45-99 minutes' } },
+      { '@type': 'Offer', itemOffered: { '@type': 'Product',  name: 'Fresh Vegetables',    description: 'Locally sourced fresh vegetables including leafy greens and root vegetables' } },
+      { '@type': 'Offer', itemOffered: { '@type': 'Product',  name: 'Pasture Raised Meat', description: 'Goat, sheep, and rabbit meat from grass-fed animals' } },
+      { '@type': 'Offer', itemOffered: { '@type': 'Product',  name: 'Kienyeji Eggs',       description: 'Fresh pasture raised eggs from free-range chickens' } },
+      { '@type': 'Offer', itemOffered: { '@type': 'Product',  name: 'Fresh Fruits',        description: 'Farm fresh fruits including mango varieties and tropical fruits' } },
+    ],
   };
 
-  // FIX: All slugs now match your real API (from /categories/ not /category/)
+  // FIX: All slugs now match your real API (/categories/ not /category/)
   const jsonLdBreadcrumb = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1,  "name": "Home",                    "item": SITE_URL },
-      { "@type": "ListItem", "position": 2,  "name": "Fresh Vegetables",         "item": `${SITE_URL}/categories/fresh-vegetables` },
-      { "@type": "ListItem", "position": 3,  "name": "Pasture Raised Meat",      "item": `${SITE_URL}/categories/livestock-1` },
-      { "@type": "ListItem", "position": 4,  "name": "Kienyeji Eggs",            "item": `${SITE_URL}/categories/egg` },
-      { "@type": "ListItem", "position": 5,  "name": "Fresh Fruits",             "item": `${SITE_URL}/categories/fresh-fruits` },
-      { "@type": "ListItem", "position": 6,  "name": "Dairy Products",           "item": `${SITE_URL}/categories/dairy-products` },
-      { "@type": "ListItem", "position": 7,  "name": "Baby Products",            "item": `${SITE_URL}/categories/baby-products` },
-      { "@type": "ListItem", "position": 8,  "name": "Cleaning Supplies",        "item": `${SITE_URL}/categories/cleaning-materials-equipment` },
-      { "@type": "ListItem", "position": 9,  "name": "Handicrafts & Artisans",   "item": `${SITE_URL}/categories/handicrafts-1` },
-      { "@type": "ListItem", "position": 10, "name": "Wooden Utensils",          "item": `${SITE_URL}/categories/wooden-utensils` },
-      { "@type": "ListItem", "position": 11, "name": "Stationery",               "item": `${SITE_URL}/categories/stationery` },
-      { "@type": "ListItem", "position": 12, "name": "Samosas",                  "item": `${SITE_URL}/categories/samosas` },
-      { "@type": "ListItem", "position": 13, "name": "Spices & Herbs",           "item": `${SITE_URL}/categories/herbs-spices` },
-      { "@type": "ListItem", "position": 14, "name": "Cereals & Organic Flour",  "item": `${SITE_URL}/categories/grains-flours` },
-      { "@type": "ListItem", "position": 15, "name": "Fresh Flowers & Plants",   "item": `${SITE_URL}/categories/flowers-1` }
-    ]
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1,  name: 'Home',                   item: SITE_URL },
+      { '@type': 'ListItem', position: 2,  name: 'Fresh Vegetables',        item: `${SITE_URL}/categories/fresh-vegetables` },
+      { '@type': 'ListItem', position: 3,  name: 'Pasture Raised Meat',     item: `${SITE_URL}/categories/livestock-1` },
+      { '@type': 'ListItem', position: 4,  name: 'Kienyeji Eggs',           item: `${SITE_URL}/categories/egg` },
+      { '@type': 'ListItem', position: 5,  name: 'Fresh Fruits',            item: `${SITE_URL}/categories/fresh-fruits` },
+      { '@type': 'ListItem', position: 6,  name: 'Dairy Products',          item: `${SITE_URL}/categories/dairy-products` },
+      { '@type': 'ListItem', position: 7,  name: 'Baby Products',           item: `${SITE_URL}/categories/baby-products` },
+      { '@type': 'ListItem', position: 8,  name: 'Cleaning Supplies',       item: `${SITE_URL}/categories/cleaning-materials-equipment` },
+      { '@type': 'ListItem', position: 9,  name: 'Handicrafts & Artisans',  item: `${SITE_URL}/categories/handicrafts-1` },
+      { '@type': 'ListItem', position: 10, name: 'Wooden Utensils',         item: `${SITE_URL}/categories/wooden-utensils` },
+      { '@type': 'ListItem', position: 11, name: 'Stationery',              item: `${SITE_URL}/categories/stationery` },
+      { '@type': 'ListItem', position: 12, name: 'Samosas',                 item: `${SITE_URL}/categories/samosas` },
+      { '@type': 'ListItem', position: 13, name: 'Spices & Herbs',          item: `${SITE_URL}/categories/herbs-spices` },
+      { '@type': 'ListItem', position: 14, name: 'Cereals & Organic Flour', item: `${SITE_URL}/categories/grains-flours` },
+      { '@type': 'ListItem', position: 15, name: 'Fresh Flowers & Plants',  item: `${SITE_URL}/categories/flowers-1` },
+    ],
   };
 
   return (
     <html lang="en-KE">
       <head>
-        {/* Essential Meta Tags */}
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        
-        {/* Google Site Verification */}
+
         <meta name="google-site-verification" content="5696457e6978be87" />
-        
-        {/* Enhanced Description with Rich Snippets */}
+
         <meta name="description" content="✓ Fresh Vegetables • Pasture Raised Meat (Goat, Sheep, Rabbit) • Kienyeji Eggs • Fresh Fruits • Dairy • Baby Products • Stationery • Cleaning Supplies • Wooden Utensils • Samosas • Handicrafts. Free delivery Nairobi over KES 2000. Order online now!" />
-        
-        {/* Canonical URL */}
+
         <link rel="canonical" href={SITE_URL} />
-        
-        {/* hreflang tags */}
         <link rel="alternate" href={SITE_URL} hrefLang="en-KE" />
         <link rel="alternate" href={`${SITE_URL}/sw`} hrefLang="sw-KE" />
         <link rel="alternate" href={SITE_URL} hrefLang="x-default" />
-        
-        {/* Preconnect for Performance */}
+
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
         <link rel="preconnect" href="https://api.hypermarket.co.ke" />
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
-        
-        {/* Favicon & Icons */}
+
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -950,25 +357,26 @@ export default function RootLayout({
         <link rel="manifest" href="/site.webmanifest" />
         <meta name="msapplication-TileColor" content="#004E9A" />
         <meta name="theme-color" content="#004E9A" />
-        
-        {/* Mobile App Meta Tags */}
+
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Hypermarket" />
         <meta name="format-detection" content="telephone=yes" />
         <meta name="mobile-web-app-capable" content="yes" />
-        
-        {/* Category & Service Tags */}
+
         <meta name="service-type" content="Grocery Delivery" />
         <meta name="delivery-areas" content="Nairobi, Kiambu, Westlands, Kilimani, Lavington, Kileleshwa, Karen, Langata, Parklands, South B, South C, Buruburu, Donholm, Umoja, Eastlands" />
         <meta name="payment-methods" content="M-Pesa, Cash on Delivery, Credit Card, Debit Card" />
         <meta name="delivery-time" content="45-99 minutes" />
         <meta name="free-delivery-threshold" content="KES 2000" />
-        
-        {/* Product Categories Meta */}
         <meta name="products" content="Fresh Vegetables, Leafy Greens, Root Vegetables, Pre-Cut Vegetables, Fresh Fruits, Tropical Fruits, Mangoes, Pasture Raised Meat (Goat, Sheep, Rabbit), Poultry, Kienyeji Eggs, Fresh Fish, Dairy Products, Cow Milk, Goat Milk, Camel Milk, Cereals, Grains, Flours, Legumes, Beans, Nuts, Seeds, Herbs, Spices, Masala, Baby Products, Diapers, Cleaning Supplies, Equipment, Handicrafts, Wooden Utensils, Stationery, Samosas, Beverages, Fresh Flowers" />
 
-        {/* ── FIX: Schema inline so Googlebot sees it in raw HTML ── */}
+        {/*
+          FIX 1: Schema is now inline — NOT strategy="afterInteractive".
+          Googlebot crawls raw HTML before JS executes. With afterInteractive
+          these scripts were injected after hydration, meaning Googlebot never
+          saw them. Inline <script> tags are in the initial HTML response.
+        */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdOrganization) }}
@@ -997,26 +405,18 @@ export default function RootLayout({
               {children}
             </ClientLayout>
             <AuthSync />
-            <Toaster 
+            <Toaster
               position="top-right"
               toastOptions={{
                 duration: 4000,
-                style: {
-                  background: '#363636',
-                  color: '#fff',
-                },
-                success: {
-                  duration: 3000,
-                  style: {
-                    background: '#004E9A',
-                  },
-                },
+                style: { background: '#363636', color: '#fff' },
+                success: { duration: 3000, style: { background: '#004E9A' } },
               }}
             />
           </AuthProvider>
         </QueryProvider>
 
-        {/* Google Analytics 4 - Replace G-XXXXXXXXXX with your actual GA4 ID */}
+        {/* Google Analytics 4 — replace G-XXXXXXXXXX with your real GA4 ID */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
           strategy="afterInteractive"
@@ -1027,14 +427,14 @@ export default function RootLayout({
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', 'G-XXXXXXXXXX', {
-              'send_page_view': true,
-              'transport_type': 'beacon',
-              'anonymize_ip': true
+              send_page_view: true,
+              transport_type: 'beacon',
+              anonymize_ip: true
             });
           `}
         </Script>
-        
-        {/* Facebook Pixel - Replace YOUR_PIXEL_ID with your actual pixel ID */}
+
+        {/* Facebook Pixel — replace YOUR_PIXEL_ID with your real pixel ID */}
         <Script id="facebook-pixel" strategy="afterInteractive">
           {`
             !function(f,b,e,v,n,t,s)
@@ -1049,12 +449,9 @@ export default function RootLayout({
             fbq('track', 'PageView');
           `}
         </Script>
-        
-        {/* Structured data for products - Dynamic */}
+
         <Script id="structured-data-products" strategy="afterInteractive">
-          {`
-            window.productData = window.productData || [];
-          `}
+          {`window.productData = window.productData || [];`}
         </Script>
       </body>
     </html>
