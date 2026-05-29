@@ -63,7 +63,7 @@ export default function OrdersPage() {
   // Helper function to safely format currency
   const formatCurrency = (value: any): string => {
     const amount = parseNumber(value);
-    return `$${amount.toFixed(2)}`;
+    return `kshs. ${amount.toFixed(2)}`;
   };
 
   const getStatusColor = (status: string) => {
