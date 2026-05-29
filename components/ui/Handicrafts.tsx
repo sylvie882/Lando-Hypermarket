@@ -185,7 +185,7 @@ const HandicraftsPage: React.FC = () => {
           </h2>
 
           {/* Prev + dot scroller + Next - only show if more than 1 slide */}
-          {totalSlides > 1 && (
+          {/* {totalSlides > 1 && (
             <div className="flex items-center gap-2">
               <button
                 onClick={prevSlide}
@@ -219,7 +219,7 @@ const HandicraftsPage: React.FC = () => {
                 <ChevronRight size={18} />
               </button>
             </div>
-          )}
+          )} */}
         </div>
 
         {/* ── Carousel ── */}

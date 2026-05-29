@@ -60,7 +60,15 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
 
   // ── Slide helpers ─────────────────────────────────────────────────────────
   const itemsPerSlide = cols * ROWS_PER_SLIDE;
-  const totalSlides   = Math.max(1, Math.ceil(products.length / itemsPerSlide));
+  
+  // Calculate total slides based on complete rows only
+  const totalCompleteRows = Math.floor(products.length / cols);
+  const totalCompleteSlides = Math.floor(totalCompleteRows / ROWS_PER_SLIDE);
+  const totalSlides = Math.max(1, totalCompleteSlides);
+
+  // Only show products that fit in complete rows
+  const validProductsCount = totalCompleteRows * cols;
+  const validProducts = products.slice(0, validProductsCount);
 
   const scrollToSlide = useCallback(
     (idx: number) => {
@@ -72,8 +80,15 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
     [totalSlides],
   );
 
-  const nextSlide = useCallback(() => scrollToSlide((currentSlide + 1) % totalSlides), [currentSlide, scrollToSlide, totalSlides]);
-  const prevSlide = useCallback(() => scrollToSlide((currentSlide - 1 + totalSlides) % totalSlides), [currentSlide, scrollToSlide, totalSlides]);
+  const nextSlide = useCallback(() => {
+    if (totalSlides <= 1) return;
+    scrollToSlide((currentSlide + 1) % totalSlides);
+  }, [currentSlide, scrollToSlide, totalSlides]);
+  
+  const prevSlide = useCallback(() => {
+    if (totalSlides <= 1) return;
+    scrollToSlide((currentSlide - 1 + totalSlides) % totalSlides);
+  }, [currentSlide, scrollToSlide, totalSlides]);
 
   // ── Auto-play ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -135,7 +150,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
     } finally {
       setLoading(false);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'offers') {
@@ -144,7 +159,7 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
     } else {
       fetchCategoryProducts();
     }
-  }, [activeTab, discountedLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab, discountedLoaded, fetchDiscounted, fetchCategoryProducts, allDiscounted]);
 
   // ── Scroll listener ───────────────────────────────────────────────────────
   const handleScroll = () => {
@@ -153,17 +168,36 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
     if (idx !== currentSlide) setCurrentSlide(Math.max(0, idx));
   };
 
-  // ── Build slides ──────────────────────────────────────────────────────────
-  const slides: Product[][][] = [];
-  for (let s = 0; s < products.length; s += itemsPerSlide) {
-    const slideItems = products.slice(s, s + itemsPerSlide);
-    const rows: Product[][] = [];
-    for (let r = 0; r < ROWS_PER_SLIDE; r++) {
-      rows.push(slideItems.slice(r * cols, r * cols + cols));
+  // ── Build slides with complete rows only ─────────────────────────────────
+  const buildSlides = () => {
+    const slides: Product[][][] = [];
+    
+    for (let s = 0; s < validProducts.length; s += itemsPerSlide) {
+      const slideItems = validProducts.slice(s, s + itemsPerSlide);
+      const rows: Product[][] = [];
+      
+      // Split into rows of exactly 'cols' items each
+      for (let r = 0; r < ROWS_PER_SLIDE; r++) {
+        const startIdx = r * cols;
+        const endIdx = startIdx + cols;
+        const rowItems = slideItems.slice(startIdx, endIdx);
+        
+        // Each row should have exactly 'cols' items since we only use complete rows
+        if (rowItems.length === cols) {
+          rows.push(rowItems);
+        }
+      }
+      
+      // Only add slide if it has all ROWS_PER_SLIDE complete rows
+      if (rows.length === ROWS_PER_SLIDE) {
+        slides.push(rows);
+      }
     }
-    slides.push(rows);
-  }
+    
+    return slides;
+  };
 
+  const slides = buildSlides();
   const gridClass = 'grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6';
 
   if (loading && products.length === 0) {
@@ -208,8 +242,8 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
               ))}
             </div>
 
-            {/* Prev / Next Buttons */}
-            {totalSlides > 1 && (
+            {/* Prev / Next Buttons - only show if more than 1 slide */}
+            {slides.length > 1 && (
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={prevSlide}
@@ -278,6 +312,19 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
               </button>
             )}
           </div>
+        ) : slides.length === 0 ? (
+          <div className="text-center py-12 sm:py-16">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-yellow-100 flex items-center justify-center mx-auto mb-4">
+              <ShoppingBag size={28} className="text-yellow-600" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
+              Not enough products for full rows
+            </h3>
+            <p className="text-gray-600 mb-5 sm:mb-6 max-w-md mx-auto text-sm sm:text-base px-4">
+              Need at least {cols * ROWS_PER_SLIDE} products to display properly.
+              Currently have {products.length} products.
+            </p>
+          </div>
         ) : (
           <>
             {/* ── Carousel ── */}
@@ -301,48 +348,29 @@ const ProductsPage: React.FC<ProductsPageProps> = ({ title = 'Shop your Favourit
                     className="snap-start flex-none space-y-3 sm:space-y-4"
                     style={{ width: `${100 / slides.length}%` }}
                   >
-                    {rows.map((row, ri) =>
-                      row.length > 0 ? (
-                        <div key={ri} className={gridClass}>
-                          {row.map((product) => (
-                            <div key={product.id} className="flex flex-col h-full">
-                              <ProductCard
-                                product={product}
-                                onViewTrack={(id) => console.log('Viewing:', id)}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      ) : null,
-                    )}
+                    {rows.map((row, ri) => (
+                      <div key={ri} className={gridClass}>
+                        {row.map((product) => (
+                          <div key={product.id} className="flex flex-col h-full">
+                            <ProductCard
+                              product={product}
+                              onViewTrack={(id) => console.log('Viewing:', id)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* ── Mobile dots ── */}
-            {totalSlides > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-5">
-                {Array.from({ length: Math.min(totalSlides, 5) }).map((_, i) => {
-                  let page = i;
-                  if (totalSlides > 5) {
-                    if (currentSlide <= 2) page = i;
-                    else if (currentSlide >= totalSlides - 3) page = totalSlides - 5 + i;
-                    else page = currentSlide - 2 + i;
-                  }
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => scrollToSlide(page)}
-                      className={`h-1.5 rounded-full transition-all duration-200 ${
-                        currentSlide === page ? 'bg-[#004E9A] w-5' : 'bg-gray-300 w-1.5 hover:bg-gray-400'
-                      }`}
-                      aria-label={`Slide ${page + 1}`}
-                    />
-                  );
-                })}
+            {/* Optional: Show message about hidden products */}
+            {/* {products.length > validProductsCount && (
+              <div className="text-center mt-4 text-sm text-gray-500">
+                Showing {validProductsCount} of {products.length} products
               </div>
-            )}
+            )} */}
           </>
         )}
       </div>

@@ -151,7 +151,7 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h2>
 
-            {/* Prev + dot scroller + Next — always visible, never disabled */}
+            {/* Only Prev and Next buttons - no dot indicators */}
             <div className="flex items-center gap-2">
               <button
                 onClick={prevPage}
@@ -160,24 +160,6 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
               >
                 <ChevronLeft size={18} />
               </button>
-
-              <div
-                className="flex items-center gap-1.5 overflow-x-auto max-w-[120px] sm:max-w-[180px]"
-                style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
-              >
-                {Array.from({ length: totalPages }).map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentPage(idx)}
-                    className={`h-2 rounded-full flex-shrink-0 transition-all duration-300 ${
-                      currentPage === idx
-                        ? 'bg-[#004E9A] w-6'
-                        : 'bg-gray-300 w-2 hover:bg-gray-400'
-                    }`}
-                    aria-label={`Go to page ${idx + 1}`}
-                  />
-                ))}
-              </div>
 
               <button
                 onClick={nextPage}

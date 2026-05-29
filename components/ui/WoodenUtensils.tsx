@@ -287,7 +287,7 @@ const WoodenUtensils: React.FC = () => {
         )}
 
         {/* Page Indicators */}
-        {totalPages > 1 && (
+        {/* {totalPages > 1 && (
           <div className="flex justify-center mt-6 gap-2">
             {Array.from({ length: totalPages }).map((_, idx) => (
               <button
@@ -302,7 +302,7 @@ const WoodenUtensils: React.FC = () => {
               />
             ))}
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );
