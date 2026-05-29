@@ -102,7 +102,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const formatKSH = useCallback((amount: any) => {
     const n = amount ? parseFloat(String(amount)) : 0;
-    if (isNaN(n) || n <= 0) return 'KSh 0';
+    if (isNaN(n) || n <= 0) return 'Kshs 0';
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
       currency: 'KES',

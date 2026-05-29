@@ -17,8 +17,8 @@ export default function DeliveryLoginPage() {
     setError('');
 
     try {
-      // FIXED: Changed from '/delivery-staff/login' to '/login'
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
+      // FIXED: Use correct delivery-staff login endpoint
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-staff/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

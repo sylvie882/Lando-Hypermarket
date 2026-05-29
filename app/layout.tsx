@@ -611,9 +611,10 @@ export default function RootLayout({
         {
           "@type": "OfferCatalog",
           "name": "Fresh Vegetables",
+          "url": `${SITE_URL}/categories/fresh-vegetables`,
           "itemListElement": [
-            { "@type": "Product", "name": "Leafy Greens (Sukuma Wiki, Managu, Terere, Kunde)" },
-            { "@type": "Product", "name": "Root Vegetables (Potatoes, Carrots, Onions, Arrow Roots)" },
+            { "@type": "Product", "name": "Leafy Greens (Sukuma Wiki, Managu, Terere, Kunde)", "url": `${SITE_URL}/categories/leafy-greens` },
+            { "@type": "Product", "name": "Root Vegetables (Potatoes, Carrots, Onions, Arrow Roots)", "url": `${SITE_URL}/categories/root-vegetables` },
             { "@type": "Product", "name": "Pre-Cut Vegetables" },
             { "@type": "Product", "name": "Traditional Vegetables" }
           ]
@@ -621,15 +622,17 @@ export default function RootLayout({
         {
           "@type": "OfferCatalog",
           "name": "Fresh Fruits",
+          "url": `${SITE_URL}/categories/fresh-fruits`,
           "itemListElement": [
             { "@type": "Product", "name": "Mangoes (Apple, Ngowe, Kent)" },
-            { "@type": "Product", "name": "Tropical Fruits" },
+            { "@type": "Product", "name": "Tropical Fruits", "url": `${SITE_URL}/categories/tropical-fruits` },
             { "@type": "Product", "name": "Citrus Fruits" }
           ]
         },
         {
           "@type": "OfferCatalog",
-          "name": "Pasture Raised Meat",
+          "name": "Pasture Raised Meat (Goat, Sheep, Rabbit)",
+          "url": `${SITE_URL}/categories/livestock-1`,
           "itemListElement": [
             { "@type": "Product", "name": "Goat Meat" },
             { "@type": "Product", "name": "Sheep Meat (Mutton)" },
@@ -639,9 +642,10 @@ export default function RootLayout({
         },
         {
           "@type": "OfferCatalog",
-          "name": "Poultry & Eggs",
+          "name": "Poultry",
+          "url": `${SITE_URL}/categories/poultry`,
           "itemListElement": [
-            { "@type": "Product", "name": "Kienyeji Eggs (Pasture Raised)" },
+            { "@type": "Product", "name": "Kienyeji Eggs (Pasture Raised)", "url": `${SITE_URL}/categories/egg` },
             { "@type": "Product", "name": "Free Range Eggs" },
             { "@type": "Product", "name": "Fresh Chicken" },
             { "@type": "Product", "name": "Turkey & Duck" }
@@ -649,11 +653,17 @@ export default function RootLayout({
         },
         {
           "@type": "OfferCatalog",
+          "name": "Kienyeji Eggs",
+          "url": `${SITE_URL}/categories/egg`
+        },
+        {
+          "@type": "OfferCatalog",
           "name": "Dairy Products",
+          "url": `${SITE_URL}/categories/dairy-products`,
           "itemListElement": [
-            { "@type": "Product", "name": "Fresh Cow Milk" },
-            { "@type": "Product", "name": "Goat Milk" },
-            { "@type": "Product", "name": "Camel Milk" },
+            { "@type": "Product", "name": "Fresh Cow Milk", "url": `${SITE_URL}/categories/cow-milk` },
+            { "@type": "Product", "name": "Goat Milk", "url": `${SITE_URL}/categories/goat-milk` },
+            { "@type": "Product", "name": "Camel Milk", "url": `${SITE_URL}/categories/camel-milk` },
             { "@type": "Product", "name": "Yogurt & Mursik" },
             { "@type": "Product", "name": "Cheese & Butter" }
           ]
@@ -661,6 +671,7 @@ export default function RootLayout({
         {
           "@type": "OfferCatalog",
           "name": "Fish & Seafood",
+          "url": `${SITE_URL}/categories/fish-seafood`,
           "itemListElement": [
             { "@type": "Product", "name": "Fresh Tilapia" },
             { "@type": "Product", "name": "Omena" },
@@ -669,7 +680,8 @@ export default function RootLayout({
         },
         {
           "@type": "OfferCatalog",
-          "name": "Cereals & Grains",
+          "name": "Cereals & Organic Flour",
+          "url": `${SITE_URL}/categories/grains-flours`,
           "itemListElement": [
             { "@type": "Product", "name": "Maize Flour" },
             { "@type": "Product", "name": "Rice" },
@@ -680,6 +692,7 @@ export default function RootLayout({
         {
           "@type": "OfferCatalog",
           "name": "Legumes & Beans",
+          "url": `${SITE_URL}/categories/legumes-beans`,
           "itemListElement": [
             { "@type": "Product", "name": "Beans (Various Types)" },
             { "@type": "Product", "name": "Lentils" },
@@ -690,6 +703,7 @@ export default function RootLayout({
         {
           "@type": "OfferCatalog",
           "name": "Nuts, Seeds & Dried Fruits",
+          "url": `${SITE_URL}/categories/nuts-seeds`,
           "itemListElement": [
             { "@type": "Product", "name": "Groundnuts" },
             { "@type": "Product", "name": "Cashew Nuts" },
@@ -701,16 +715,18 @@ export default function RootLayout({
         {
           "@type": "OfferCatalog",
           "name": "Herbs, Spices & Seasonings",
+          "url": `${SITE_URL}/categories/herbs-spices`,
           "itemListElement": [
             { "@type": "Product", "name": "Fresh Herbs" },
-            { "@type": "Product", "name": "Masala Spices" },
-            { "@type": "Product", "name": "Mixed Spices" },
-            { "@type": "Product", "name": "Seasonings" }
+            { "@type": "Product", "name": "Masala Spices", "url": `${SITE_URL}/categories/masala-species` },
+            { "@type": "Product", "name": "Mixed Spices", "url": `${SITE_URL}/categories/mixed-spices` },
+            { "@type": "Product", "name": "Seasonings", "url": `${SITE_URL}/categories/salad-seasoning` }
           ]
         },
         {
           "@type": "OfferCatalog",
           "name": "Baby Products",
+          "url": `${SITE_URL}/categories/baby-products`,
           "itemListElement": [
             { "@type": "Product", "name": "Baby Diapers" },
             { "@type": "Product", "name": "Baby Formula" },
@@ -722,6 +738,7 @@ export default function RootLayout({
         {
           "@type": "OfferCatalog",
           "name": "Cleaning Supplies & Equipment",
+          "url": `${SITE_URL}/categories/cleaning-materials-equipment`,
           "itemListElement": [
             { "@type": "Product", "name": "Detergents" },
             { "@type": "Product", "name": "Disinfectants" },
@@ -733,16 +750,18 @@ export default function RootLayout({
         {
           "@type": "OfferCatalog",
           "name": "Handicrafts & Artisans",
+          "url": `${SITE_URL}/categories/handicrafts-1`,
           "itemListElement": [
-            { "@type": "Product", "name": "Wooden Utensils" },
-            { "@type": "Product", "name": "Eating & Cooking Utensils" },
-            { "@type": "Product", "name": "Serving Ware" },
+            { "@type": "Product", "name": "Wooden Utensils", "url": `${SITE_URL}/categories/wooden-utensils` },
+            { "@type": "Product", "name": "Eating & Cooking Utensils", "url": `${SITE_URL}/categories/eating-utensils` },
+            { "@type": "Product", "name": "Serving Ware", "url": `${SITE_URL}/categories/serving-wire` },
             { "@type": "Product", "name": "Traditional Crafts" }
           ]
         },
         {
           "@type": "OfferCatalog",
           "name": "Stationery",
+          "url": `${SITE_URL}/categories/stationery`,
           "itemListElement": [
             { "@type": "Product", "name": "Office Supplies" },
             { "@type": "Product", "name": "School Supplies" },
@@ -753,6 +772,7 @@ export default function RootLayout({
         {
           "@type": "OfferCatalog",
           "name": "Samosas & Snacks",
+          "url": `${SITE_URL}/categories/samosas`,
           "itemListElement": [
             { "@type": "Product", "name": "Beef Samosas" },
             { "@type": "Product", "name": "Chicken Samosas" },
@@ -763,6 +783,7 @@ export default function RootLayout({
         {
           "@type": "OfferCatalog",
           "name": "Beverages",
+          "url": `${SITE_URL}/categories/beverages-1`,
           "itemListElement": [
             { "@type": "Product", "name": "Fresh Juices" },
             { "@type": "Product", "name": "Soft Drinks" },
@@ -773,6 +794,7 @@ export default function RootLayout({
         {
           "@type": "OfferCatalog",
           "name": "Fresh Flowers & Plants",
+          "url": `${SITE_URL}/categories/flowers-1`,
           "itemListElement": [
             { "@type": "Product", "name": "Fresh Flowers" },
             { "@type": "Product", "name": "Decorative Plants" },
@@ -868,21 +890,26 @@ export default function RootLayout({
     ]
   };
 
+  // FIX: All slugs now match your real API (from /categories/ not /category/)
   const jsonLdBreadcrumb = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL },
-      { "@type": "ListItem", "position": 2, "name": "Fresh Vegetables", "item": `${SITE_URL}/category/vegetables` },
-      { "@type": "ListItem", "position": 3, "name": "Pasture Raised Meat", "item": `${SITE_URL}/category/livestock-1` },
-      { "@type": "ListItem", "position": 4, "name": "Kienyeji Eggs", "item": `${SITE_URL}/category/egg` },
-      { "@type": "ListItem", "position": 5, "name": "Fresh Fruits", "item": `${SITE_URL}/category/fruits` },
-      { "@type": "ListItem", "position": 6, "name": "Dairy Products", "item": `${SITE_URL}/category/dairy-products` },
-      { "@type": "ListItem", "position": 7, "name": "Baby Products", "item": `${SITE_URL}/category/baby-products` },
-      { "@type": "ListItem", "position": 8, "name": "Cleaning Supplies", "item": `${SITE_URL}/category/cleaning-materials-equipment` },
-      { "@type": "ListItem", "position": 9, "name": "Handicrafts", "item": `${SITE_URL}/category/handicrafts-1` },
-      { "@type": "ListItem", "position": 10, "name": "Stationery", "item": `${SITE_URL}/category/stationery` },
-      { "@type": "ListItem", "position": 11, "name": "Samosas", "item": `${SITE_URL}/category/samosas` }
+      { "@type": "ListItem", "position": 1,  "name": "Home",                    "item": SITE_URL },
+      { "@type": "ListItem", "position": 2,  "name": "Fresh Vegetables",         "item": `${SITE_URL}/categories/fresh-vegetables` },
+      { "@type": "ListItem", "position": 3,  "name": "Pasture Raised Meat",      "item": `${SITE_URL}/categories/livestock-1` },
+      { "@type": "ListItem", "position": 4,  "name": "Kienyeji Eggs",            "item": `${SITE_URL}/categories/egg` },
+      { "@type": "ListItem", "position": 5,  "name": "Fresh Fruits",             "item": `${SITE_URL}/categories/fresh-fruits` },
+      { "@type": "ListItem", "position": 6,  "name": "Dairy Products",           "item": `${SITE_URL}/categories/dairy-products` },
+      { "@type": "ListItem", "position": 7,  "name": "Baby Products",            "item": `${SITE_URL}/categories/baby-products` },
+      { "@type": "ListItem", "position": 8,  "name": "Cleaning Supplies",        "item": `${SITE_URL}/categories/cleaning-materials-equipment` },
+      { "@type": "ListItem", "position": 9,  "name": "Handicrafts & Artisans",   "item": `${SITE_URL}/categories/handicrafts-1` },
+      { "@type": "ListItem", "position": 10, "name": "Wooden Utensils",          "item": `${SITE_URL}/categories/wooden-utensils` },
+      { "@type": "ListItem", "position": 11, "name": "Stationery",               "item": `${SITE_URL}/categories/stationery` },
+      { "@type": "ListItem", "position": 12, "name": "Samosas",                  "item": `${SITE_URL}/categories/samosas` },
+      { "@type": "ListItem", "position": 13, "name": "Spices & Herbs",           "item": `${SITE_URL}/categories/herbs-spices` },
+      { "@type": "ListItem", "position": 14, "name": "Cereals & Organic Flour",  "item": `${SITE_URL}/categories/grains-flours` },
+      { "@type": "ListItem", "position": 15, "name": "Fresh Flowers & Plants",   "item": `${SITE_URL}/categories/flowers-1` }
     ]
   };
 
@@ -940,43 +967,55 @@ export default function RootLayout({
         
         {/* Product Categories Meta */}
         <meta name="products" content="Fresh Vegetables, Leafy Greens, Root Vegetables, Pre-Cut Vegetables, Fresh Fruits, Tropical Fruits, Mangoes, Pasture Raised Meat (Goat, Sheep, Rabbit), Poultry, Kienyeji Eggs, Fresh Fish, Dairy Products, Cow Milk, Goat Milk, Camel Milk, Cereals, Grains, Flours, Legumes, Beans, Nuts, Seeds, Herbs, Spices, Masala, Baby Products, Diapers, Cleaning Supplies, Equipment, Handicrafts, Wooden Utensils, Stationery, Samosas, Beverages, Fresh Flowers" />
-        
-        {/* Comprehensive Schema.org Structured Data */}
-        <Script
-          id="schema-organization"
+
+        {/* ── FIX: Schema inline so Googlebot sees it in raw HTML ── */}
+        <script
           type="application/ld+json"
-          strategy="afterInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdOrganization) }}
         />
-        
-        <Script
-          id="schema-grocery-store"
+        <script
           type="application/ld+json"
-          strategy="afterInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdGroceryStore) }}
         />
-        
-        <Script
-          id="schema-website"
+        <script
           type="application/ld+json"
-          strategy="afterInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebsite) }}
         />
-        
-        <Script
-          id="schema-local-business"
+        <script
           type="application/ld+json"
-          strategy="afterInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdLocalBusiness) }}
         />
-        
-        <Script
-          id="schema-breadcrumb"
+        <script
           type="application/ld+json"
-          strategy="afterInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBreadcrumb) }}
         />
-        
+      </head>
+      <body className="font-sans antialiased">
+        <QueryProvider>
+          <AuthProvider>
+            <ClientLayout>
+              {children}
+            </ClientLayout>
+            <AuthSync />
+            <Toaster 
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: '#363636',
+                  color: '#fff',
+                },
+                success: {
+                  duration: 3000,
+                  style: {
+                    background: '#004E9A',
+                  },
+                },
+              }}
+            />
+          </AuthProvider>
+        </QueryProvider>
+
         {/* Google Analytics 4 - Replace G-XXXXXXXXXX with your actual GA4 ID */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
@@ -1014,36 +1053,9 @@ export default function RootLayout({
         {/* Structured data for products - Dynamic */}
         <Script id="structured-data-products" strategy="afterInteractive">
           {`
-            // This can be enhanced to dynamically pull product data
             window.productData = window.productData || [];
           `}
         </Script>
-      </head>
-      <body className="font-sans antialiased">
-        <QueryProvider>
-          <AuthProvider>
-            <ClientLayout>
-              {children}
-            </ClientLayout>
-            <AuthSync />
-            <Toaster 
-              position="top-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: '#363636',
-                  color: '#fff',
-                },
-                success: {
-                  duration: 3000,
-                  style: {
-                    background: '#004E9A',
-                  },
-                },
-              }}
-            />
-          </AuthProvider>
-        </QueryProvider>
       </body>
     </html>
   );

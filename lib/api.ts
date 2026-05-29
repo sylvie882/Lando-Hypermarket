@@ -416,7 +416,7 @@ class ApiService {
   };
 
   // Admin APIs
-  admin = {
+ admin = {
     // Dashboard
     getDashboardStats: () => this.api.get('/admin/dashboard'),
     getSystemInfo: () => this.api.get('/admin/system-info'),
@@ -445,7 +445,6 @@ class ApiService {
     },
     updateProduct: (id: number, data: any) => {
       if (data instanceof FormData) {
-        // For FormData, let browser set Content-Type with boundary
         return this.api.post(`/admin/products/${id}`, data, {
           headers: {
             // Don't set Content-Type for FormData - browser will set it with boundary
@@ -463,7 +462,7 @@ class ApiService {
     bulkUpdateStock: (data: any) => this.api.post('/admin/products/bulk-stock', data),
     exportProducts: () => this.api.get('/admin/products/export'),
     
-    // Category Management - FIXED updateCategory method
+    // Category Management
     getCategories: (params?: any) => this.api.get('/admin/categories', { params }),
     createCategory: (data: any) => {
       if (data instanceof FormData) {
@@ -476,7 +475,6 @@ class ApiService {
     },
     updateCategory: (id: number, data: any) => {
       if (data instanceof FormData) {
-        // For Laravel file uploads with PUT, use POST with _method=PUT
         data.append('_method', 'PUT');
         return this.api.post(`/admin/categories/${id}`, data);
       } else {
@@ -496,14 +494,12 @@ class ApiService {
     getOrderTrackingHistory: (id: number) => 
       this.api.get(`/admin/orders/${id}/tracking-history`),
     
-    // Banner Management - FIXED: updateBanner now uses POST with _method=PUT
+    // Banner Management
     getBanners: (params?: any) => this.api.get('/admin/banners', { params }),
     getBanner: (id: number) => this.api.get(`/admin/banners/${id}`),
     getBannerStats: () => this.api.get('/admin/banners/stats'),
     createBanner: (data: FormData) => this.api.post('/admin/banners', data),
     updateBanner: (id: number, data: FormData) => {
-      // For Laravel file uploads with PUT, we need to use POST with _method=PUT
-      // Check if data is already FormData and add _method=PUT
       if (data instanceof FormData) {
         data.append('_method', 'PUT');
       }
@@ -514,44 +510,10 @@ class ApiService {
       this.api.get(`/admin/banners/${bannerId}/stats`, { params }),
     
     // Promotion Management
-    getAllPromotions: (params?: { 
-      search?: string; 
-      status?: string; 
-      type?: string;
-      page?: number;
-      per_page?: number;
-    }) => this.api.get('/admin/promotions', { params }),
-    
-    createPromotion: (data: {
-      code: string;
-      name: string;
-      description?: string;
-      type: 'percentage' | 'fixed_amount' | 'free_shipping' | 'buy_one_get_one';
-      discount_value: number;
-      minimum_order_amount?: number;
-      max_discount_amount?: number;
-      usage_limit?: number;
-      valid_from: string;
-      valid_until: string;
-      is_active?: boolean;
-    }) => this.api.post('/admin/promotions', data),
-    
-    updatePromotion: (id: number, data: {
-      code?: string;
-      name?: string;
-      description?: string;
-      type?: 'percentage' | 'fixed_amount' | 'free_shipping' | 'buy_one_get_one';
-      discount_value?: number;
-      minimum_order_amount?: number;
-      max_discount_amount?: number;
-      usage_limit?: number;
-      valid_from?: string;
-      valid_until?: string;
-      is_active?: boolean;
-    }) => this.api.put(`/admin/promotions/${id}`, data),
-    
+    getAllPromotions: (params?: any) => this.api.get('/admin/promotions', { params }),
+    createPromotion: (data: any) => this.api.post('/admin/promotions', data),
+    updatePromotion: (id: number, data: any) => this.api.put(`/admin/promotions/${id}`, data),
     deletePromotion: (id: number) => this.api.delete(`/admin/promotions/${id}`),
-    
     getPromotionStats: () => this.api.get('/admin/promotions/stats'),
 
     // Review Management
@@ -567,13 +529,18 @@ class ApiService {
       this.api.put(`/admin/support/tickets/${id}/status`, data),
     getSupportStats: () => this.api.get('/admin/support/stats'),
 
-    // DELIVERY MANAGEMENT
+    // ======================
+    // DELIVERY MANAGEMENT - FIXED: All endpoints now have /admin prefix
+    // ======================
+    
+    // Deliveries
     getDeliveries: (params?: any) => this.api.get('/admin/deliveries', { params }),
     getDeliveryStats: () => this.api.get('/admin/deliveries/stats'),
     assignDelivery: (data: any) => this.api.post('/admin/deliveries/assign', data),
-    // FIX: was missing — caused 404 on the status dropdown in admin deliveries page
     updateDeliveryStatus: (id: number, data: { status: string; notes?: string }) =>
       this.api.put(`/admin/deliveries/${id}/status`, data),
+    getDeliveryTracking: (id: number) => this.api.get(`/admin/deliveries/${id}/tracking`),
+    bulkAssignDeliveries: (data: any) => this.api.post('/admin/deliveries/bulk-assign', data),
 
     // Delivery Staff Management
     getDeliveryStaff: (params?: any) => this.api.get('/admin/delivery-staff', { params }),
@@ -583,12 +550,6 @@ class ApiService {
     toggleDeliveryStaffOnline: (id: number, data: { is_online: boolean }) => 
       this.api.put(`/admin/delivery-staff/${id}/toggle-online`, data),
     getDeliveryStaffDetails: (id: number) => this.api.get(`/admin/delivery-staff/${id}`),
-    
-    // Bulk assignments
-    bulkAssignDeliveries: (data: any) => this.api.post('/admin/delivery/bulk-assign', data),
-    
-    // Delivery tracking
-    getDeliveryTracking: (id: number) => this.api.get(`/admin/deliveries/${id}/tracking`),
     
     // Order delivery assignment
     assignOrderDelivery: (orderId: number, data: any) => 
@@ -601,7 +562,7 @@ class ApiService {
 
     // Analytics
     getAnalytics: () => this.api.get('/admin/analytics'),
-  };
+};
 
   // Vendor APIs
   vendor = {
