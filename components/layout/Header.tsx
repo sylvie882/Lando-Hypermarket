@@ -302,7 +302,7 @@ const Header: React.FC = () => {
             <div className="flex items-center gap-4 py-3">
 
               <Link href="/" className="flex-shrink-0" aria-label="Home">
-                <Image src="/logo10.png" alt="Lando Ranch Hypermarket" width={200} height={70} className="object-cover w-[150px] h-[52px]" priority />
+                <Image src="/logo10.png" alt="Lando  Hypermarket" width={200} height={70} className="object-cover w-[150px] h-[52px]" priority />
               </Link>
 
               <button onClick={getLocation} className="flex items-center gap-1.5 text-gray-700 hover:text-blue-700 transition-colors flex-shrink-0 py-2 px-2 rounded-lg hover:bg-blue-50" aria-label="Set delivery location">

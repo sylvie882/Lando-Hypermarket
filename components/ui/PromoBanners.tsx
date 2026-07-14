@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
 
 interface Banner {
@@ -28,24 +28,30 @@ interface Banner {
 }
 
 interface PromoBannersProps {
-  /** Max banners to show (default: 3 — gives a nice 1-big + 2-stacked or 3-equal layout) */
+  /** Max banners to show (default: 5) */
   limit?: number;
-  /** Section heading — leave empty to hide */
-  heading?: string;
+  /** Auto-scroll speed in milliseconds (default: 3000) */
+  autoScrollInterval?: number;
 }
 
 const PromoBanners: React.FC<PromoBannersProps> = ({
-  limit = 3,
-  heading = 'Special Offers',
+  limit = 5,
+  autoScrollInterval = 3000,
 }) => {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [showWords, setShowWords] = useState(true);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const autoScrollTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const wordTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const getLink = (banner: Banner): string => {
     if (banner.button_link) return banner.button_link;
     if (banner.category_slug) return `/categories/${banner.category_slug}`;
     return '/products';
-  }; 
+  };
 
   const getImageUrl = (banner: Banner, isMobile = false): string => {
     if (isMobile && banner.mobile_image_url) return banner.mobile_image_url;
@@ -55,7 +61,6 @@ const PromoBanners: React.FC<PromoBannersProps> = ({
   const fetchBanners = useCallback(async () => {
     try {
       setIsLoading(true);
-      // Pass type=promotional directly — the backend defaults to 'homepage' if omitted
       const res = await api.banners.getAll({ type: 'promotional', limit });
       let data: Banner[] = [];
       if (res.data?.data) data = res.data.data;
@@ -82,25 +87,103 @@ const PromoBanners: React.FC<PromoBannersProps> = ({
     fetchBanners();
   }, [fetchBanners]);
 
+  // Words appear and disappear together
+  useEffect(() => {
+    if (banners.length === 0 || !banners[currentIndex]) return;
+
+    // Clear any existing timer
+    if (wordTimerRef.current) {
+      clearTimeout(wordTimerRef.current);
+    }
+
+    const animateWords = () => {
+      // Show words
+      setShowWords(true);
+      
+      // Wait, then hide words
+      wordTimerRef.current = setTimeout(() => {
+        setShowWords(false);
+        
+        // Wait, then show again
+        wordTimerRef.current = setTimeout(() => {
+          animateWords();
+        }, 1000); // Hide for 1 second
+      }, 2500); // Show for 2.5 seconds
+    };
+
+    // Start the animation
+    const initialDelay = setTimeout(animateWords, 500);
+
+    return () => {
+      clearTimeout(initialDelay);
+      if (wordTimerRef.current) {
+        clearTimeout(wordTimerRef.current);
+      }
+    };
+  }, [currentIndex, banners]);
+
+  // Auto-scroll logic
+  useEffect(() => {
+    if (banners.length === 0 || isPaused) return;
+
+    const startAutoScroll = () => {
+      if (autoScrollTimerRef.current) {
+        clearInterval(autoScrollTimerRef.current);
+      }
+      autoScrollTimerRef.current = setInterval(() => {
+        setCurrentIndex((prevIndex) => 
+          prevIndex === banners.length - 1 ? 0 : prevIndex + 1
+        );
+      }, autoScrollInterval);
+    };
+
+    startAutoScroll();
+
+    return () => {
+      if (autoScrollTimerRef.current) {
+        clearInterval(autoScrollTimerRef.current);
+      }
+    };
+  }, [banners.length, autoScrollInterval, isPaused]);
+
+  // Scroll to current index
+  useEffect(() => {
+    if (scrollContainerRef.current && banners.length > 0) {
+      const container = scrollContainerRef.current;
+      const cardWidth = container.querySelector('.pb-card')?.clientWidth || 0;
+      const gap = 12;
+      const scrollPosition = currentIndex * (cardWidth + gap);
+      container.scrollTo({
+        left: scrollPosition,
+        behavior: 'smooth',
+      });
+    }
+  }, [currentIndex, banners.length]);
+
   const handleClick = (id: number) => {
     api.banners.trackClick(id).catch(() => {});
+  };
+
+  const goToPrevious = () => {
+    setCurrentIndex((prevIndex) => 
+      prevIndex === 0 ? banners.length - 1 : prevIndex - 1
+    );
+  };
+
+  const goToNext = () => {
+    setCurrentIndex((prevIndex) => 
+      prevIndex === banners.length - 1 ? 0 : prevIndex + 1
+    );
   };
 
   /* ── Loading skeleton ── */
   if (isLoading) {
     return (
       <section className="pb-section">
-        {/* {heading && (
-          <div className="pb-header">
-            <span className="pb-heading-skeleton" />
-          </div>
-        )} */}
-        <div className="pb-grid pb-grid--skeleton">
-          <div className="pb-skeleton pb-skeleton--large" />
-          <div className="pb-stack">
-            <div className="pb-skeleton" />
-            <div className="pb-skeleton" />
-          </div>
+        <div className="pb-scroll-container pb-scroll-container--skeleton">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="pb-skeleton pb-skeleton--card" />
+          ))}
         </div>
       </section>
     );
@@ -108,75 +191,59 @@ const PromoBanners: React.FC<PromoBannersProps> = ({
 
   if (banners.length === 0) return null;
 
-  /* ── Determine layout ── */
-  // 1 banner  → full width
-  // 2 banners → 50/50
-  // 3+        → large left + 2 stacked right
-  const layout: '1' | '2' | '3' =
-    banners.length === 1 ? '1' : banners.length === 2 ? '2' : '3';
-
   return (
-    <section className="pb-section">
-     
-      <div className={`pb-grid pb-grid--${layout}`}>
-        {layout === '1' && (
+    <section 
+      className="pb-section"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      {/* Controls */}
+      {/* <div className="pb-controls-wrapper">
+        <div className="pb-controls">
+          <button 
+            onClick={goToPrevious}
+            className="pb-control-btn"
+            aria-label="Previous banner"
+          >
+            <ChevronLeft size={24} />
+          </button>
+          <div className="pb-dots">
+            {banners.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentIndex(index)}
+                className={`pb-dot ${index === currentIndex ? 'pb-dot--active' : ''}`}
+                aria-label={`Go to banner ${index + 1}`}
+              />
+            ))}
+          </div>
+          <button 
+            onClick={goToNext}
+            className="pb-control-btn"
+            aria-label="Next banner"
+          >
+            <ChevronRight size={24} />
+          </button>
+        </div> 
+      </div>*/}
+
+      {/* Scrollable container */}
+      <div 
+        ref={scrollContainerRef}
+        className="pb-scroll-container"
+      >
+        {banners.map((banner, index) => (
           <BannerCard
-            banner={banners[0]}
-            imageUrl={getImageUrl(banners[0])}
-            link={getLink(banners[0])}
+            key={banner.id}
+            banner={banner}
+            imageUrl={getImageUrl(banner)}
+            link={getLink(banner)}
             onClick={handleClick}
-            size="large"
+            isActive={index === currentIndex}
+            showWords={index === currentIndex ? showWords : false}
+            words={banner.title.split(' ')}
           />
-        )}
-
-        {layout === '2' && (
-          <>
-            <BannerCard
-              banner={banners[0]}
-              imageUrl={getImageUrl(banners[0])}
-              link={getLink(banners[0])}
-              onClick={handleClick}
-              size="medium"
-            />
-            <BannerCard
-              banner={banners[1]}
-              imageUrl={getImageUrl(banners[1])}
-              link={getLink(banners[1])}
-              onClick={handleClick}
-              size="medium"
-            />
-          </>
-        )}
-
-        {layout === '3' && (
-          <>
-            {/* Left — large featured banner */}
-            <BannerCard
-              banner={banners[0]}
-              imageUrl={getImageUrl(banners[0])}
-              link={getLink(banners[0])}
-              onClick={handleClick}
-              size="large"
-            />
-            {/* Right — two stacked */}
-            <div className="pb-stack">
-              <BannerCard
-                banner={banners[1]}
-                imageUrl={getImageUrl(banners[1])}
-                link={getLink(banners[1])}
-                onClick={handleClick}
-                size="small"
-              />
-              <BannerCard
-                banner={banners[2]}
-                imageUrl={getImageUrl(banners[2])}
-                link={getLink(banners[2])}
-                onClick={handleClick}
-                size="small"
-              />
-            </div>
-          </>
-        )}
+        ))}
       </div>
 
       <style jsx global>{`
@@ -186,126 +253,147 @@ const PromoBanners: React.FC<PromoBannersProps> = ({
           max-width: 1400px;
           margin: 0 auto;
           width: 100%;
+          position: relative;
         }
         @media (min-width: 640px)  { .pb-section { padding: 28px 24px 10px; } }
         @media (min-width: 1024px) { .pb-section { padding: 32px 48px 12px; } }
 
-        /* ─── Header ─── */
-        .pb-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 14px;
-        }
-        .pb-heading {
-          font-size: 1.2rem;
-          font-weight: 800;
-          color: #111827;
-          letter-spacing: -0.02em;
-          margin: 0;
-        }
-        @media (min-width: 768px) { .pb-heading { font-size: 1.45rem; } }
-        .pb-heading-skeleton {
-          display: block;
-          width: 160px;
-          height: 24px;
-          border-radius: 6px;
-          background: #e5e7eb;
-        }
-        .pb-see-all {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 0.82rem;
-          font-weight: 600;
-          color: #004E9A;
-          text-decoration: none;
-          transition: gap 0.18s;
-        }
-        .pb-see-all:hover { gap: 8px; }
+        /* ─── Controls ─── */
+        // .pb-controls-wrapper {
+        //   display: flex;
+        //   justify-content: flex-end;
+        //   margin-bottom: 14px;
+        // }
+        
+        // .pb-controls {
+        //   display: flex;
+        //   align-items: center;
+        //   gap: 8px;
+        // }
+        // .pb-control-btn {
+        //   display: flex;
+        //   align-items: center;
+        //   justify-content: center;
+        //   width: 40px;
+        //   height: 40px;
+        //   border-radius: 50%;
+        //   border: 2px solid #E67E22;
+        //   background: rgba(255, 255, 255, 0.9);
+        //   color: #E67E22;
+        //   cursor: pointer;
+        //   transition: all 0.2s ease;
+        //   padding: 0;
+        //   backdrop-filter: blur(4px);
+        // }
+        // .pb-control-btn:hover {
+        //   background: #E67E22;
+        //   color: #fff;
+        //   transform: scale(1.05);
+        //   box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3);
+        // }
+        // .pb-control-btn:active {
+        //   transform: scale(0.95);
+        // }
 
-        /* ─── Grid layouts ─── */
-        .pb-grid {
-          display: grid;
+        // .pb-dots {
+        //   display: flex;
+        //   gap: 8px;
+        //   align-items: center;
+        // }
+        // .pb-dot {
+        //   width: 10px;
+        //   height: 10px;
+        //   border-radius: 50%;
+        //   border: none;
+        //   background: rgba(209, 213, 219, 0.6);
+        //   cursor: pointer;
+        //   transition: all 0.3s ease;
+        //   padding: 0;
+        //   backdrop-filter: blur(4px);
+        // }
+        // .pb-dot:hover {
+        //   background: #E67E22;
+        //   transform: scale(1.2);
+        // }
+        // .pb-dot--active {
+        //   background: #004E9A;
+        //   width: 28px;
+        //   border-radius: 5px;
+        // }
+
+        /* ─── Scroll Container ─── */
+        .pb-scroll-container {
+          display: flex;
+          gap: 12px;
+          overflow-x: auto;
+          overflow-y: hidden;
+          scroll-behavior: smooth;
+          scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch;
+          padding: 4px 2px 8px;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .pb-scroll-container::-webkit-scrollbar {
+          display: none;
+        }
+        .pb-scroll-container--skeleton {
           gap: 12px;
         }
-        /* 1 banner — single full row */
-        .pb-grid--1 {
-          grid-template-columns: 1fr;
-        }
-        /* 2 banners — equal halves */
-        .pb-grid--2 {
-          grid-template-columns: 1fr;
-        }
-        @media (min-width: 640px) {
-          .pb-grid--2 { grid-template-columns: 1fr 1fr; }
-        }
-        /* 3 banners — 60/40 split */
-        .pb-grid--3 {
-          grid-template-columns: 1fr;
-        }
-        @media (min-width: 768px) {
-          .pb-grid--3 { grid-template-columns: 3fr 2fr; }
-        }
-        /* Skeleton grid */
-        .pb-grid--skeleton {
-          grid-template-columns: 1fr;
-        }
-        @media (min-width: 768px) {
-          .pb-grid--skeleton { grid-template-columns: 3fr 2fr; }
-        }
-
-        /* ─── Stacked right column ─── */
-        .pb-stack {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          min-height: 240px;
-        }
-        .pb-stack > * { flex: 1; }
 
         /* ─── Skeleton ─── */
-        .pb-skeleton {
+        .pb-skeleton--card {
+          flex: 0 0 calc(100% - 4px);
+          min-height: 200px;
           border-radius: 16px;
-          min-height: 180px;
           background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
           background-size: 200% 100%;
           animation: pb-shimmer 1.4s infinite;
+          scroll-snap-align: start;
         }
-        .pb-skeleton--large { min-height: 320px; }
+        @media (min-width: 640px) {
+          .pb-skeleton--card { flex: 0 0 calc(50% - 6px); min-height: 240px; }
+        }
+        @media (min-width: 1024px) {
+          .pb-skeleton--card { flex: 0 0 calc(33.333% - 8px); min-height: 280px; }
+        }
         @keyframes pb-shimmer {
           0%   { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
 
-        /* ─── Banner card ─── */
+        /* ─── Banner Card ─── */
         .pb-card {
           position: relative;
-          display: block;
-          overflow: hidden;
+          flex: 0 0 calc(100% - 4px);
+          min-height: 300px;
           border-radius: 16px;
+          overflow: hidden;
           text-decoration: none;
           cursor: pointer;
           background: #1a1a2e;
-          transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-                      box-shadow 0.25s ease;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          scroll-snap-align: start;
           box-shadow: 0 2px 14px rgba(0,0,0,0.13);
         }
         .pb-card:hover {
-          transform: translateY(-3px) scale(1.015);
+          transform: scale(1.02);
           box-shadow: 0 14px 32px rgba(0,0,0,0.2);
+          z-index: 99;
         }
         .pb-card:active { transform: scale(0.98); }
 
-        /* Heights by size */
-        .pb-card--large { min-height: 320px; }
-        .pb-card--medium { min-height: 220px; }
-        .pb-card--small { min-height: 0; height: 100%; min-height: 140px; }
-
-        @media (min-width: 768px) {
-          .pb-card--large  { min-height: 380px; }
-          .pb-card--medium { min-height: 280px; }
-          .pb-card--small  { min-height: 0; }
+        @media (min-width: 640px) {
+          .pb-card { 
+            flex: 0 0 calc(50% - 6px);
+            min-height: 240px;
+          }
+        }
+        @media (min-width: 1024px) {
+          .pb-card { 
+            flex: 0 0 calc(33.333% - 8px);
+            min-height: 320px;
+          }
         }
 
         /* ─── Image ─── */
@@ -313,7 +401,7 @@ const PromoBanners: React.FC<PromoBannersProps> = ({
           object-fit: cover;
           transition: transform 0.5s ease;
         }
-        .pb-card:hover .pb-img { transform: scale(1.05); }
+        .pb-card:hover .pb-img { transform: scale(1.08); }
 
         /* ─── Overlays ─── */
         .pb-overlay {
@@ -321,111 +409,108 @@ const PromoBanners: React.FC<PromoBannersProps> = ({
           inset: 0;
           background: linear-gradient(
             to top,
-            rgba(0,0,0,0.72) 0%,
-            rgba(0,0,0,0.28) 45%,
-            rgba(0,0,0,0.05) 100%
+            rgba(0, 0, 0, 0.7) 0%,
+            rgba(0, 0, 0, 0.2) 60%,
+            rgba(0, 0, 0, 0.05) 100%
           );
           z-index: 1;
-        }
-        /* Large banners get a left-side gradient too */
-        .pb-card--large .pb-overlay {
-          background: linear-gradient(
-            135deg,
-            rgba(0,0,0,0.65) 0%,
-            rgba(0,0,0,0.3) 50%,
-            rgba(0,0,0,0.05) 100%
-          );
         }
 
         /* ─── Content ─── */
         .pb-content {
           position: absolute;
-          z-index: 2;
-          padding: 16px 18px;
-          bottom: 0;
-          left: 0;
-          right: 0;
-        }
-        .pb-card--large .pb-content {
-          bottom: auto;
           top: 50%;
-          transform: translateY(-50%);
-          max-width: 70%;
-        }
-        @media (min-width: 768px) {
-          .pb-content { padding: 20px 24px; }
-          .pb-card--large .pb-content { max-width: 60%; left: 32px; }
-        }
-
-        /* Badge */
-        .pb-badge {
-          display: inline-block;
-          font-size: 0.62rem;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          color: #fff;
-          background: #E67E22;
-          padding: 3px 8px;
-          border-radius: 4px;
-          margin-bottom: 7px;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          z-index: 2;
+          padding: 20px;
+          width: 90%;
+          text-align: center;
         }
 
-        /* Title */
-        .pb-title {
-          font-size: 1rem;
-          font-weight: 800;
-          color: #fff;
-          line-height: 1.25;
-          letter-spacing: -0.02em;
-          text-shadow: 0 1px 6px rgba(0,0,0,0.4);
-          margin: 0 0 4px;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-        .pb-card--large .pb-title {
-          font-size: 1.35rem;
-          -webkit-line-clamp: 3;
-          margin-bottom: 8px;
-        }
-        @media (min-width: 768px) {
-          .pb-title { font-size: 1.05rem; }
-          .pb-card--large .pb-title { font-size: 1.65rem; }
-        }
-
-        /* Subtitle */
-        .pb-subtitle {
-          font-size: 0.75rem;
-          color: rgba(255,255,255,0.82);
-          margin: 0 0 10px;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-        @media (min-width: 768px) { .pb-subtitle { font-size: 0.82rem; } }
-
-        /* CTA button */
-        .pb-btn {
-          display: inline-flex;
+        /* Title - All words appear and disappear together */
+        .pb-title-wrapper {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
           align-items: center;
-          gap: 5px;
-          font-size: 0.72rem;
-          font-weight: 700;
-          color: #fff;
-          background: #004E9A;
-          border: none;
-          padding: 7px 14px;
-          border-radius: 8px;
-          letter-spacing: 0.01em;
-          transition: background 0.18s, gap 0.18s, transform 0.18s;
-          cursor: pointer;
-          text-decoration: none;
+          gap: 4px 12px;
+          min-height: 10rem;
+          transition: all 0.5s ease;
         }
-        .pb-btn:hover { background: #003E8A; gap: 8px; transform: translateX(2px); }
-        .pb-card--large .pb-btn { font-size: 0.8rem; padding: 9px 18px; border-radius: 10px; }
+
+        .pb-word {
+          font-size: 2.8rem;
+          font-weight: 900;
+          line-height: 1.2;
+          letter-spacing: -0.02em;
+          text-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+          opacity: 1;
+          transform: scale(1);
+          transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+          display: inline-block;
+          position: relative;
+        }
+        
+        /* Words alternate between orange and blue */
+        .pb-word--orange {
+          color: #E67E22;
+        }
+        
+        .pb-word--blue {
+          color: #004E9A;
+        }
+
+        /* When words are hidden */
+        .pb-word--hidden {
+          opacity: 0;
+          transform: scale(0.5) rotate(-5deg);
+        }
+
+        /* When words are visible */
+        .pb-word--visible {
+          opacity: 1;
+          transform: scale(1) rotate(0deg);
+        }
+
+        /* Glow effects for visible words */
+        .pb-word--orange.pb-word--visible {
+          text-shadow: 0 0 50px rgba(230, 126, 34, 0.5), 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+        
+        .pb-word--blue.pb-word--visible {
+          text-shadow: 0 0 50px rgba(0, 78, 154, 0.5), 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        @media (min-width: 640px) {
+          .pb-title-wrapper {
+            min-height: 12rem;
+          }
+          .pb-word {
+            font-size: 3.8rem;
+          }
+        }
+        @media (min-width: 768px) {
+          .pb-title-wrapper {
+            min-height: 14rem;
+          }
+          .pb-word {
+            font-size: 4.8rem;
+          }
+        }
+        @media (min-width: 1024px) {
+          .pb-title-wrapper {
+            min-height: 10rem;
+          }
+          .pb-word {
+            font-size: 5.8rem;
+          }
+        }
+        @media (min-width: 1280px) {
+          .pb-word {
+            font-size: 6.8rem;
+          }
+        }
       `}</style>
     </section>
   );
@@ -437,14 +522,24 @@ interface BannerCardProps {
   imageUrl: string;
   link: string;
   onClick: (id: number) => void;
-  size: 'large' | 'medium' | 'small';
+  isActive: boolean;
+  showWords: boolean;
+  words: string[];
 }
 
-const BannerCard: React.FC<BannerCardProps> = ({ banner, imageUrl, link, onClick, size }) => (
+const BannerCard: React.FC<BannerCardProps> = ({ 
+  banner, 
+  imageUrl, 
+  link, 
+  onClick,
+  isActive,
+  showWords,
+  words
+}) => (
   <Link
     href={link}
     onClick={() => onClick(banner.id)}
-    className={`pb-card pb-card--${size}`}
+    className="pb-card"
   >
     {/* Image */}
     {imageUrl && (
@@ -453,11 +548,33 @@ const BannerCard: React.FC<BannerCardProps> = ({ banner, imageUrl, link, onClick
         alt={banner.title}
         fill
         className="pb-img"
-        sizes="(max-width: 768px) 100vw, 50vw"
-        priority={size === 'large'}
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+        priority={isActive}
       />
     )}
-
+    
+    {/* Overlay */}
+    <div className="pb-overlay" />
+    
+    {/* Content - Only animated words */}
+    <div className="pb-content">
+      <div className="pb-title-wrapper">
+        {words.map((word, index) => {
+          // Alternate colors: even index = orange, odd index = blue
+          const colorClass = index % 2 === 0 ? 'pb-word--orange' : 'pb-word--blue';
+          const visibilityClass = showWords ? 'pb-word--visible' : 'pb-word--hidden';
+          
+          return (
+            <span 
+              key={index}
+              className={`pb-word ${colorClass} ${visibilityClass}`}
+            >
+              {word}
+            </span>
+          );
+        })}
+      </div>
+    </div>
   </Link>
 );
 

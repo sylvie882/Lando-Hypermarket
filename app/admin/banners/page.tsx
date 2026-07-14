@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import DashboardCard from '@/components/admin/DashboardCard';
 import { 
   Plus, 
   Edit, 
@@ -13,7 +12,6 @@ import {
   Calendar,
   Image as ImageIcon,
   Search,
-  Filter,
   RefreshCw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -22,6 +20,7 @@ interface Banner {
   id: number;
   title: string;
   subtitle: string | null;
+  description: string | null;
   image: string;
   mobile_image: string | null;
   button_text: string | null;
@@ -30,12 +29,13 @@ interface Banner {
   is_active: boolean;
   start_date: string | null;
   end_date: string | null;
-  type: 'homepage' | 'category' | 'promotional' | 'sidebar';
+  type: string;
   category_slug: string | null;
   clicks: number;
   impressions: number;
   created_at: string;
   updated_at: string;
+  info?: string; // Optional info field
 }
 
 export default function BannersPage() {
@@ -58,7 +58,6 @@ export default function BannersPage() {
   }, []);
 
   useEffect(() => {
-    // Calculate stats from banners data when banners change
     if (banners.length > 0) {
       calculateStatsFromBanners();
     }
@@ -67,22 +66,92 @@ export default function BannersPage() {
   const fetchBanners = async () => {
     try {
       setLoading(true);
-      const response = await api.banners.getAll();
+      setError('');
+      
+      // Use the admin endpoint directly with fetch
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Please login first');
+        setLoading(false);
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke/api';
+      
+      // Try to get banners using the admin endpoint
+      let response = await fetch(`${apiUrl}/admin/banners`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      // If admin endpoint fails, try the public endpoint with all parameter
+      if (response.status === 404 || response.status === 403) {
+        console.log('Admin endpoint failed, trying public endpoint...');
+        response = await fetch(`${apiUrl}/banners?type=all&limit=100`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+          credentials: 'include',
+        });
+      }
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast.error('Session expired. Please login again.');
+          localStorage.removeItem('token');
+          router.push('/login');
+          setLoading(false);
+          return;
+        }
+        throw new Error(`Failed to fetch banners: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Banners API response:', result);
+
+      let bannersData: Banner[] = [];
       
       // Handle different response structures
-      if (response.data && response.data.success) {
-        setBanners(response.data.data || []);
-      } else if (Array.isArray(response.data)) {
-        setBanners(response.data);
-      } else if (response.data?.data) {
-        setBanners(response.data.data);
-      } else {
-        setBanners([]);
+      if (result.success) {
+        if (result.data && result.data.data) {
+          // Paginated response: { success: true, data: { data: [...], total, ... } }
+          bannersData = result.data.data;
+        } else if (Array.isArray(result.data)) {
+          // Direct array response: { success: true, data: [...] }
+          bannersData = result.data;
+        } else if (result.data) {
+          // Try to find any array property
+          const possibleArrays = Object.values(result.data).filter(val => Array.isArray(val));
+          if (possibleArrays.length > 0) {
+            bannersData = possibleArrays[0];
+          }
+        }
+      } else if (Array.isArray(result)) {
+        // Response is directly the array
+        bannersData = result;
+      } else if (result.data && Array.isArray(result.data)) {
+        bannersData = result.data;
       }
+
+      console.log('Extracted banners:', bannersData);
+      setBanners(bannersData);
+      
+      // if (bannersData.length === 0) {
+      //   toast.info('No banners found in the database');
+      // } else {
+      //   const promoCount = bannersData.filter(b => b.type === 'promotional').length;
+      //   const homepageCount = bannersData.filter(b => b.type === 'homepage').length;
+      //   toast.success(`Loaded ${bannersData.length} banners (${homepageCount} homepage, ${promoCount} promotional)`);
+      // }
+      
     } catch (err: any) {
       console.error('Error fetching banners:', err);
-      setError('Failed to load banners');
-      toast.error('Failed to load banners');
+      setError(err.message || 'Failed to load banners');
+      toast.error(err.message || 'Failed to load banners');
     } finally {
       setLoading(false);
     }
@@ -110,70 +179,32 @@ export default function BannersPage() {
     if (!confirm('Are you sure you want to delete this banner?')) return;
     
     try {
-      // Get authentication token
       const token = localStorage.getItem('token');
       if (!token) {
         toast.error('Please login to delete banners');
         return;
       }
 
-      // Try multiple API endpoints
-      const endpoints = [
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/banners/${id}`,
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/banners/${id}`,
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/banners/${id}/delete`
-      ];
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke/api';
+      const response = await fetch(`${apiUrl}/admin/banners/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
 
-      let deleteSuccessful = false;
-      let lastError: Error | null = null;
-
-      for (const endpoint of endpoints) {
-        try {
-          const response = await fetch(endpoint, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'application/json',
-            },
-            credentials: 'include',
-          });
-
-          if (response.ok) {
-            deleteSuccessful = true;
-            break;
-          } else if (response.status === 404) {
-            console.log(`Endpoint not found: ${endpoint}`);
-            continue;
-          } else {
-            const errorText = await response.text();
-            console.log(`Delete failed at ${endpoint}:`, response.status, errorText);
-            continue;
-          }
-        } catch (endpointError) {
-          console.log(`Error with endpoint ${endpoint}:`, endpointError);
-          lastError = endpointError instanceof Error ? endpointError : new Error(String(endpointError));
-          continue;
-        }
-      }
-
-      if (deleteSuccessful) {
+      if (response.ok) {
         setBanners(banners.filter(banner => banner.id !== id));
         toast.success('Banner deleted successfully');
       } else {
-        throw new Error(lastError?.message || 'All delete endpoints failed');
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete banner');
       }
 
     } catch (err: any) {
       console.error('Delete error:', err);
-      
-      // Fallback: Remove from local state if server delete fails
-      if (confirm('Server delete failed. Remove from local list anyway?')) {
-        setBanners(banners.filter(banner => banner.id !== id));
-        toast.success('Banner removed from list (server may still have it)');
-      } else {
-        setError('Failed to delete banner: ' + err.message);
-        toast.error('Failed to delete banner');
-      }
+      toast.error(err.message || 'Failed to delete banner');
     }
   };
 
@@ -185,8 +216,8 @@ export default function BannersPage() {
         return;
       }
 
-      // Direct fetch approach
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/banners/${id}`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke/api';
+      const response = await fetch(`${apiUrl}/admin/banners/${id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -200,14 +231,12 @@ export default function BannersPage() {
         throw new Error(`Server error: ${response.status}`);
       }
 
-      // Update local state
       setBanners(banners.map(banner => 
         banner.id === id ? { ...banner, is_active: !currentStatus } : banner
       ));
       toast.success('Banner status updated');
     } catch (err: any) {
       console.error('Toggle status error:', err);
-      setError('Failed to update banner status');
       toast.error('Failed to update banner status');
     }
   };
@@ -246,7 +275,7 @@ export default function BannersPage() {
   };
 
   const getTypeColor = (type: string) => {
-    switch (type) {
+    switch (type?.toLowerCase()) {
       case 'homepage': return 'bg-purple-100 text-purple-800';
       case 'category': return 'bg-blue-100 text-blue-800';
       case 'promotional': return 'bg-green-100 text-green-800';
@@ -255,23 +284,24 @@ export default function BannersPage() {
     }
   };
 
+  const getImageUrl = (banner: Banner) => {
+    if (banner.image) {
+      if (banner.image.startsWith('http')) return banner.image;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke';
+      // Remove /api from base URL for storage
+      const baseUrl = apiUrl.replace(/\/api$/, '');
+      return `${baseUrl}/storage/${banner.image}`;
+    }
+    return '/images/placeholder-banner.jpg';
+  };
+
   const filterBanners = () => {
-    let filtered = banners;
+    let filtered = [...banners];
 
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(banner => 
-        banner.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (banner.subtitle && banner.subtitle.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    // Filter by type
     if (filterType !== 'all') {
-      filtered = filtered.filter(banner => banner.type === filterType);
+      filtered = filtered.filter(banner => banner.type?.toLowerCase() === filterType.toLowerCase());
     }
 
-    // Filter by status
     if (filterStatus !== 'all') {
       filtered = filtered.filter(banner => {
         if (filterStatus === 'active') return banner.is_active;
@@ -288,17 +318,30 @@ export default function BannersPage() {
       });
     }
 
+    if (searchTerm) {
+      filtered = filtered.filter(banner => 
+        banner.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (banner.subtitle && banner.subtitle.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
     return filtered;
   };
 
   const filteredBanners = filterBanners();
+
+  const typeCounts = banners.reduce((acc, b) => {
+    const type = b.type || 'unknown';
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Banner Management</h1>
-          <p className="text-gray-600">Manage homepage sliders, promotional banners, and sidebar ads</p>
+          <p className="text-gray-600">Manage all banners including homepage, promotional, category, and sidebar</p>
         </div>
         <div className="flex items-center gap-4">
           <button
@@ -321,44 +364,45 @@ export default function BannersPage() {
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-700">{error}</p>
+          <button 
+            onClick={() => fetchBanners()} 
+            className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+          >
+            Retry fetching banners
+          </button>
         </div>
       )}
 
-      {/* Stats Overview - Using simple cards instead of DashboardCard */}
       <div className="grid grid-cols-1 gap-6 mb-6 md:grid-cols-4">
         {[
           { 
             title: "Total Banners", 
             value: stats.total.toString(), 
             icon: <ImageIcon className="text-blue-600" size={24} />,
-            bgColor: "bg-blue-50",
-            borderColor: "border-blue-200"
+            bgColor: "bg-blue-50"
           },
           { 
             title: "Active Banners", 
             value: stats.active.toString(), 
             icon: <Eye className="text-green-600" size={24} />,
-            bgColor: "bg-green-50",
-            borderColor: "border-green-200"
+            bgColor: "bg-green-50"
           },
           { 
             title: "Total Clicks", 
             value: stats.total_clicks.toLocaleString(), 
             icon: <div className="text-purple-600 text-lg">👆</div>,
-            bgColor: "bg-purple-50",
-            borderColor: "border-purple-200"
+            bgColor: "bg-purple-50"
           },
           { 
             title: "Total Impressions", 
             value: stats.total_impressions.toLocaleString(), 
             icon: <div className="text-yellow-600 text-lg">👁️</div>,
-            bgColor: "bg-yellow-50",
-            borderColor: "border-yellow-200"
+            bgColor: "bg-yellow-50"
           }
         ].map((stat, index) => (
           <div 
             key={index} 
-            className={`bg-white rounded-lg border ${stat.borderColor} p-6`}
+            className={`bg-white rounded-lg border p-6 ${stat.bgColor}`}
           >
             <div className="flex items-center justify-between mb-4">
               <div className="text-sm font-medium text-gray-600">{stat.title}</div>
@@ -371,7 +415,17 @@ export default function BannersPage() {
         ))}
       </div>
 
-      {/* Filters and Search */}
+      {Object.keys(typeCounts).length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <span className="text-sm text-gray-600 mr-2">Banner types:</span>
+          {Object.entries(typeCounts).map(([type, count]) => (
+            <span key={type} className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(type)}`}>
+              {type}: {count}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
@@ -393,11 +447,12 @@ export default function BannersPage() {
               onChange={(e) => setFilterType(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">All Types</option>
-              <option value="homepage">Homepage</option>
-              <option value="category">Category</option>
-              <option value="promotional">Promotional</option>
-              <option value="sidebar">Sidebar</option>
+              <option value="all">All Types ({banners.length})</option>
+              {Object.entries(typeCounts).map(([type, count]) => (
+                <option key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)} ({count})
+                </option>
+              ))}
             </select>
             
             <select
@@ -426,7 +481,6 @@ export default function BannersPage() {
         </div>
       </div>
 
-      {/* Banners Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="p-8 text-center">
@@ -439,39 +493,39 @@ export default function BannersPage() {
             <h3 className="mt-4 text-lg font-medium text-gray-900">No banners found</h3>
             <p className="mt-1 text-gray-600">
               {banners.length === 0 
-                ? "Get started by creating your first banner." 
-                : "No banners match your search criteria."}
+                ? "No banners found in the database. Create your first banner!" 
+                : `${banners.length} banners found but none match your filters.`}
             </p>
-            <button
-              onClick={() => router.push('/admin/banners/create')}
-              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Create Banner
-            </button>
+            <div className="mt-4 space-x-4">
+              <button
+                onClick={() => router.push('/admin/banners/create')}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                Create Banner
+              </button>
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterType('all');
+                  setFilterStatus('all');
+                }}
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
+              >
+                Show All Banners
+              </button>
+            </div>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Banner
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Dates
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Performance
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Banner</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -481,7 +535,7 @@ export default function BannersPage() {
                       <div className="flex items-center">
                         <div className="h-16 w-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                           <img
-                            src={banner.image ? `/storage/${banner.image}` : '/images/placeholder-banner.jpg'}
+                            src={getImageUrl(banner)}
                             alt={banner.title}
                             className="h-16 w-24 object-cover"
                             onError={(e) => {
@@ -494,21 +548,19 @@ export default function BannersPage() {
                           {banner.subtitle && (
                             <div className="text-sm text-gray-500 truncate max-w-xs">{banner.subtitle}</div>
                           )}
-                          <div className="text-xs text-gray-400">
-                            Order: {banner.order} • ID: {banner.id}
-                          </div>
+                          <div className="text-xs text-gray-400">Order: {banner.order} • ID: {banner.id}</div>
+                          {banner.type?.toLowerCase() === 'promotional' && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-1">
+                              🌟 Promotional
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(banner.type)}`}>
-                        {banner.type.charAt(0).toUpperCase() + banner.type.slice(1)}
+                        {banner.type ? banner.type.charAt(0).toUpperCase() + banner.type.slice(1) : 'Unknown'}
                       </span>
-                      {banner.category_slug && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          {banner.category_slug}
-                        </div>
-                      )}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(banner)}`}>
@@ -581,10 +633,16 @@ export default function BannersPage() {
               </tbody>
             </table>
             
-            {/* Summary */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
               <div className="text-sm text-gray-600">
                 Showing {filteredBanners.length} of {banners.length} banners
+              </div>
+              <div className="text-sm text-gray-600 flex gap-4">
+                {Object.entries(typeCounts).map(([type, count]) => (
+                  <span key={type}>
+                    {type}: {count}
+                  </span>
+                ))}
               </div>
             </div>
           </div>

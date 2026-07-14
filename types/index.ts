@@ -243,6 +243,7 @@ export interface Promotion {
   applicable_products?: number[];
   created_at: string;
   updated_at: string;
+  info?: string; // Add this line
 }
 
 export interface Wishlist {
