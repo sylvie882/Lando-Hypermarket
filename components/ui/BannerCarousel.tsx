@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -41,8 +41,8 @@ interface BannerCarouselProps {
 
 const BannerCarousel: React.FC<BannerCarouselProps> = ({
   height = {
-    mobile: '280px',
-    desktop: '400px'
+    mobile: '20vh',
+    desktop: '20vh'
   },
   rounded = true,
   autoPlay = true,
@@ -57,7 +57,6 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
   const [mounted, setMounted] = useState(false);
   const [windowWidth, setWindowWidth] = useState(0);
 
-  // Fix hydration mismatch by only rendering after mount
   useEffect(() => {
     setMounted(true);
     setWindowWidth(window.innerWidth);
@@ -70,15 +69,11 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Fetch banners from the correct API endpoint
   const fetchBanners = useCallback(async () => {
     try {
       setIsLoading(true);
-      
-      // Use the specific homepage banners endpoint
       const response = await api.banners.getHomepage();
       
-      // Extract data from the response
       let bannerData: Banner[] = [];
       
       if (response.data?.data) {
@@ -87,7 +82,6 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
         bannerData = response.data;
       }
       
-      // Filter active banners and sort by order
       const activeBanners = bannerData
         .filter(banner => banner.is_active === true)
         .sort((a, b) => a.order - b.order);
@@ -95,7 +89,6 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
       setBanners(activeBanners);
       setActiveIndex(0);
       
-      // Track impressions for each banner
       activeBanners.forEach(banner => {
         api.banners.trackImpression(banner.id).catch(console.error);
       });
@@ -125,7 +118,6 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
     setDirection('right');
     setActiveIndex((prev) => (prev + 1) % banners.length);
     
-    // Track click on next
     if (banners[activeIndex]) {
       api.banners.trackClick(banners[activeIndex].id).catch(console.error);
     }
@@ -139,7 +131,6 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
     setDirection('left');
     setActiveIndex((prev) => (prev - 1 + banners.length) % banners.length);
     
-    // Track click on prev
     if (banners[activeIndex]) {
       api.banners.trackClick(banners[activeIndex].id).catch(console.error);
     }
@@ -147,12 +138,10 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
     setTimeout(() => setIsAnimating(false), 700);
   }, [banners.length, isAnimating, banners, activeIndex]);
 
-  // Track click on active banner
   const handleBannerClick = useCallback((bannerId: number) => {
     api.banners.trackClick(bannerId).catch(console.error);
   }, []);
 
-  // Auto-rotate slides
   useEffect(() => {
     if (!autoPlay || isHovering || banners.length <= 1 || isAnimating) return;
     
@@ -165,32 +154,29 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
 
   // Get current height based on window width (only on client side)
   const getCurrentHeight = () => {
-    if (!mounted) return '400px'; // Default for SSR
+    if (!mounted) return '20vh';
     const isMobile = windowWidth < 768;
     return isMobile ? height.mobile : height.desktop;
   };
 
-  // Loading skeleton - use fixed height to prevent mismatch
   if (isLoading) {
     return (
       <div 
         className={`relative overflow-hidden bg-gradient-to-r from-[#E67E22]/20 via-[#F8FAF5] to-[#E67E22]/20 animate-pulse ${rounded ? 'rounded-xl md:rounded-2xl' : ''}`}
-        style={{ height: '400px' }}
+        style={{ height: '20vh', minHeight: '150px', maxHeight: '300px' }}
       />
     );
   }
 
-  // No banners
   if (banners.length === 0) {
     return null;
   }
 
-  // Don't render carousel content until mounted to prevent hydration mismatch
   if (!mounted) {
     return (
       <div 
         className={`relative overflow-hidden bg-gradient-to-r from-[#E67E22]/20 via-[#F8FAF5] to-[#E67E22]/20 ${rounded ? 'rounded-xl md:rounded-2xl' : ''}`}
-        style={{ height: '400px' }}
+        style={{ height: '20vh', minHeight: '150px', maxHeight: '300px' }}
       />
     );
   }
@@ -203,11 +189,12 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      {/* Main Carousel Container */}
       <div className={`relative overflow-hidden shadow-xl ${rounded ? 'rounded-xl md:rounded-2xl' : ''}`}>
-        
-        {/* All Banners - Single container with dynamic height */}
-        <div style={{ height: getCurrentHeight() }}>
+        <div style={{ 
+          height: getCurrentHeight(),
+          minHeight: '300px',
+          maxHeight: '600px'
+        }}>
           {banners.map((banner, index) => {
             const isActive = index === activeIndex;
             
@@ -251,7 +238,6 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
                   banner={banner}
                   imageUrl={getImageUrl(banner, isMobile)}
                   isActive={isActive}
-                  isMobile={isMobile}
                   onTrackClick={handleBannerClick}
                 />
               </div>
@@ -259,7 +245,6 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
           })}
         </div>
 
-        {/* Navigation Arrows - Only show on hover and if more than 1 banner */}
         {banners.length > 1 && (
           <>
             <button
@@ -281,7 +266,6 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
           </>
         )}
 
-        {/* Dots Indicator */}
         {banners.length > 1 && (
           <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 flex space-x-2 md:space-x-3 z-30">
             {banners.map((_, index) => (
@@ -311,14 +295,13 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
   );
 };
 
-// Banner Slide Component
+// Banner Slide Component - Only Image, No Text with fixed height
 const BannerSlide: React.FC<{
   banner: Banner;
   imageUrl: string;
   isActive: boolean;
-  isMobile?: boolean;
   onTrackClick: (id: number) => void;
-}> = ({ banner, imageUrl, isActive, isMobile = false, onTrackClick }) => {
+}> = ({ banner, imageUrl, isActive, onTrackClick }) => {
   
   const getBannerLink = (): string => {
     if (banner.button_link) {
@@ -330,7 +313,6 @@ const BannerSlide: React.FC<{
     return '/products';
   };
 
-  // Use next/image with proper priority for active slide
   const imagePriority = isActive;
 
   return (
@@ -339,7 +321,6 @@ const BannerSlide: React.FC<{
       onClick={() => onTrackClick(banner.id)}
       className="absolute inset-0 w-full h-full block group/slide"
     >
-      {/* Use img for better reliability or next/image with fill */}
       <div className="relative w-full h-full">
         <Image
           src={imageUrl}
@@ -349,42 +330,12 @@ const BannerSlide: React.FC<{
           priority={imagePriority}
           sizes="100vw"
           quality={90}
+          style={{ 
+            objectFit: 'cover',
+            width: '100%',
+            height: '100%'
+          }}
         />
-      </div>
-      
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-transparent" />
-      
-      {/* Content */}
-      <div className="absolute inset-0 flex items-center justify-center md:justify-start">
-        <div className={`text-white p-5 md:p-12 max-w-2xl transform transition-all duration-700 ${
-          isActive ? 'translate-x-0 opacity-100' : '-translate-x-5 md:-translate-x-10 opacity-0'
-        } ${isMobile ? 'text-center' : 'ml-4 md:ml-16'}`}>
-          
-          {/* Title */}
-          <h2 className={`font-bold leading-tight mb-2 md:mb-4 ${
-            isMobile ? 'text-xl md:text-2xl' : 'text-2xl md:text-3xl lg:text-4xl'
-          }`}>
-            <span className="bg-gradient-to-r text-white bg-clip-text text-transparent">
-              {banner.title}
-            </span>
-          </h2>
-
-          {/* Subtitle */}
-          {banner.subtitle && (
-            <p className="text-xs md:text-sm text-white/90 mb-3 md:mb-4 max-w-lg">
-              {banner.subtitle}
-            </p>
-          )}
-          
-          {/* Button - Warm Orange */}
-          {banner.button_text && (
-            <button className="group/btn inline-flex items-center gap-1.5 md:gap-2 px-4 py-2 md:px-6 md:py-3 bg-[#004E9A] hover:bg-[#003E9A] text-white font-semibold rounded-lg md:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 text-xs md:text-sm">
-              <span>{banner.button_text}</span>
-              <ArrowRight size={14} className="md:w-4 md:h-4 group-hover/btn:translate-x-1 transition-transform" />
-            </button>
-          )}
-        </div>
       </div>
     </Link>
   );

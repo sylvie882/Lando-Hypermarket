@@ -87,29 +87,27 @@ const HomePage: React.FC = () => {
       {/* ── Banner ── */}
       <section className="-mt-2 pt-0 sm:pt-2 md:pt-4 pb-0 overflow-hidden">
         <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
-
-          {offers.length > 0 && <OffersTickerStrip offers={offers} />}
-
+          {/* {offers.length > 0 && <OffersTickerStrip offers={offers} />} */}
           <BannerCarousel
-            height={{ mobile: '280px', desktop: '390px' }}
+            height={{ mobile: '300px', desktop: '500px' }}
             rounded={false}
           />
         </div>
       </section>
 
-       {/* ── Promotional Banners ── */}
+      {/* ── Top Categories - Now showing 12 ── */}
       <div className="reveal-section section-hidden">
-        <PromoBanners limit={15} />
-      </div>
-
-      {/* ── Top Categories ── */}
-      <div className="reveal-section section-hidden">
-        <TopCategories limit={15} showHeader={true} />
+        <TopCategories limit={12} showHeader={true} />
       </div>
 
       {/* ── New Arrivals ── */}
       <div className="reveal-section section-hidden">
         <NewArrivals limit={48} showHeader={true} />
+      </div>
+
+      {/* ── Promotional Banners ── */}
+      <div className="reveal-section section-hidden">
+        <PromoBanners limit={15} />
       </div>
 
       {/* ── All Products ── */}
@@ -187,9 +185,9 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* ── Floating Action Buttons (Adjusted for mobile bottom nav) ── */}
+      {/* ── Floating Action Buttons ── */}
       <div className="fixed bottom-20 md:bottom-6 right-4 z-40 flex flex-col items-end gap-3">
-        {/* Chat Button - Blue Color */}
+        {/* Chat Button */}
         <button
           onClick={() => setShowChatModal(!showChatModal)}
           className="group relative w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-full shadow-xl transition-all duration-300 hover:scale-110 active:scale-95"
@@ -199,7 +197,6 @@ const HomePage: React.FC = () => {
           }}
           aria-label="Chat with us"
         >
-          {/* Ripple effect */}
           <span className="absolute inset-0 rounded-full animate-ping bg-blue-400 opacity-40"></span>
           <MessageCircle className="text-white" size={20} fill="white" />
         </button>
@@ -220,16 +217,14 @@ const HomePage: React.FC = () => {
         </button>
       </div>
 
-      {/* Chat Modal - Adjusted position for mobile */}
+      {/* Chat Modal */}
       {showChatModal && (
         <>
-          {/* Backdrop */}
           <div 
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-300"
             onClick={() => setShowChatModal(false)}
           />
           
-          {/* Chat Modal Content - Positioned higher on mobile */}
           <div className="fixed bottom-28 md:bottom-32 right-4 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 flex items-center justify-between">
@@ -256,7 +251,6 @@ const HomePage: React.FC = () => {
                 👋 Hello! How can we help you today? Choose your preferred way to connect with us:
               </p>
               
-              {/* WhatsApp Option */}
               <a
                 href={whatsappUrl}
                 target="_blank"
@@ -274,7 +268,6 @@ const HomePage: React.FC = () => {
                 <ArrowUp size={16} className="text-green-600 opacity-0 group-hover:opacity-100 transition-opacity rotate-45" />
               </a>
 
-              {/* Phone Call Option */}
               <a
                 href="tel:+254716354589"
                 className="flex items-center gap-4 p-3 rounded-xl bg-blue-50 hover:bg-blue-100 transition-all duration-200 group border border-blue-200"
@@ -290,7 +283,6 @@ const HomePage: React.FC = () => {
                 <ArrowUp size={16} className="text-blue-600 opacity-0 group-hover:opacity-100 transition-transform rotate-45" />
               </a>
 
-              {/* Email Option */}
               <a
                 href="mailto:support@example.com"
                 className="flex items-center gap-4 p-3 rounded-xl bg-purple-50 hover:bg-purple-100 transition-all duration-200 group border border-purple-200"
@@ -307,7 +299,6 @@ const HomePage: React.FC = () => {
               </a>
             </div>
 
-            {/* Modal Footer */}
             <div className="p-4 bg-gray-50 border-t border-gray-100">
               <p className="text-xs text-gray-500 text-center">
                 Our support team is available 24/7 to assist you
