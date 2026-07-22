@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Product } from '@/types';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { ShoppingCart, Heart } from 'lucide-react';
+import { ShoppingCart, Heart, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface ProductCardProps {
@@ -277,12 +277,54 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         </Link>
 
-        {/* Hover Add to Cart */}
+        {/* Plus Icon - Bottom Right Corner (cycles with logo color) */}
+        {isInStock && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleAddToCart();
+            }}
+            disabled={isAddingToCart}
+            className={`absolute bottom-3 right-3 z-40 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ${
+              isHovered ? 'scale-110' : 'scale-100'
+            } ${
+              isAddingToCart ? 'opacity-70' : 'hover:scale-110'
+            }`}
+            style={{
+              background: isHovered ? '#E67E22' : 'white',
+              color: isHovered ? 'white' : '#E67E22',
+              border: `2px solid ${isHovered ? '#E67E22' : '#E67E22'}`,
+              boxShadow: isHovered 
+                ? '0 4px 15px rgba(230, 126, 34, 0.4)' 
+                : '0 2px 8px rgba(0,0,0,0.15)',
+            }}
+            aria-label="Add to cart"
+          >
+            {isAddingToCart ? (
+              <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+            ) : (
+              <Plus 
+                size={20} 
+                className="transition-transform duration-300"
+                style={{
+                  transform: isHovered ? 'rotate(90deg)' : 'rotate(0deg)',
+                }}
+              />
+            )}
+          </button>
+        )}
+
+        {/* Hover Add to Cart (Full Width) - Hidden when plus icon is shown */}
         <div
           className={`absolute bottom-0 left-0 right-0 z-40 transition-all duration-300 ease-out ${
             isHovered && isInStock ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
           }`}
-          style={{ pointerEvents: isHovered && isInStock ? 'auto' : 'none', padding: '12px 16px 16px 16px' }}
+          style={{ 
+            pointerEvents: isHovered && isInStock ? 'auto' : 'none', 
+            padding: '12px 16px 16px 16px',
+            display: 'none' // Hide the full-width button
+          }}
         >
           <button
             onClick={handleAddToCart}

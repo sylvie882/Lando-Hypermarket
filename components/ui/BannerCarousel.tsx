@@ -53,9 +53,9 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isHovering, setIsHovering] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [direction, setDirection] = useState<'left' | 'right'>('right');
   const [mounted, setMounted] = useState(false);
   const [windowWidth, setWindowWidth] = useState(0);
+  const [isZoomingOut, setIsZoomingOut] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -114,33 +114,62 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
 
   const nextSlide = useCallback(() => {
     if (banners.length <= 1 || isAnimating) return;
+    
+    // Start zoom out animation
+    setIsZoomingOut(true);
     setIsAnimating(true);
-    setDirection('right');
-    setActiveIndex((prev) => (prev + 1) % banners.length);
     
-    if (banners[activeIndex]) {
-      api.banners.trackClick(banners[activeIndex].id).catch(console.error);
-    }
-    
-    setTimeout(() => setIsAnimating(false), 700);
+    // After zoom out, change slide
+    setTimeout(() => {
+      setActiveIndex((prev) => (prev + 1) % banners.length);
+      setIsZoomingOut(false);
+      
+      if (banners[activeIndex]) {
+        api.banners.trackClick(banners[activeIndex].id).catch(console.error);
+      }
+      
+      setTimeout(() => setIsAnimating(false), 300);
+    }, 700);
   }, [banners.length, isAnimating, banners, activeIndex]);
 
   const prevSlide = useCallback(() => {
     if (banners.length <= 1 || isAnimating) return;
+    
+    // Start zoom out animation
+    setIsZoomingOut(true);
     setIsAnimating(true);
-    setDirection('left');
-    setActiveIndex((prev) => (prev - 1 + banners.length) % banners.length);
     
-    if (banners[activeIndex]) {
-      api.banners.trackClick(banners[activeIndex].id).catch(console.error);
-    }
-    
-    setTimeout(() => setIsAnimating(false), 700);
+    // After zoom out, change slide
+    setTimeout(() => {
+      setActiveIndex((prev) => (prev - 1 + banners.length) % banners.length);
+      setIsZoomingOut(false);
+      
+      if (banners[activeIndex]) {
+        api.banners.trackClick(banners[activeIndex].id).catch(console.error);
+      }
+      
+      setTimeout(() => setIsAnimating(false), 300);
+    }, 700);
   }, [banners.length, isAnimating, banners, activeIndex]);
 
   const handleBannerClick = useCallback((bannerId: number) => {
     api.banners.trackClick(bannerId).catch(console.error);
   }, []);
+
+  const goToSlide = (index: number) => {
+    if (index === activeIndex || isAnimating) return;
+    
+    // Start zoom out animation
+    setIsZoomingOut(true);
+    setIsAnimating(true);
+    
+    // After zoom out, change slide
+    setTimeout(() => {
+      setActiveIndex(index);
+      setIsZoomingOut(false);
+      setTimeout(() => setIsAnimating(false), 300);
+    }, 700);
+  };
 
   useEffect(() => {
     if (!autoPlay || isHovering || banners.length <= 1 || isAnimating) return;
@@ -195,44 +224,41 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
           minHeight: '300px',
           maxHeight: '600px'
         }}>
+          {/* Current Banner - Zooms out when transitioning */}
           {banners.map((banner, index) => {
             const isActive = index === activeIndex;
+            const isNext = index === (activeIndex + 1) % banners.length;
+            const isPrev = index === (activeIndex - 1 + banners.length) % banners.length;
             
-            let transform = '';
-            let zIndex = 0;
+            // Only show current, next, and previous banners
+            if (!isActive && !isNext && !isPrev) return null;
+            
             let opacity = 0;
+            let scale = 1;
+            let zIndex = 0;
             
             if (isActive) {
-              transform = 'translateX(0)';
+              // Current banner - zooms out when transitioning
+              opacity = isZoomingOut ? 0 : 1;
+              scale = isZoomingOut ? 1.1 : 1;
               zIndex = 20;
-              opacity = 1;
-            } else if (direction === 'right') {
-              if (index === (activeIndex - 1 + banners.length) % banners.length) {
-                transform = 'translateX(-100%)';
-                zIndex = 10;
-                opacity = 1;
-              } else {
-                transform = 'translateX(100%)';
-                zIndex = 0;
-                opacity = 0;
-              }
-            } else {
-              if (index === (activeIndex + 1) % banners.length) {
-                transform = 'translateX(100%)';
-                zIndex = 10;
-                opacity = 1;
-              } else {
-                transform = 'translateX(-100%)';
-                zIndex = 0;
-                opacity = 0;
-              }
+            } else if (isNext || isPrev) {
+              // Next/Previous banner - fades in
+              opacity = isZoomingOut ? 1 : 0;
+              scale = isZoomingOut ? 1 : 0.95;
+              zIndex = 10;
             }
             
             return (
               <div
                 key={banner.id}
-                className="absolute inset-0 transition-all duration-700 ease-in-out"
-                style={{ transform, zIndex, opacity }}
+                className="absolute inset-0 transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
+                style={{ 
+                  opacity, 
+                  transform: `scale(${scale})`,
+                  zIndex,
+                  pointerEvents: isActive ? 'auto' : 'none'
+                }}
               >
                 <BannerSlide 
                   banner={banner}
@@ -271,13 +297,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
             {banners.map((_, index) => (
               <button
                 key={index}
-                onClick={() => {
-                  if (isAnimating) return;
-                  setIsAnimating(true);
-                  setDirection(index > activeIndex ? 'right' : 'left');
-                  setActiveIndex(index);
-                  setTimeout(() => setIsAnimating(false), 700);
-                }}
+                onClick={() => goToSlide(index)}
                 className="transition-all duration-300 flex items-center"
                 aria-label={`Go to slide ${index + 1}`}
               >
