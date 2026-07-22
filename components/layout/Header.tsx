@@ -336,12 +336,10 @@ const Header: React.FC = () => {
         <div className="hidden md:block bg-white">
           <div className="w-full px-4 sm:px-6 lg:px-12">
             <div className="flex items-center gap-4 py-3">
-
-              {/* LOGO - Pushed to left with same padding as Home link */}
-              <Link href="/" className="flex-shrink-0 pl-0" aria-label="Home">
-                <Image src="/logo10.png" alt="Lando Hypermarket" width={300} height={100} className="object-cover w-[300px] h-[80px]" priority />
-              </Link>
-
+{/* LOGO - Offset container padding */}
+<Link href="/" className="flex-shrink-0 -ml-4 lg:-ml-12" aria-label="Home">
+  <Image src="/logo10.png" alt="Lando Hypermarket" width={300} height={100} className="object-cover w-[300px] h-[80px]" priority />
+</Link>
               <button onClick={getLocation} className="flex items-center gap-1.5 text-gray-700 hover:text-blue-700 transition-colors flex-shrink-0 py-2 px-2 rounded-lg hover:bg-blue-50" aria-label="Set delivery location">
                 <MapPin size={16} className="flex-shrink-0" style={{ color: '#004E9A' }} />
                 <div className="text-left">
