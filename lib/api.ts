@@ -12,6 +12,9 @@ export const getBaseUrl = (): string => {
   // Remove trailing /api if present
   let baseUrl = url.trim();
   
+
+
+  
   // Remove trailing slash if present
   if (baseUrl.endsWith('/')) {
     baseUrl = baseUrl.slice(0, -1);
