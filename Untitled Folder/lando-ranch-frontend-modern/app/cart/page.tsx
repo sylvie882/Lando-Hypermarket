@@ -110,7 +110,11 @@ const CartPage: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchCart();
+    if (isAuthenticated) {
+      fetchCart();
+    } else {
+      setIsLoading(false);
+    }
   }, [isAuthenticated]);
 
   const fetchCart = async () => {
@@ -333,6 +337,24 @@ const CartPage: React.FC = () => {
     };
   }, []);
 
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto">
+          <ShoppingBag size={64} className="mx-auto text-gray-300 mb-6" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Please Login</h1>
+          <p className="text-gray-600 mb-6">Login to view your shopping cart</p>
+          <Link
+            href="/auth/login"
+            className="inline-flex items-center justify-center bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
+          >
+            Login to Continue
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -380,26 +402,7 @@ const CartPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
-          <p className="text-gray-500 mt-1">
-            {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} ready for checkout
-          </p>
-        </div>
-
-        {!isAuthenticated && (
-          <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-            <p className="text-sm text-green-800">
-              Shopping as a guest — you can check out without an account.
-            </p>
-            <Link
-              href="/auth/login"
-              className="text-sm font-semibold text-green-700 hover:text-green-800 whitespace-nowrap"
-            >
-              Sign in for faster checkout →
-            </Link>
-          </div>
-        )}
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart Items - Table Style with Borders */}
@@ -752,13 +755,12 @@ const CartPage: React.FC = () => {
               <div className="space-y-4">
                 <Link
                   href="/checkout"
-                  className="w-full flex items-center justify-center gap-2 text-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed border border-orange-700"
+                  className="block w-full text-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed border border-orange-700"
                   onClick={() => {
                     window.dispatchEvent(new Event('cart:updated'));
                   }}
                 >
                   Proceed to Checkout
-                  <ArrowRight size={20} />
                 </Link>
                 
                 <Link

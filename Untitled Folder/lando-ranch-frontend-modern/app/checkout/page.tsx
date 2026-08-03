@@ -46,20 +46,6 @@ const CheckoutPage: React.FC = () => {
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
   const [currentOrderId, setCurrentOrderId] = useState<number | null>(null);
-  const [currentOrderNumber, setCurrentOrderNumber] = useState<string | null>(null);
-
-  // Guest checkout details (used only when the shopper isn't logged in)
-  const [guestDetails, setGuestDetails] = useState({
-    guest_name: '',
-    guest_email: '',
-    guest_phone: '',
-    guest_address_line_1: '',
-    guest_address_line_2: '',
-    guest_city: '',
-    guest_state: '',
-    guest_country: 'Kenya',
-    guest_postal_code: '',
-  });
 
   // Payment — M-Pesa only
   const [paymentDetails, setPaymentDetails] = useState<any>({
@@ -85,28 +71,26 @@ const CheckoutPage: React.FC = () => {
   // ─── Data loading ──────────────────────────────────────────────────────────
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
     fetchData();
   }, [isAuthenticated]);
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
+      const [cartRes, addressesRes] = await Promise.all([
+        api.cart.get(),
+        api.addresses.getAll(),
+      ]);
 
-      if (isAuthenticated) {
-        const [cartRes, addressesRes] = await Promise.all([
-          api.cart.get(),
-          api.addresses.getAll(),
-        ]);
+      setCart(cartRes.data.cart);
+      setAddresses(addressesRes.data);
 
-        setCart(cartRes.data.cart);
-        setAddresses(addressesRes.data);
-
-        const defaultAddress = addressesRes.data.find((a: Address) => a.is_default);
-        if (defaultAddress) setSelectedAddressId(defaultAddress.id);
-      } else {
-        const cartRes = await api.cart.get();
-        setCart(cartRes.data.cart);
-      }
+      const defaultAddress = addressesRes.data.find((a: Address) => a.is_default);
+      if (defaultAddress) setSelectedAddressId(defaultAddress.id);
     } catch (error) {
       console.error('Fetch error:', error);
       toast.error('Failed to load checkout data');
@@ -177,21 +161,9 @@ const CheckoutPage: React.FC = () => {
 
   // ─── Create Order FIRST ─────────────────────────────────────────────────
 
-  const isGuestFormComplete = () =>
-    guestDetails.guest_name.trim() &&
-    guestDetails.guest_email.trim() &&
-    guestDetails.guest_phone.trim() &&
-    guestDetails.guest_address_line_1.trim() &&
-    guestDetails.guest_city.trim();
-
   const createOrder = async (): Promise<number | null> => {
-    if (isAuthenticated) {
-      if (!selectedAddressId) {
-        toast.error('Please select a delivery address');
-        return null;
-      }
-    } else if (!isGuestFormComplete()) {
-      toast.error('Please fill in your name, email, phone and address');
+    if (!selectedAddressId) { 
+      toast.error('Please select a delivery address'); 
       return null;
     }
 
@@ -199,9 +171,7 @@ const CheckoutPage: React.FC = () => {
     
     try {
       const orderData = {
-        ...(isAuthenticated
-          ? { address_id: selectedAddressId }
-          : { ...guestDetails }),
+        address_id: selectedAddressId,
         payment_method: 'mpesa',
         shipping_method: selectedShippingMethod,
         notes: deliveryNotes,
@@ -212,14 +182,12 @@ const CheckoutPage: React.FC = () => {
 
       const orderResponse = await api.orders.create(orderData);
       const orderId = orderResponse.data.order?.id || orderResponse.data.id;
-      const orderNumber = orderResponse.data.order?.order_number || null;
       
       if (!orderId) {
         throw new Error('No order ID returned from server');
       }
       
       setCurrentOrderId(orderId);
-      setCurrentOrderNumber(orderNumber);
       toast.success('Order created successfully!');
       return orderId;
     } catch (error: any) {
@@ -239,13 +207,8 @@ const CheckoutPage: React.FC = () => {
   // ─── Navigation handlers ─────────────────────────────────────────────────
 
   const handleContinueToPayment = () => {
-    if (isAuthenticated) {
-      if (!selectedAddressId) {
-        toast.error('Please select a delivery address');
-        return;
-      }
-    } else if (!isGuestFormComplete()) {
-      toast.error('Please fill in your name, email, phone and address');
+    if (!selectedAddressId) {
+      toast.error('Please select a delivery address');
       return;
     }
     setStep(2);
@@ -265,9 +228,12 @@ const CheckoutPage: React.FC = () => {
   };
 
   const handlePaymentComplete = () => {
-    // Show an in-page confirmation instead of bouncing guests to an
-    // account-only order page they can't access.
-    setStep(4);
+    if (currentOrderId) {
+      router.push(`/orders/${currentOrderId}`);
+    } else {
+      toast.error('Order ID not found');
+      router.push('/orders');
+    }
   };
 
   // ─── Totals ───────────────────────────────────────────────────────────────
@@ -293,7 +259,7 @@ const CheckoutPage: React.FC = () => {
 
   // ─── Guards ───────────────────────────────────────────────────────────────
 
-  if (isLoading) {
+  if (!isAuthenticated || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -301,7 +267,7 @@ const CheckoutPage: React.FC = () => {
     );
   }
 
-  if ((!cart || cart.items.length === 0) && step !== 4) {
+  if (!cart || cart.items.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md mx-auto">
@@ -325,44 +291,33 @@ const CheckoutPage: React.FC = () => {
     { number: 1, title: 'Address', icon: <Truck size={20} /> },
     { number: 2, title: 'Payment', icon: <Smartphone size={20} /> },
     { number: 3, title: 'Pay', icon: <Lock size={20} /> },
-    { number: 4, title: 'Done', icon: <Check size={20} /> },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Checkout</h1>
-
         {/* Steps */}
         <div className="mb-8">
-          <div className="flex items-center justify-center max-w-2xl mx-auto overflow-x-auto">
-            {steps.map((stepItem, index) => {
-              const isDone = step > stepItem.number;
-              const isActive = step === stepItem.number;
-              return (
-                <React.Fragment key={stepItem.number}>
-                  <div className="flex items-center shrink-0">
-                    <div className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-colors ${
-                      isDone
-                        ? 'bg-green-500 text-white'
-                        : isActive
-                        ? 'bg-orange-500 text-white shadow-lg shadow-orange-200'
-                        : 'bg-gray-200 text-gray-500'
-                    }`}>
-                      {isDone ? <Check size={20} /> : stepItem.icon}
-                    </div>
-                    <div className={`ml-2 sm:ml-3 hidden sm:block ${isActive || isDone ? 'text-gray-900' : 'text-gray-400'}`}>
-                      <div className="text-xs font-medium text-gray-400">Step {stepItem.number}</div>
-                      <div className="text-sm font-semibold">{stepItem.title}</div>
-                    </div>
+          <div className="flex items-center justify-center max-w-2xl mx-auto">
+            {steps.map((stepItem, index) => (
+              <React.Fragment key={stepItem.number}>
+                <div className="flex items-center">
+                  <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
+                    step >= stepItem.number ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-500'
+                  }`}>
+                    {stepItem.icon}
                   </div>
-                  {index < steps.length - 1 && (
-                    <div className={`h-0.5 w-8 sm:w-16 mx-2 sm:mx-4 shrink-0 transition-colors ${isDone ? 'bg-green-500' : 'bg-gray-200'}`} />
-                  )}
-                </React.Fragment>
-              );
-            })}
+                  <div className={`ml-3 ${step >= stepItem.number ? 'text-orange-500' : 'text-gray-500'}`}>
+                    <div className="text-sm font-medium">Step {stepItem.number}</div>
+                    <div className="text-sm font-semibold">{stepItem.title}</div>
+                  </div>
+                </div>
+                {index < steps.length - 1 && (
+                  <div className={`h-0.5 w-16 mx-4 ${step > stepItem.number ? 'bg-orange-500' : 'bg-gray-200'}`} />
+                )}
+              </React.Fragment>
+            ))}
           </div>
         </div>
 
@@ -375,10 +330,8 @@ const CheckoutPage: React.FC = () => {
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h2 className="text-2xl font-bold mb-6">Delivery Address</h2>
 
-                {isAuthenticated ? (
-                  <>
-                    <div className="space-y-4 mb-6">
-                      {addresses.length > 0 ? addresses.map((address) => (
+                <div className="space-y-4 mb-6">
+                  {addresses.length > 0 ? addresses.map((address) => (
                     <div
                       key={address.id}
                       onClick={() => setSelectedAddressId(address.id)}
@@ -540,100 +493,6 @@ const CheckoutPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-                  </>
-                ) : (
-                  <div className="p-6 border-2 border-gray-200 rounded-xl bg-gray-50">
-                    <div className="flex items-start justify-between mb-4">
-                      <h3 className="font-bold text-lg">Your Details</h3>
-                      <Link href="/auth/login" className="text-sm font-semibold text-orange-600 hover:text-orange-700">
-                        Have an account? Sign in
-                      </Link>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Full Name *</label>
-                        <input
-                          type="text"
-                          placeholder="Full Name"
-                          value={guestDetails.guest_name}
-                          onChange={(e) => setGuestDetails({ ...guestDetails, guest_name: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Phone Number *</label>
-                        <input
-                          type="tel"
-                          placeholder="07XX XXX XXX"
-                          value={guestDetails.guest_phone}
-                          onChange={(e) => setGuestDetails({ ...guestDetails, guest_phone: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-1">Email *</label>
-                        <input
-                          type="email"
-                          placeholder="you@example.com"
-                          value={guestDetails.guest_email}
-                          onChange={(e) => setGuestDetails({ ...guestDetails, guest_email: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">We'll send your order confirmation and tracking link here.</p>
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-1">Address Line 1 *</label>
-                        <input
-                          type="text"
-                          placeholder="Street address"
-                          value={guestDetails.guest_address_line_1}
-                          onChange={(e) => setGuestDetails({ ...guestDetails, guest_address_line_1: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-1">Address Line 2 (Optional)</label>
-                        <input
-                          type="text"
-                          placeholder="Apartment, suite, unit, etc."
-                          value={guestDetails.guest_address_line_2}
-                          onChange={(e) => setGuestDetails({ ...guestDetails, guest_address_line_2: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">City *</label>
-                        <input
-                          type="text"
-                          placeholder="e.g., Nairobi"
-                          value={guestDetails.guest_city}
-                          onChange={(e) => setGuestDetails({ ...guestDetails, guest_city: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">State/County</label>
-                        <input
-                          type="text"
-                          placeholder="e.g., Nairobi County"
-                          value={guestDetails.guest_state}
-                          onChange={(e) => setGuestDetails({ ...guestDetails, guest_state: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Postal Code</label>
-                        <input
-                          type="text"
-                          placeholder="Postal Code"
-                          value={guestDetails.guest_postal_code}
-                          onChange={(e) => setGuestDetails({ ...guestDetails, guest_postal_code: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* Shipping method */}
                 <div className="mt-8">
@@ -691,7 +550,7 @@ const CheckoutPage: React.FC = () => {
                 <div className="mt-8 flex justify-end">
                   <button
                     onClick={handleContinueToPayment}
-                    disabled={isAuthenticated ? !selectedAddressId : !isGuestFormComplete()}
+                    disabled={!selectedAddressId}
                     className="px-8 py-4 bg-orange-500 text-white rounded-xl hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg transition-all shadow-lg hover:shadow-xl"
                   >
                     Continue to Payment →
@@ -808,50 +667,6 @@ const CheckoutPage: React.FC = () => {
               <div className="bg-white rounded-xl shadow-lg p-12 text-center">
                 <LoadingSpinner size="lg" />
                 <p className="mt-4 text-gray-600">Preparing your order...</p>
-              </div>
-            )}
-
-            {/* STEP 4 — Confirmation */}
-            {step === 4 && (
-              <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Check className="text-green-600" size={32} />
-                </div>
-                <h2 className="text-2xl font-bold mb-2">Order Placed!</h2>
-                <p className="text-gray-600 mb-6">
-                  {isAuthenticated
-                    ? 'Thanks for your order — we\'ve started getting it ready.'
-                    : "Thanks for your order — a confirmation has been sent to " + (guestDetails.guest_email || 'your email') + "."}
-                </p>
-
-                <div className="p-4 bg-gray-50 rounded-lg text-left inline-block mb-8">
-                  <p className="text-sm text-gray-500">Order Number</p>
-                  <p className="font-bold text-lg">{currentOrderNumber || `#${currentOrderId}`}</p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Link
-                    href="/track-order"
-                    className="px-6 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 font-bold"
-                  >
-                    Track My Order
-                  </Link>
-                  {isAuthenticated ? (
-                    <Link
-                      href={`/orders/${currentOrderId}`}
-                      className="px-6 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 font-medium"
-                    >
-                      View Order Details
-                    </Link>
-                  ) : (
-                    <Link
-                      href="/products"
-                      className="px-6 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 font-medium"
-                    >
-                      Continue Shopping
-                    </Link>
-                  )}
-                </div>
               </div>
             )}
           </div>

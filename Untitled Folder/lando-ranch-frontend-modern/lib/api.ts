@@ -3,24 +3,6 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 // Use environment variable directly or fallback - ensure it includes /api
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke/api';
 
-// Persistent anonymous ID for guests shopping without an account.
-// Sent as X-Guest-Id so the backend can find/create a guest cart and,
-// after checkout, verify the guest owns the order they're paying for.
-export const getGuestId = (): string => {
-  if (typeof window === 'undefined') return '';
-
-  let guestId = localStorage.getItem('guest_cart_id');
-
-  if (!guestId) {
-    guestId = (typeof crypto !== 'undefined' && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : `guest-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    localStorage.setItem('guest_cart_id', guestId);
-  }
-
-  return guestId;
-};
-
 // Helper to get base URL without /api for storage URLs
 export const getBaseUrl = (): string => {
   const url = process.env.NEXT_PUBLIC_API_URL || 'https://api.hypermarket.co.ke/api';
@@ -144,10 +126,6 @@ class ApiService {
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
-        } else if (typeof window !== 'undefined') {
-          // No logged-in user — identify this browser as a guest so
-          // cart/checkout/payment requests can be served without login.
-          config.headers['X-Guest-Id'] = getGuestId();
         }
         
         // Handle FormData vs JSON content types

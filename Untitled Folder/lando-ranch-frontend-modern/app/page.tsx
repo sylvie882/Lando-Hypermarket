@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import BannerCarousel from '@/components/ui/BannerCarousel';
 import PromoBanners from '@/components/ui/PromoBanners';
 import TopCategories from '@/components/ui/TopCategories';
+import TrustStrip from '@/components/ui/TrustStrip';
 import FeaturedProducts from '@/components/ui/FeaturedProducts';
 import WoodenUtensilsPage from '@/components/ui/WoodenUtensils';
 import HandicraftsPage from '@/components/ui/Handicrafts';
@@ -87,7 +88,7 @@ const HomePage: React.FC = () => {
       {/* ── Banner ── */}
       <section className="-mt-2 pt-0 sm:pt-2 md:pt-4 pb-0 overflow-hidden">
         <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
-          {offers.length > 0 && <OffersTickerStrip offers={offers} />}
+          {/* {offers.length > 0 && <OffersTickerStrip offers={offers} />} */}
           <BannerCarousel
             height={{ mobile: '300px', desktop: '500px' }}
             rounded={false}
@@ -95,19 +96,22 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* ── Trust / delivery strip ── */}
+      <TrustStrip />
+
       {/* ── Top Categories - Now showing 12 ── */}
       <div className="reveal-section section-hidden">
         <TopCategories limit={12} showHeader={true} />
       </div>
 
+      {/* ── Promotional Banners (deal grid) ── */}
+      <div className="reveal-section section-hidden">
+        <PromoBanners limit={5} />
+      </div>
+
       {/* ── New Arrivals ── */}
       <div className="reveal-section section-hidden">
         <NewArrivals limit={48} showHeader={true} />
-      </div>
-
-      {/* ── Promotional Banners ── */}
-      <div className="reveal-section section-hidden">
-        <PromoBanners limit={15} />
       </div>
 
       {/* ── All Products ── */}
