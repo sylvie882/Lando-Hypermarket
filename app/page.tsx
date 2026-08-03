@@ -82,6 +82,8 @@ const HomePage: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
+
+  
   return (
     <div className="min-h-screen bg-white pb-20 md:pb-0">
       {/* ── Banner ── */}
