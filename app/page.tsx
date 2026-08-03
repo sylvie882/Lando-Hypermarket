@@ -87,7 +87,7 @@ const HomePage: React.FC = () => {
       {/* ── Banner ── */}
       <section className="-mt-2 pt-0 sm:pt-2 md:pt-4 pb-0 overflow-hidden">
         <div className="mx-auto px-4 sm:px-6 lg:px-12 w-full">
-          {/* {offers.length > 0 && <OffersTickerStrip offers={offers} />} */}
+          {offers.length > 0 && <OffersTickerStrip offers={offers} />}
           <BannerCarousel
             height={{ mobile: '300px', desktop: '500px' }}
             rounded={false}
